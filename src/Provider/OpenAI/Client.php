@@ -46,7 +46,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * Lists existing batch jobs.
 	 * @param  ?int  $limit  Maximum number of jobs to return
 	 * @param  ?string  $after  Cursor for pagination (retrieve the page after this batch ID)
-	 * @return BatchResponse[]
+	 * @return list<BatchResponse>
 	 */
 	public function listBatches(?int $limit = null, ?string $after = null): array
 	{
@@ -78,7 +78,9 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 	/**
 	 * Calculates embeddings for the given input text(s) using a specified OpenAI model.
+	 * @param  list<string>  $input
 	 * @param  ?int  $dimensions  The number of dimensions the resulting output embeddings should have. Only supported for 'text-embedding-3' models
+	 * @return list<Vector>
 	 */
 	public function calculateEmbeddings(string $model, array $input, ?int $dimensions = null): array
 	{

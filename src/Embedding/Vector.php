@@ -19,8 +19,8 @@ final class Vector
 	private float $norm;
 
 
-	/** @param list<float> $vector */
 	public function __construct(
+		/** @var list<float> */
 		private readonly array $vector,
 	) {
 		(function (float ...$num) {})(...$vector);

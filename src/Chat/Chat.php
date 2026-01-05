@@ -14,7 +14,7 @@ use AIAccess\ServiceException;
  */
 abstract class Chat
 {
-	/** @var Message[] */
+	/** @var list<Message> */
 	protected array $messages = [];
 	protected ?string $systemInstruction = null;
 
@@ -58,7 +58,7 @@ abstract class Chat
 
 	/**
 	 * Retrieves the current message history (user and model messages).
-	 * @return Message[]
+	 * @return list<Message>
 	 */
 	public function getMessages(): array
 	{

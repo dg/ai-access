@@ -23,8 +23,8 @@ final class ChatResponse implements Chat\Response
 	private ?array $contentBlocks = null;
 
 
-	/** @param mixed[] $rawResponse */
 	public function __construct(
+		/** @var mixed[] */
 		private array $rawResponse,
 	) {
 		$this->parseRawResponse($this->rawResponse);

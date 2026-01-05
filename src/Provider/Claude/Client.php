@@ -45,7 +45,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 	 * @param  ?int  $limit  Maximum number of jobs to return
 	 * @param  ?string  $after  Cursor for pagination (retrieve the page after this batch ID)
 	 * @param  ?string  $before  Cursor for pagination (retrieve the page before this batch ID)
-	 * @return BatchResponse[]
+	 * @return list<BatchResponse>
 	 */
 	public function listBatches(?int $limit = null, ?string $after = null, ?string $before = null): array
 	{

@@ -16,8 +16,8 @@ interface Service
 {
 	/**
 	 * Calculates embeddings for the given input text(s) using a specified model.
-	 * @param  string[]  $input
-	 * @return Vector[]
+	 * @param  list<string>  $input
+	 * @return list<Vector>
 	 * @throws ServiceException
 	 */
 	function calculateEmbeddings(string $model, array $input): array;

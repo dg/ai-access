@@ -18,13 +18,13 @@ use function explode, implode, is_array, trim;
  */
 final class BatchResponse implements AIAccess\Batch\Response
 {
-	/** @var Message[]|null */
+	/** @var ?array<string, Message> */
 	private ?array $messages = null;
 
 
-	/** @param mixed[] $batchData */
 	public function __construct(
 		private Client $client,
+		/** @var mixed[] */
 		private array $batchData,
 	) {
 	}
@@ -58,7 +58,7 @@ final class BatchResponse implements AIAccess\Batch\Response
 	}
 
 
-	/** @return Message[] */
+	/** @return array<string, Message> */
 	private function parseMessages(string $jsonl): array
 	{
 		$res = [];

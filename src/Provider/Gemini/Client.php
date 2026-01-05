@@ -36,9 +36,11 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 
 	/**
 	 * Calculates embeddings using Gemini models via the batch endpoint.
+	 * @param  list<string>  $input
 	 * @param  ?string  $taskType Optional task type hint (e.g., RETRIEVAL_QUERY, RETRIEVAL_DOCUMENT)
 	 * @param  ?string  $title Optional title if taskType is RETRIEVAL_DOCUMENT
 	 * @param  ?int  $outputDimensionality Optional request for specific embedding dimensions
+	 * @return list<Vector>
 	 */
 	public function calculateEmbeddings(
 		string $model,
@@ -87,7 +89,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 		if (count($results) !== count($input)) {
 			trigger_error('Number of returned embeddings does not match the number of inputs.', E_USER_WARNING);
 		}
-		return $results;
+		return array_values($results);
 	}
 
 

@@ -15,7 +15,7 @@ use AIAccess\LogicException;
  */
 final class FormData
 {
-	/** @var array<string, array{value?: string, path?: string, content?: string, name?: string, mime?: ?string}> */
+	/** @var array<string, array{value: string}|array{path: string, name: string, mime: ?string}|array{content: string, name: string, mime: ?string}> */
 	private array $items = [];
 
 
@@ -75,7 +75,7 @@ final class FormData
 
 	/**
 	 * Gets all form items.
-	 * @return array<string, array{value?: string, path?: string, content?: string, name?: string, mime?: ?string}>
+	 * @return array<string, array{value: string}|array{path: string, name: string, mime: ?string}|array{content: string, name: string, mime: ?string}>
 	 */
 	public function getItems(): array
 	{

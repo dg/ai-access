@@ -14,11 +14,9 @@ namespace AIAccess\Http;
  */
 final class Response
 {
-	/**
-	 * @param array<string, string[]> $headers HTTP headers with lowercased keys
-	 */
 	public function __construct(
 		private int $statusCode,
+		/** @var array<string, string[]> $headers HTTP headers with lowercased keys */
 		private array $headers,
 		private mixed $data,
 	) {

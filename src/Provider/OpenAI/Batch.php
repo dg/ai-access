@@ -15,7 +15,7 @@ use AIAccess;
  */
 final class Batch implements AIAccess\Batch\Batch
 {
-	/** @var Chat[] */
+	/** @var array<string, Chat> */
 	private array $chats = [];
 
 	private string $endpoint = '/v1/responses';
