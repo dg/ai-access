@@ -122,7 +122,6 @@ final class Chat extends AIAccess\Chat\Chat
 			$payload['instructions'] = $this->systemInstruction;
 		}
 
-		$payload = array_merge($payload, $this->options);
-		return $payload;
+		return array_merge($payload, $this->options);
 	}
 }

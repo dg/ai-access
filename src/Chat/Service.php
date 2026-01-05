@@ -9,7 +9,7 @@ namespace AIAccess\Chat;
 
 
 /**
- * Provides access to the batch processing capabilities.
+ * Provides access to the conversational capabilities.
  */
 interface Service
 {

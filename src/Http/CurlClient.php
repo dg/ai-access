@@ -66,7 +66,7 @@ final class CurlClient implements Client
 		array $headers,
 		string $url,
 		?string $method,
-	): mixed
+	): \CurlHandle
 	{
 		$ch = curl_init();
 		if ($ch === false) {
@@ -113,7 +113,7 @@ final class CurlClient implements Client
 	}
 
 
-	private function execute(mixed $ch): Response
+	private function execute(\CurlHandle $ch): Response
 	{
 		$response = curl_exec($ch);
 		if ($response === false) {

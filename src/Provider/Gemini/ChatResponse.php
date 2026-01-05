@@ -92,7 +92,6 @@ final class ChatResponse implements Chat\Response
 			$textParts[] = $data['candidates'][0]['text'];
 		}
 
-		$text = implode('', $textParts);
 		$this->text = $textParts ? implode("\n", $textParts) : null;
 	}
 }

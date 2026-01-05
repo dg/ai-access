@@ -2,7 +2,6 @@
 	"name": "ai-access/ai-access",
 	"description": "A flexible PHP library providing access to various AI models (Gemini, OpenAI, Anthropic, DeepSeek, Grok) via a consistent interface.",
 	"keywords": ["ai", "artificial intelligence", "llm", "large language model", "gemini", "openai", "anthropic", "xai", "grok", "deepseek", "api", "client", "sdk", "generative ai", "chat", "chatbot", "ai access"],
-	"keywords": ["composer"],
 	"license": ["BSD-3-Clause"],
 	"authors": [
 		{

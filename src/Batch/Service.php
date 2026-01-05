@@ -10,7 +10,7 @@ use AIAccess\ServiceException;
 
 
 /**
- * Provides access to the conversational capabilities.
+ * Provides access to the batch processing capabilities.
  */
 interface Service
 {

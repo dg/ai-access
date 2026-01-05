@@ -116,11 +116,9 @@ final class Chat extends AIAccess\Chat\Chat
 			];
 		}
 
-		$payload = [
+		return [
 			'model' => $this->model,
 			'messages' => $messages,
 		] + $this->options;
-
-		return $payload;
 	}
 }
