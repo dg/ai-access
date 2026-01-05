@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 use AIAccess\Chat\Chat;
 use AIAccess\Chat\Message;
