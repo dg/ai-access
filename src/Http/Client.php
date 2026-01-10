@@ -20,7 +20,7 @@ interface Client
 	 * @param  string  $url  URL for the request
 	 * @param  string|mixed[]|FormData|null  $payload  Request body (array is encoded as JSON)
 	 * @param  string[]  $headers  HTTP headers
-	 * @param  ?string  $method  HTTP method (GET, POST, ...), defaults to GET for null payload or POST for non-null payload
+	 * @param  non-empty-string|null  $method  HTTP method (GET, POST, ...), defaults to GET for null payload or POST for non-null payload
 	 * @throws CommunicationException  On connection errors, timeouts, etc.
 	 */
 	function fetch(

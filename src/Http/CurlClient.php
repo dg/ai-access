@@ -9,7 +9,7 @@ namespace AIAccess\Http;
 
 use AIAccess\CommunicationException;
 use AIAccess\Helpers;
-use function is_array;
+use function is_array, is_string;
 
 
 /**
@@ -60,6 +60,7 @@ final class CurlClient implements Client
 	/**
 	 * @param string|mixed[]|FormData|null $payload
 	 * @param string[] $headers
+	 * @param non-empty-string|null $method
 	 */
 	private function create(
 		array|string|FormData|null $payload,
@@ -69,10 +70,7 @@ final class CurlClient implements Client
 	): \CurlHandle
 	{
 		$ch = curl_init();
-		if ($ch === false) {
-			throw new CommunicationException('Failed to initialize cURL session.');
-		}
-
+		assert($url !== '');
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method ?? ($payload === null ? 'GET' : 'POST'));
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -105,8 +103,9 @@ final class CurlClient implements Client
 		$tmp = array_map(fn($k, $v) => "$k: $v", array_keys($headers), array_values($headers));
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $tmp);
 
-		if (isset($this->proxy)) {
-			curl_setopt($ch, CURLOPT_PROXY, $this->proxy);
+		$proxy = $this->proxy;
+		if ($proxy !== null && $proxy !== '') {
+			curl_setopt($ch, CURLOPT_PROXY, $proxy);
 		}
 
 		return $ch;
@@ -121,6 +120,7 @@ final class CurlClient implements Client
 			throw new CommunicationException('cURL request failed: [' . $errorNo . '] ' . curl_error($ch), $errorNo);
 		}
 
+		assert(is_string($response));
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 		$headers = substr($response, 0, $headerSize);
