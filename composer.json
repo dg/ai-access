@@ -16,8 +16,10 @@
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",
-		"phpstan/phpstan-nette": "^2",
 		"tracy/tracy": "^2.10",
+		"phpstan/phpstan": "^2.2@stable",
+		"phpstan/extension-installer": "^1.4@stable",
+		"nette/phpstan-rules": "^1.0",
 		"mockery/mockery": "^1.6",
 		"dg/bypass-finals": "^1.9"
 	},
@@ -28,5 +30,10 @@
 	"scripts": {
 		"phpstan": "phpstan analyse",
 		"tester": "tester tests -s"
+	},
+	"config": {
+		"allow-plugins": {
+			"phpstan/extension-installer": true
+		}
 	}
 }
