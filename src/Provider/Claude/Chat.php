@@ -24,7 +24,7 @@ final class Chat extends AIAccess\Chat\Chat
 
 	public function __construct(
 		private readonly Client $client,
-		private string $model,
+		private readonly string $model,
 	) {
 	}
 

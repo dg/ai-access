@@ -23,9 +23,9 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 
 	public function __construct(
-		private Client $client,
+		private readonly Client $client,
 		/** @var mixed[] */
-		private array $batchData,
+		private readonly array $batchData,
 	) {
 	}
 

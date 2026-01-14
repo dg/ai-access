@@ -25,7 +25,7 @@ final class ChatResponse implements Chat\Response
 
 	public function __construct(
 		/** @var mixed[] */
-		private array $rawResponse,
+		private readonly array $rawResponse,
 	) {
 		$this->parseRawResponse($this->rawResponse);
 	}

@@ -14,8 +14,8 @@ namespace AIAccess\Chat;
 class Message
 {
 	public function __construct(
-		private string $text,
-		private Role $role,
+		private readonly string $text,
+		private readonly Role $role,
 	) {
 	}
 

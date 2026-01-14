@@ -26,7 +26,7 @@ final class Batch implements AIAccess\Batch\Batch
 
 
 	public function __construct(
-		private Client $client,
+		private readonly Client $client,
 	) {
 	}
 

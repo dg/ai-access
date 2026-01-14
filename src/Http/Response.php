@@ -15,10 +15,10 @@ namespace AIAccess\Http;
 final class Response
 {
 	public function __construct(
-		private int $statusCode,
+		private readonly int $statusCode,
 		/** @var array<string, string[]> $headers HTTP headers with lowercased keys */
-		private array $headers,
-		private mixed $data,
+		private readonly array $headers,
+		private readonly mixed $data,
 	) {
 	}
 

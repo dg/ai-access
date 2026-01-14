@@ -22,8 +22,8 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 
 
 	public function __construct(
-		private string $apiKey,
-		private Http\Client $httpClient = new Http\CurlClient,
+		private readonly string $apiKey,
+		private readonly Http\Client $httpClient = new Http\CurlClient,
 	) {
 	}
 
