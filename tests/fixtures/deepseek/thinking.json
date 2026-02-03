@@ -1,0 +1,32 @@
+{
+	"id": "30081977-efa2-42d9-b30b-bb248878a4b5",
+	"object": "chat.completion",
+	"created": 1785798726,
+	"model": "deepseek-v4-flash",
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "",
+				"reasoning_content": "We need answer to user. They said \"Say OK.\" We need comply."
+			},
+			"logprobs": null,
+			"finish_reason": "length"
+		}
+	],
+	"usage": {
+		"prompt_tokens": 86,
+		"completion_tokens": 16,
+		"total_tokens": 102,
+		"prompt_tokens_details": {
+			"cached_tokens": 0
+		},
+		"completion_tokens_details": {
+			"reasoning_tokens": 16
+		},
+		"prompt_cache_hit_tokens": 0,
+		"prompt_cache_miss_tokens": 86
+	},
+	"system_fingerprint": "fp_a18b46594c_prod0820_fp8_kvcache_20260402"
+}

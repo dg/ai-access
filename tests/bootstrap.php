@@ -19,6 +19,27 @@ register_shutdown_function(function () {
 });
 
 
+require __DIR__ . '/Support/FakeHttpClient.php';
+
+
+/**
+ * Decoded API response captured from a real provider.
+ * @return mixed[]
+ */
+function fixture(string $name): array
+{
+	$data = json_decode(fixtureRaw($name . '.json'), true, flags: JSON_THROW_ON_ERROR);
+	return is_array($data) ? $data : throw new LogicException("Fixture $name is not an array.");
+}
+
+
+function fixtureRaw(string $name): string
+{
+	$file = __DIR__ . '/fixtures/' . $name;
+	return @file_get_contents($file) ?: throw new LogicException("Missing fixture $file.");
+}
+
+
 function getTempDir(): string
 {
 	$dir = __DIR__ . '/tmp/' . getmypid();

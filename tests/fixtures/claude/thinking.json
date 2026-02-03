@@ -1,0 +1,35 @@
+{
+	"model": "claude-haiku-4-5-20251001",
+	"id": "msg_011CdgfNb1yn75dPcziqMYhn",
+	"type": "message",
+	"role": "assistant",
+	"content": [
+		{
+			"type": "thinking",
+			"thinking": "27 * 453\n\nLet me break this down:\n27 * 453 = 27 * (450 + 3)\n= 27 * 450 + 27 * 3\n= 27 * 450 + 81\n\n27 * 450 = 27 * 45 * 10\n= 1215 * 10\n= 12150\n\nSo 27 * 453 = 12150 + 81 = 12231",
+			"signature": "EqUDCpMBCBAYAipABmUeWSWIKTk/PIXMHSOB0PPeMvu7+NXzE4PPEYoGGq4J2jNNsCJz+eYUNN6NpmewvOtIO7VMapetMt3PNckefzIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okZDA1N2M4YjctN2Y4Mi00ZDcxLTgyNjQtOWQ5ZTAzYzk3ZTVlEgydIa76zYm1MBBoipsaDB5oykiTOnM23ZcbZyIwQb04p3rdLa1EyjU7n7R6gR5NIc9aj6/hdXjuDPfoy2hjSqHJ3Iu3ubtJtBKn2Le2Kr4Bzck3gL5QeclBXcuWR7VQg1sX4EQs+CL5JsszRhS7vBXYoFJhs2jAdLrnHbQXPgwNgpYWBKkj2Z8Edr1H0CaEe4TWNjMvTC/X6Gvh9YDexXc2Eua2MbnC5+r6bU3j0zgxeFduSFQE4xD6n8FfzBU27zaBf30Q5RWV8EoU4/yYw5NaLkF95SkQyXVZUOXMzzE2VzMXjDYLclRI2hibDuKiiPvbFV4t0rptyr8T0ZExdG3mKvHQg0ZJwIPiED1S1xgB"
+		},
+		{
+			"type": "text",
+			"text": "27 × 453 = **12,231**\n\n(Quick calculation: 27 × 450 = 12,150, then 27 × 3 = 81, so 12,150 + 81 = 12,231)"
+		}
+	],
+	"stop_reason": "end_turn",
+	"stop_sequence": null,
+	"stop_details": null,
+	"usage": {
+		"input_tokens": 48,
+		"cache_creation_input_tokens": 0,
+		"cache_read_input_tokens": 0,
+		"cache_creation": {
+			"ephemeral_5m_input_tokens": 0,
+			"ephemeral_1h_input_tokens": 0
+		},
+		"output_tokens": 182,
+		"output_tokens_details": {
+			"thinking_tokens": 119
+		},
+		"service_tier": "standard",
+		"inference_geo": "not_available"
+	}
+}

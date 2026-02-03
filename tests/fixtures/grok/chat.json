@@ -1,0 +1,39 @@
+{
+	"id": "6e54e440-ee26-936a-8fe2-ceed5fddffdd",
+	"object": "chat.completion",
+	"created": 1785798730,
+	"model": "grok-4.3",
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "OK.",
+				"reasoning_content": "The user said: \"Say OK.\"\n",
+				"refusal": null
+			},
+			"finish_reason": "stop"
+		}
+	],
+	"usage": {
+		"prompt_tokens": 195,
+		"completion_tokens": 2,
+		"total_tokens": 309,
+		"prompt_tokens_details": {
+			"text_tokens": 195,
+			"audio_tokens": 0,
+			"image_tokens": 0,
+			"cached_tokens": 128
+		},
+		"completion_tokens_details": {
+			"reasoning_tokens": 112,
+			"audio_tokens": 0,
+			"accepted_prediction_tokens": 0,
+			"rejected_prediction_tokens": 0
+		},
+		"num_sources_used": 0,
+		"cost_in_usd_ticks": 3943500
+	},
+	"system_fingerprint": "fp_eb3c003fc66c14ed",
+	"service_tier": "default"
+}
