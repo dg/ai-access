@@ -16,7 +16,7 @@ public manual is distilled.
 **Key Features:**
 - Single unified API across multiple providers
 - Support for Chat, Batch processing, and Embeddings
-- Modern PHP 8.1+ with strict types throughout
+- Modern PHP 8.3+ with strict types throughout
 - No vendor SDK dependencies (uses native HTTP client)
 
 ## Development Commands
@@ -180,7 +180,7 @@ Assert::exception(
 
 ### PHP Standards
 - **Strict types required:** Every file must have `declare(strict_types=1)`
-- **PHP 8.1+ features:** Use enums, readonly properties, union types, match expressions
+- **PHP 8.3+ features:** Use enums, readonly properties, union types, match expressions
 - **Full type hints:** All properties, parameters, and return types must be typed
 - **Modern syntax:** Prefer concise expressions (e.g., `if (is_array($response['data'] ?? null))`)
 
