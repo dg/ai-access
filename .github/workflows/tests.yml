@@ -20,6 +20,7 @@ jobs:
                   coverage: none
 
             - run: composer install --no-progress --prefer-dist
+            - run: find examples -name '*.php' -print0 | xargs -0 -n1 php -l
             - run: vendor/bin/tester tests -s -C
             - if: failure()
               uses: actions/upload-artifact@v4
