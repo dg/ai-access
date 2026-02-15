@@ -8,7 +8,7 @@
 namespace AIAccess\Embedding;
 
 use AIAccess\LogicException;
-use function array_reduce, array_values, count, pack, sqrt, unpack;
+use function array_reduce, array_values, count, pack, sqrt, strlen, unpack;
 
 
 /**
@@ -59,11 +59,11 @@ final class Vector
 
 
 	/**
-	 * Serializes embedding into binary form.
+	 * Serializes embedding into binary form. Values are stored as 32bit floats.
 	 */
 	public function serialize(): string
 	{
-		return pack('f*', ...$this->vector);
+		return pack('g*', ...$this->vector);
 	}
 
 
@@ -72,8 +72,9 @@ final class Vector
 	 */
 	public static function deserialize(string $data): self
 	{
-		$unpacked = unpack('f*', $data);
-		if ($unpacked === false) {
+		// a length check of its own, because unpack() answers truncated data with an empty
+		// array rather than an error, and a silently empty vector is the worse outcome
+		if (strlen($data) % 4 !== 0 || ($unpacked = unpack('g*', $data)) === false) {
 			throw new LogicException('Failed to unpack binary data into floats.');
 		}
 		return new self(array_values($unpacked));

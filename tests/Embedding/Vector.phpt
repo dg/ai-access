@@ -98,6 +98,21 @@ test('Serialization and deserialization preserves values', function () {
 });
 
 
+test('truncated data throws instead of yielding a silently empty vector', function () {
+	// unpack() answers a length that is not a multiple of 4 with an empty array
+	foreach (['abc', 'a', str_repeat('x', 9)] as $corrupted) {
+		Assert::exception(
+			fn() => Vector::deserialize($corrupted),
+			LogicException::class,
+			'Failed to unpack binary data into floats.',
+		);
+	}
+
+	// an empty vector serializes to an empty string, so that roundtrip has to survive
+	Assert::same([], Vector::deserialize((new Vector([]))->serialize())->toArray());
+});
+
+
 test('Vector constructor validates array with variadic helper', function () {
 	// This should pass - all floats
 	new Vector([0.1, 0.2, 0.3]);
