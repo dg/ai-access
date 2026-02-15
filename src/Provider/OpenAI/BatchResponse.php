@@ -21,6 +21,9 @@ final class BatchResponse implements AIAccess\Batch\Response
 	/** @var ?array<string, Message> */
 	private ?array $messages = null;
 
+	/** @var array<string, string> */
+	private array $errors = [];
+
 
 	public function __construct(
 		private readonly Client $client,
@@ -46,26 +49,42 @@ final class BatchResponse implements AIAccess\Batch\Response
 	 */
 	public function getMessages(): ?array
 	{
-		if ($this->messages === null
-			&& $this->getStatus() === Status::Completed
-			&& isset($this->batchData['output_file_id'])
-		) {
-			$response = $this->client->callApi('files/' . $this->batchData['output_file_id'] . '/content', isJson: false);
-			$this->messages = $this->parseMessages($response);
-		}
-
+		$this->loadResults();
 		return $this->messages;
 	}
 
 
-	/** @return array<string, Message> */
-	private function parseMessages(string $jsonl): array
+	/**
+	 * @throws AIAccess\ServiceException
+	 */
+	public function getErrors(): array
 	{
-		$res = [];
-		$lines = explode("\n", trim($jsonl));
+		$this->loadResults();
+		return $this->errors;
+	}
 
-		foreach ($lines as $line) {
-			if (empty(trim($line))) {
+
+	private function loadResults(): void
+	{
+		if ($this->messages !== null || $this->getStatus() !== Status::Completed) {
+			return;
+		}
+
+		$this->messages = [];
+		// failed requests live in a separate error file; when everything failed, the output
+		// file does not even exist, so both files are results
+		foreach (['output_file_id', 'error_file_id'] as $field) {
+			if (isset($this->batchData[$field])) {
+				$this->parseFile($this->client->callApi('files/' . $this->batchData[$field] . '/content', isJson: false));
+			}
+		}
+	}
+
+
+	private function parseFile(string $jsonl): void
+	{
+		foreach (explode("\n", trim($jsonl)) as $line) {
+			if (trim($line) === '') {
 				continue;
 			}
 
@@ -75,7 +94,7 @@ final class BatchResponse implements AIAccess\Batch\Response
 				continue;
 			}
 
-			if (isset($lineData['response']) && $lineData['response']['status_code'] === 200) {
+			if (($lineData['response']['status_code'] ?? null) === 200) {
 				$content = '';
 				foreach ($lineData['response']['body']['output'] ?? [] as $item) {
 					if (($item['type'] ?? null) === 'message' && is_array($item['content'] ?? null)) {
@@ -86,21 +105,14 @@ final class BatchResponse implements AIAccess\Batch\Response
 						}
 					}
 				}
+				$this->messages[$customId] = new Message(trim($content), AIAccess\Chat\Role::Model);
 
-				if ($content !== '') {
-					$res[$customId] = new Message(trim($content), AIAccess\Chat\Role::Model);
-				}
-
-			} elseif (isset($lineData['error'])) {
-				$errorMsg = "Error in request '{$customId}'";
-				if (isset($lineData['error']['message'])) {
-					$errorMsg .= ': ' . $lineData['error']['message'];
-				}
-				trigger_error($errorMsg, E_USER_WARNING);
+			} else {
+				$this->errors[$customId] = $lineData['error']['message']
+					?? $lineData['response']['body']['error']['message']
+					?? 'Request failed with status ' . ($lineData['response']['status_code'] ?? '?');
 			}
 		}
-
-		return $res;
 	}
 
 
@@ -163,7 +175,7 @@ final class BatchResponse implements AIAccess\Batch\Response
 	}
 
 
-	public function getRawResult(): mixed
+	public function getRawResponse(): array
 	{
 		return $this->batchData;
 	}

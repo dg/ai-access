@@ -15,6 +15,8 @@ use AIAccess\Chat\Message;
  */
 interface Response
 {
+	function getId(): string;
+
 	/**
 	 * Gets the current status of the batch job.
 	 */
@@ -26,6 +28,12 @@ interface Response
 	 * @return ?array<string, Message>
 	 */
 	function getMessages(): ?array;
+
+	/**
+	 * Errors of individual requests, keyed by custom_id.
+	 * @return array<string, string>
+	 */
+	function getErrors(): array;
 
 	/**
 	 * Gets the error information if the batch job had any issues, otherwise null.
@@ -43,7 +51,8 @@ interface Response
 	function getCompletedAt(): ?\DateTimeImmutable;
 
 	/**
-	 * Gets the raw, unprocessed result data associated with the batch job from the API.
+	 * Gets the raw, unprocessed response data for the batch job from the API provider.
+	 * @return mixed[]
 	 */
-	function getRawResult(): mixed;
+	function getRawResponse(): array;
 }

@@ -7,6 +7,7 @@
 
 namespace AIAccess;
 
+use function is_int, is_string;
 use const JSON_THROW_ON_ERROR;
 
 
@@ -32,5 +33,21 @@ final class Helpers
 		} catch (\JsonException $e) {
 			throw new LogicException('Failed to encode request body as JSON: ' . $e->getMessage(), 0, $e);
 		}
+	}
+
+
+	public static function expectString(mixed $value, string $what): string
+	{
+		return is_string($value)
+			? $value
+			: throw new UnexpectedResponseException("Missing or invalid $what in API response.");
+	}
+
+
+	public static function expectInt(mixed $value, string $what): int
+	{
+		return is_int($value)
+			? $value
+			: throw new UnexpectedResponseException("Missing or invalid $what in API response.");
 	}
 }

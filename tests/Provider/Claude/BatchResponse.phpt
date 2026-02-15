@@ -129,16 +129,17 @@ test('getMessages only calls API once', function () {
 });
 
 
-test('getMessages handles error responses in JSONL', function () {
+test('failed requests are reported by getErrors()', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'processing_status' => 'ended',
 		'results_url' => 'https://results.url/download',
 	];
 
+	// the wire nests errored results one level deeper: result.error = {type: "error", error: {...}}
 	$jsonlResponse = <<<'JSONL'
 		{"custom_id":"task1","result":{"type":"succeeded","message":{"content":[{"type":"text","text":"Success response"}]}}}
-		{"custom_id":"task2","result":{"type":"errored","error":{"message":"Content policy violation","type":"content_policy"}}}
+		{"custom_id":"task2","result":{"type":"errored","error":{"type":"error","error":{"message":"Content policy violation","type":"content_policy"}}}}
 		JSONL;
 
 	$clientMock = Mockery::mock(Client::class);
@@ -148,14 +149,15 @@ test('getMessages handles error responses in JSONL', function () {
 
 	$response = new BatchResponse($clientMock, $batchData);
 
-	Assert::error(function () use ($response) {
-		$messages = $response->getMessages();
+	$messages = $response->getMessages();
+	Assert::count(1, $messages);
+	Assert::true(isset($messages['task1']));
+	Assert::false(isset($messages['task2']));
 
-		// Should still return the successful message
-		Assert::count(1, $messages);
-		Assert::true(isset($messages['task1']));
-		Assert::false(isset($messages['task2']));
-	}, E_USER_WARNING, "Error in request 'task2': Content policy violation (type: content_policy)");
+	Assert::same(
+		['task2' => 'Content policy violation (type: content_policy)'],
+		$response->getErrors(),
+	);
 });
 
 
@@ -283,7 +285,7 @@ test('getCompletedAt returns null for invalid or missing timestamp', function ()
 });
 
 
-test('getRawResult returns original batch data', function () {
+test('getRawResponse returns original batch data', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'processing_status' => 'in_progress',
@@ -293,7 +295,7 @@ test('getRawResult returns original batch data', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$response = new BatchResponse($clientMock, $batchData);
 
-	Assert::same($batchData, $response->getRawResult());
+	Assert::same($batchData, $response->getRawResponse());
 });
 
 

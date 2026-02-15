@@ -63,17 +63,39 @@ test('getMessages returns null for non-completed batch', function () {
 });
 
 
-test('getMessages returns null for completed batch without output_file_id', function () {
+test('a completed batch with no files is done and empty, not pending', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'status' => 'completed',
-		// No output_file_id field
+		// no output_file_id or error_file_id
 	];
 
 	$clientMock = Mockery::mock(Client::class);
 	$response = new BatchResponse($clientMock, $batchData);
 
-	Assert::null($response->getMessages());
+	Assert::same([], $response->getMessages());
+});
+
+
+test('failed requests come from the error file, even when everything failed', function () {
+	$batchData = [
+		'id' => 'batch-123',
+		'status' => 'completed',
+		'error_file_id' => 'file-err',
+		// all requests failed, so there is no output_file_id at all
+	];
+
+	$jsonl = '{"custom_id":"task1","response":{"status_code":400,"body":{"error":{"message":"Invalid model"}}},"error":null}';
+	$clientMock = Mockery::mock(Client::class);
+	$clientMock->expects('callApi')
+		->with('files/file-err/content', null, [], false)
+		->once()
+		->andReturn($jsonl);
+
+	$response = new BatchResponse($clientMock, $batchData);
+
+	Assert::same([], $response->getMessages());
+	Assert::same(['task1' => 'Invalid model'], $response->getErrors());
 });
 
 
@@ -137,7 +159,7 @@ test('getMessages only calls API once', function () {
 });
 
 
-test('getMessages handles error responses in JSONL', function () {
+test('failed requests are reported by getErrors()', function () {
 	$fileId = 'file-output-123';
 	$batchData = [
 		'id' => 'batch-123',
@@ -158,14 +180,12 @@ test('getMessages handles error responses in JSONL', function () {
 
 	$response = new BatchResponse($clientMock, $batchData);
 
-	Assert::error(function () use ($response) {
-		$messages = $response->getMessages();
+	$messages = $response->getMessages();
+	Assert::count(1, $messages);
+	Assert::true(isset($messages['task1']));
+	Assert::false(isset($messages['task2']));
 
-		// Should still return the successful message
-		Assert::count(1, $messages);
-		Assert::true(isset($messages['task1']));
-		Assert::false(isset($messages['task2']));
-	}, E_USER_WARNING, "Error in request 'task2': Content policy violation");
+	Assert::same(['task2' => 'Content policy violation'], $response->getErrors());
 });
 
 
@@ -343,7 +363,7 @@ test('getCompletedAt returns null for missing timestamp', function () {
 });
 
 
-test('getRawResult returns original batch data', function () {
+test('getRawResponse returns original batch data', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'status' => 'in_progress',
@@ -353,7 +373,7 @@ test('getRawResult returns original batch data', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$response = new BatchResponse($clientMock, $batchData);
 
-	Assert::same($batchData, $response->getRawResult());
+	Assert::same($batchData, $response->getRawResponse());
 });
 
 

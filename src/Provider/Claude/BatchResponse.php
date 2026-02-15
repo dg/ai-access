@@ -21,6 +21,9 @@ final class BatchResponse implements AIAccess\Batch\Response
 	/** @var ?array<string, Message> */
 	private ?array $messages = null;
 
+	/** @var array<string, string> */
+	private array $errors = [];
+
 
 	public function __construct(
 		private readonly Client $client,
@@ -46,26 +49,35 @@ final class BatchResponse implements AIAccess\Batch\Response
 	 */
 	public function getMessages(): ?array
 	{
-		if ($this->messages === null
-			&& $this->getStatus() === Status::Completed
-			&& isset($this->batchData['results_url'])
-		) {
-			$response = $this->client->callApi($this->batchData['results_url'], isJson: false);
-			$this->messages = $this->parseMessages($response);
-		}
-
+		$this->loadResults();
 		return $this->messages;
 	}
 
 
-	/** @return array<string, Message> */
-	private function parseMessages(string $jsonl): array
+	/**
+	 * @throws AIAccess\ServiceException
+	 */
+	public function getErrors(): array
 	{
-		$res = [];
-		$lines = explode("\n", trim($jsonl));
+		$this->loadResults();
+		return $this->errors;
+	}
 
-		foreach ($lines as $line) {
-			if (empty(trim($line))) {
+
+	private function loadResults(): void
+	{
+		if ($this->messages !== null
+			|| $this->getStatus() !== Status::Completed
+			|| !isset($this->batchData['results_url'])
+		) {
+			return;
+		}
+
+		$this->messages = [];
+		$jsonl = $this->client->callApi($this->batchData['results_url'], isJson: false);
+
+		foreach (explode("\n", trim($jsonl)) as $line) {
+			if (trim($line) === '') {
 				continue;
 			}
 
@@ -75,30 +87,24 @@ final class BatchResponse implements AIAccess\Batch\Response
 				continue;
 			}
 
-			$resultType = $lineData['result']['type'] ?? null;
-			if ($resultType === 'succeeded' && is_array($lineData['result']['message']['content'] ?? null)) {
+			$result = $lineData['result'] ?? [];
+			if (($result['type'] ?? null) === 'succeeded' && is_array($result['message']['content'] ?? null)) {
 				$content = '';
-				foreach ($lineData['result']['message']['content'] as $contentBlock) {
+				foreach ($result['message']['content'] as $contentBlock) {
 					if ($contentBlock['type'] === 'text') {
 						$content .= $contentBlock['text'];
 					}
 				}
-				$res[$customId] = new Message(trim($content), AIAccess\Chat\Role::Model);
+				$this->messages[$customId] = new Message(trim($content), AIAccess\Chat\Role::Model);
 
-			} elseif ($resultType === 'errored') {
-				$errorMsg = "Error in request '{$customId}'";
-				if (isset($lineData['result']['error'])) {
-					$error = $lineData['result']['error'];
-					$errorMsg .= ': ' . ($error['message'] ?? 'Unknown error');
-					if (isset($error['type'])) {
-						$errorMsg .= " (type: {$error['type']})";
-					}
-				}
-				trigger_error($errorMsg, E_USER_WARNING);
+			} else {
+				// the wire nests it: result.error = {type: "error", error: {type, message}}
+				$error = $result['error'] ?? [];
+				$error = is_array($error['error'] ?? null) ? $error['error'] : $error;
+				$this->errors[$customId] = ($error['message'] ?? 'Request ' . ($result['type'] ?? 'failed'))
+					. (isset($error['type']) ? " (type: {$error['type']})" : '');
 			}
 		}
-
-		return $res;
 	}
 
 
@@ -143,7 +149,7 @@ final class BatchResponse implements AIAccess\Batch\Response
 	}
 
 
-	public function getRawResult(): mixed
+	public function getRawResponse(): array
 	{
 		return $this->batchData;
 	}
