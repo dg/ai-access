@@ -9,7 +9,7 @@ namespace AIAccess\Http;
 
 use AIAccess\CommunicationException;
 use AIAccess\Helpers;
-use function is_array, is_string;
+use function defined, is_array, is_string;
 
 
 /**
@@ -22,7 +22,7 @@ final class CurlClient implements Client
 
 	/** Default timeouts in seconds */
 	private int $connectTimeout = 10;
-	private int $requestTimeout = 60;
+	private int $requestTimeout = 180;
 	private ?string $proxy = null;
 
 
@@ -79,6 +79,10 @@ final class CurlClient implements Client
 		curl_setopt($ch, CURLOPT_TIMEOUT, max($this->connectTimeout, $this->requestTimeout));
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+		curl_setopt($ch, CURLOPT_ENCODING, '');
+		if (defined('CURLOPT_PROTOCOLS_STR')) {
+			curl_setopt($ch, CURLOPT_PROTOCOLS_STR, 'http,https');
+		}
 
 		if ($payload instanceof FormData) {
 			$tmp = [];
@@ -97,6 +101,9 @@ final class CurlClient implements Client
 			$headers['content-type'] = 'application/json';
 			$headers['accept'] = 'application/json';
 			curl_setopt($ch, CURLOPT_POSTFIELDS, Helpers::encodeJson($payload));
+
+		} elseif (is_string($payload)) {
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 		}
 
 		$headers += ['User-Agent' => $this->userAgent];

@@ -158,3 +158,16 @@ test('Custom options and proxy setting', function () {
 	$response = $client->fetch('https://api.example.com/data');
 	Assert::same(200, $response->getStatusCode());
 });
+
+
+test('string payload is sent as the request body', function () {
+	CurlMocker::reset();
+	CurlMocker::$response = '{"ok":true}';
+	CurlMocker::$contentType = 'application/json';
+
+	$client = new CurlClient;
+	$client->fetch('https://api.example.com/data', 'raw body');
+
+	Assert::same('raw body', CurlMocker::$options[CURLOPT_POSTFIELDS]);
+	Assert::same('POST', CurlMocker::$options[CURLOPT_CUSTOMREQUEST]);
+});

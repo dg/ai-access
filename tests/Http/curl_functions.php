@@ -11,6 +11,7 @@ class CurlMocker
 	public static $headerSize = 0;
 	public static $httpCode = 200;
 	public static $contentType;
+	public static array $options = [];
 
 
 	public static function reset(): void
@@ -21,6 +22,7 @@ class CurlMocker
 		self::$headerSize = 0;
 		self::$httpCode = 200;
 		self::$contentType = null;
+		self::$options = [];
 	}
 }
 
@@ -33,6 +35,7 @@ function curl_init()
 
 function curl_setopt($ch, $option, $value)
 {
+	CurlMocker::$options[$option] = $value;
 	return true;
 }
 
