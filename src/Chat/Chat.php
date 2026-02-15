@@ -17,6 +17,7 @@ abstract class Chat
 	/** @var list<Message> */
 	protected array $messages = [];
 	protected ?string $systemInstruction = null;
+	protected ?Effort $effort = null;
 
 
 	/**
@@ -72,6 +73,26 @@ abstract class Chat
 	public function setSystemInstruction(string $instruction): static
 	{
 		$this->systemInstruction = $instruction;
+		return $this;
+	}
+
+
+	/**
+	 * Sets how much the model should reason before answering. Null keeps the provider's default.
+	 */
+	public function setEffort(?Effort $effort): static
+	{
+		$this->effort = $effort;
+		return $this;
+	}
+
+
+	/**
+	 * Removes all messages from the history.
+	 */
+	public function clearMessages(): static
+	{
+		$this->messages = [];
 		return $this;
 	}
 

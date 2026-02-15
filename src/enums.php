@@ -17,6 +17,19 @@ namespace AIAccess\Chat {
 	}
 
 	/**
+	 * How much effort the model should spend on reasoning before answering.
+	 */
+	enum Effort: string
+	{
+		case None = 'none';
+		case Low = 'low';
+		case Medium = 'medium';
+		case High = 'high';
+		case XHigh = 'xhigh';
+		case Max = 'max';
+	}
+
+	/**
 	 * Enum representing the standardized reason why the AI model stopped generating output.
 	 */
 	enum FinishReason: string

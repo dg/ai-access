@@ -14,8 +14,18 @@ final class Usage
 		public readonly ?int $inputTokens = null,
 		public readonly ?int $outputTokens = null,
 		public readonly ?int $reasoningTokens = null,
+		public readonly ?int $cacheReadTokens = null,
+		public readonly ?int $cacheWriteTokens = null,
 		/** @var mixed[] */
 		public readonly array $raw = [],
 	) {
+	}
+
+
+	public function getTotalTokens(): ?int
+	{
+		return $this->inputTokens === null && $this->outputTokens === null
+			? null
+			: ($this->inputTokens ?? 0) + ($this->outputTokens ?? 0);
 	}
 }
