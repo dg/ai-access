@@ -221,7 +221,7 @@ test('Non-array response throws ApiException', function () {
 
 	Assert::exception(
 		fn() => $client->callApi('models/gemini-pro:generateContent', []),
-		ApiException::class,
+		CommunicationException::class,
 		'Invalid JSON response from Gemini API',
 	);
 });

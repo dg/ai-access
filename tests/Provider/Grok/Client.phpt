@@ -218,7 +218,7 @@ test('Non-array response throws ApiException', function () {
 
 	Assert::exception(
 		fn() => $client->callApi('completions', ['model' => 'grok-1']),
-		ApiException::class,
+		CommunicationException::class,
 		'Invalid JSON response from Grok API',
 	);
 });

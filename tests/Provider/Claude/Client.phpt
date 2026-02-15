@@ -220,7 +220,7 @@ test('Non-array response throws ApiException', function () {
 
 	Assert::exception(
 		fn() => $client->callApi('messages', ['model' => 'claude-3-sonnet-20240229']),
-		ApiException::class,
+		CommunicationException::class,
 		'Invalid JSON response from Claude API',
 	);
 });

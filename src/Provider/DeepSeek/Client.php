@@ -70,6 +70,6 @@ final class Client implements AIAccess\Chat\Service
 
 		return is_array($data)
 			? $data
-			: throw new AIAccess\ApiException('Invalid JSON response from DeepSeek API');
+			: throw new AIAccess\CommunicationException('Invalid JSON response from DeepSeek API');
 	}
 }

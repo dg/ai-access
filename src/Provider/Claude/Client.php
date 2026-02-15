@@ -123,6 +123,6 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 
 		return !$isJson || is_array($data)
 			? $data
-			: throw new AIAccess\ApiException('Invalid JSON response from Claude API');
+			: throw new AIAccess\CommunicationException('Invalid JSON response from Claude API');
 	}
 }

@@ -218,7 +218,7 @@ test('Non-array response throws ApiException', function () {
 
 	Assert::exception(
 		fn() => $client->callApi('completions', ['model' => 'deepseek-coder']),
-		ApiException::class,
+		CommunicationException::class,
 		'Invalid JSON response from DeepSeek API',
 	);
 });

@@ -260,7 +260,7 @@ try {
 }
 ```
 
-`LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production.
+`LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production. It extends PHP's own `\LogicException`, which is where any PHP developer expects to find it.
 
  <!---->
 

@@ -11,7 +11,7 @@ namespace AIAccess;
 /**
  * Invalid method parameters or library state.
  */
-class LogicException extends \Exception
+class LogicException extends \LogicException
 {
 }
 

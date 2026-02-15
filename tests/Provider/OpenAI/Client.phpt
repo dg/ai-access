@@ -241,7 +241,7 @@ test('Non-array response throws ApiException', function () {
 
 	Assert::exception(
 		fn() => $client->callApi('chat/completions', ['model' => 'gpt-4']),
-		ApiException::class,
+		CommunicationException::class,
 		'Invalid JSON response from OpenAI API',
 	);
 });

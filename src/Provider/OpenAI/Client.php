@@ -205,6 +205,6 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 		return !$isJson || is_array($data)
 			? $data
-			: throw new AIAccess\ApiException('Invalid JSON response from OpenAI API');
+			: throw new AIAccess\CommunicationException('Invalid JSON response from OpenAI API');
 	}
 }

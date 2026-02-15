@@ -21,7 +21,7 @@ final class Helpers
 		try {
 			return json_decode($data, true, 512, JSON_THROW_ON_ERROR);
 		} catch (\JsonException $e) {
-			throw new CommunicationException('Invalid JSON response from API: ' . $e->getMessage());
+			throw new CommunicationException('Invalid JSON response from API: ' . $e->getMessage(), 0, $e);
 		}
 	}
 
