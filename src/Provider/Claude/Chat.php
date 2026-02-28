@@ -8,6 +8,7 @@
 namespace AIAccess\Provider\Claude;
 
 use AIAccess;
+use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use AIAccess\ServiceException;
 use function array_filter, array_flip, array_intersect_key, array_merge;
@@ -31,23 +32,23 @@ final class Chat extends AIAccess\Chat\Chat
 
 	/**
 	 * Sets options specific to this Claude chat session.
-	 * @param  ?int  $maxTokens  Maximum tokens to generate
+	 * @param  ?int  $maxOutputTokens  Maximum tokens to generate (max_tokens)
 	 * @param  ?string[]  $stopSequences  Sequences where the API will stop generating
-	 * @param  ?float  $temperature  Controls randomness (0.0-1.0)
-	 * @param  ?float  $topK  Top-k sampling parameter
-	 * @param  ?float  $topP  Nucleus sampling parameter
+	 * @param  ?float  $temperature  Controls randomness (0.0-1.0). Works on 4.6 and older only.
+	 * @param  ?int  $topK  Top-k sampling parameter. Same restriction as temperature.
+	 * @param  ?float  $topP  Nucleus sampling parameter. Same restriction as temperature.
 	 */
 	public function setOptions(
-		?int $maxTokens = null,
+		?int $maxOutputTokens = null,
 		?array $stopSequences = null,
 		?float $temperature = null,
-		?float $topK = null,
+		?int $topK = null,
 		?float $topP = null,
 	): static
 	{
 		$this->options = array_merge($this->options, array_filter(
 			[
-				'max_tokens' => $maxTokens,
+				'max_tokens' => $maxOutputTokens,
 				'stop_sequences' => $stopSequences,
 				'temperature' => $temperature,
 				'top_k' => $topK,
@@ -67,7 +68,8 @@ final class Chat extends AIAccess\Chat\Chat
 	{
 		$payload = $this->buildPayload();
 		$payload = array_intersect_key($payload, array_flip(['model', 'messages', 'system']));
-		return $this->client->callApi('v1/messages/count_tokens', $payload)['input_tokens'];
+		$response = $this->client->callApi('v1/messages/count_tokens', $payload);
+		return AIAccess\Helpers::expectInt($response['input_tokens'] ?? null, 'input_tokens');
 	}
 
 
@@ -99,11 +101,28 @@ final class Chat extends AIAccess\Chat\Chat
 			];
 		}
 
-		return [
+		$payload = [
 			'model' => $this->model,
 			'messages' => $messages,
-			'system' => $this->systemInstruction ?? '',
-			'max_tokens' => $this->options['max_tokens'] ?? 1024,
+			'max_tokens' => $this->options['max_tokens'] ?? 4096,
 		] + $this->options;
+
+		if ($this->systemInstruction !== null) {
+			$payload['system'] = $this->systemInstruction;
+		}
+
+		if ($this->effort === Effort::None) {
+			$payload['thinking'] = ['type' => 'disabled'];
+		} elseif ($this->effort !== null) {
+			$payload['output_config']['effort'] = match ($this->effort) {
+				Effort::Low => 'low',
+				Effort::Medium => 'medium',
+				Effort::High => 'high',
+				Effort::XHigh => 'xhigh',
+				Effort::Max => 'max',
+			};
+		}
+
+		return $payload;
 	}
 }

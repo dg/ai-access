@@ -204,7 +204,8 @@ Assert::exception(
 Each provider's `Chat` class implements `setOptions()` with provider-specific parameters. Common options:
 
 - **temperature**: Controls randomness (ranges vary by provider)
-- **maxTokens/maxOutputTokens**: Maximum tokens in response
+- **maxOutputTokens**: Maximum tokens in response (same name on every provider,
+  whatever the wire calls it)
 - **topP**: Nucleus sampling threshold
 - **stopSequences/stop**: Strings that halt generation
 

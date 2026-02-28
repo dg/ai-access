@@ -46,7 +46,7 @@ test('ChatResponse handles finish reasons correctly', function () {
 		['stop_reason' => 'end_turn', 'expected' => FinishReason::Complete],
 		['stop_reason' => 'stop_sequence', 'expected' => FinishReason::Complete],
 		['stop_reason' => 'max_tokens', 'expected' => FinishReason::TokenLimit],
-		['stop_reason' => 'content_filtered', 'expected' => FinishReason::ContentFiltered],
+		['stop_reason' => 'refusal', 'expected' => FinishReason::ContentFiltered],
 		['stop_reason' => 'tool_use', 'expected' => FinishReason::ToolCall],
 		['stop_reason' => 'unknown_reason', 'expected' => FinishReason::Unknown],
 		// Test missing stop_reason
@@ -79,7 +79,7 @@ test('ChatResponse correctly extracts usage information', function () {
 		'usage' => [
 			'input_tokens' => $inputTokens,
 			'output_tokens' => $outputTokens,
-			'reasoning_tokens' => $reasoningTokens,
+			'output_tokens_details' => ['thinking_tokens' => $reasoningTokens],
 			'total_tokens' => $inputTokens + $outputTokens,
 		],
 	];
@@ -107,38 +107,36 @@ test('ChatResponse returns null usage when not provided', function () {
 });
 
 
-test('ChatResponse provides content blocks access', function () {
-	$contentBlocks = [
-		['type' => 'text', 'text' => 'First block'],
-		['type' => 'text', 'text' => 'Second block'],
-	];
-
+test('ChatResponse joins multiple text blocks', function () {
 	$rawResponse = [
-		'content' => $contentBlocks,
+		'content' => [
+			['type' => 'text', 'text' => 'First block'],
+			['type' => 'text', 'text' => 'Second block'],
+		],
 		'stop_reason' => 'end_turn',
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::same($contentBlocks, $response->getContentBlocks());
+	Assert::same("First block\nSecond block", $response->getText());
+	Assert::same($rawResponse, $response->getRawResponse());
 });
 
 
-test('ChatResponse returns null contentBlocks when not provided', function () {
-	// Test with a response format that doesn't use content blocks
+test('ChatResponse ignores content that is not a list of blocks', function () {
 	$rawResponse = [
 		'content' => 'Plain text response without blocks',
 		'stop_reason' => 'end_turn',
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::null($response->getContentBlocks());
+	Assert::null($response->getText());
 });
 
 
 test('ChatResponse handles filtered content', function () {
 	$rawResponse = [
 		'content' => [['type' => 'text', 'text' => '']],
-		'stop_reason' => 'content_filtered',
+		'stop_reason' => 'refusal',
 	];
 
 	$response = new ChatResponse($rawResponse);

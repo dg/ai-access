@@ -29,7 +29,7 @@ test('getStatus returns correct Status enum for various processing_status values
 	$testCases = [
 		'in_progress' => Status::InProgress,
 		'ended' => Status::Completed,
-		'canceling' => Status::Failed,
+		'canceling' => Status::InProgress,
 		'unknown_status' => Status::Other,
 	];
 

@@ -9,6 +9,7 @@ namespace AIAccess\Provider\Claude;
 
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
+use AIAccess\Helpers;
 use function implode, is_array;
 
 
@@ -18,9 +19,7 @@ use function implode, is_array;
 final class ChatResponse implements Chat\Response
 {
 	private ?string $text = null;
-
-	/** @var mixed[]|null */
-	private ?array $contentBlocks = null;
+	private ?string $reasoning = null;
 
 
 	public function __construct(
@@ -41,9 +40,9 @@ final class ChatResponse implements Chat\Response
 	{
 		return match ($this->getRawFinishReason()) {
 			'end_turn', 'stop_sequence' => FinishReason::Complete,
-			'max_tokens' => FinishReason::TokenLimit,
+			'max_tokens', 'model_context_window_exceeded' => FinishReason::TokenLimit,
 			'tool_use' => FinishReason::ToolCall,
-			'content_filtered' => FinishReason::ContentFiltered,
+			'refusal' => FinishReason::ContentFiltered,
 			default => FinishReason::Unknown,
 		};
 	}
@@ -60,9 +59,11 @@ final class ChatResponse implements Chat\Response
 		$usage = $this->rawResponse['usage'] ?? null;
 		return is_array($usage)
 			? new Chat\Usage(
-				inputTokens: $usage['input_tokens'] ?? null,
-				outputTokens: $usage['output_tokens'] ?? null,
-				reasoningTokens: $usage['reasoning_tokens'] ?? null,
+				inputTokens: Helpers::intOrNull($usage['input_tokens'] ?? null),
+				outputTokens: Helpers::intOrNull($usage['output_tokens'] ?? null),
+				reasoningTokens: Helpers::intOrNull($usage['output_tokens_details']['thinking_tokens'] ?? null),
+				cacheReadTokens: Helpers::intOrNull($usage['cache_read_input_tokens'] ?? null),
+				cacheWriteTokens: Helpers::intOrNull($usage['cache_creation_input_tokens'] ?? null),
 				raw: $usage,
 			)
 			: null;
@@ -70,12 +71,11 @@ final class ChatResponse implements Chat\Response
 
 
 	/**
-	 * Gets all content blocks from the response, which may include text, tool_use, thinking, etc.
-	 * @return mixed[]|null
+	 * Summarized chain of thought, if the model produced one. Not part of getText().
 	 */
-	public function getContentBlocks(): ?array
+	public function getReasoning(): ?string
 	{
-		return $this->contentBlocks;
+		return $this->reasoning;
 	}
 
 
@@ -88,21 +88,20 @@ final class ChatResponse implements Chat\Response
 	/** @param mixed[] $data */
 	private function parseRawResponse(array $data): void
 	{
-		if (is_array($data['content'] ?? null)) {
-			$this->contentBlocks = $data['content'];
-
-			$textParts = [];
-			foreach ($data['content'] as $block) {
-				$type = $block['type'] ?? null;
-				if ($type === 'text' && isset($block['text'])) {
-					$textParts[] = $block['text'];
-				} elseif ($type === 'thinking') {
-					$textParts[] = '[Thinking: ' . ($block['text'] ?? '') . ']';
-				}
-			}
-
-			$text = implode("\n", $textParts);
-			$this->text = $text === '' ? null : $text;
+		if (!is_array($data['content'] ?? null)) {
+			return;
 		}
+
+		$textParts = $thinkingParts = [];
+		foreach ($data['content'] as $block) {
+			if (($block['type'] ?? null) === 'text' && isset($block['text'])) {
+				$textParts[] = $block['text'];
+			} elseif (($block['type'] ?? null) === 'thinking' && isset($block['thinking'])) {
+				$thinkingParts[] = $block['thinking'];
+			}
+		}
+
+		$this->text = ($text = implode("\n", $textParts)) === '' ? null : $text;
+		$this->reasoning = ($thinking = implode("\n", $thinkingParts)) === '' ? null : $thinking;
 	}
 }

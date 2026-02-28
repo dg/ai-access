@@ -72,7 +72,7 @@ test('countTokens includes only necessary fields when options are set', function
 		->once()
 		->with('v1/messages/count_tokens', Mockery::on(function ($payload) {
 			// Only these three fields should be present
-			$expectedFields = ['model', 'messages', 'system'];
+			$expectedFields = ['model', 'messages'];
 			$actualFields = array_keys($payload);
 			sort($expectedFields);
 			sort($actualFields);
@@ -84,7 +84,7 @@ test('countTokens includes only necessary fields when options are set', function
 	$chat = new Chat($clientMock, $model);
 	// Set various options that should NOT be included in token count payload
 	$chat->setOptions(
-		maxTokens: 500,
+		maxOutputTokens: 500,
 		stopSequences: ['STOP'],
 		temperature: 0.7,
 		topK: 10,

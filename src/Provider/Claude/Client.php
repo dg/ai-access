@@ -54,7 +54,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 			'after_id' => $after,
 			'before_id' => $before,
 		], fn($v) => $v !== null);
-		$response = $this->callApi('v1/messages/batches?' . http_build_query($params));
+		$response = $this->callApi('v1/messages/batches' . ($params ? '?' . http_build_query($params) : ''));
 
 		$res = [];
 		foreach ($response['data'] ?? [] as $batchData) {

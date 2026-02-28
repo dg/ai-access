@@ -26,7 +26,7 @@ test('Chat setOptions returns self for fluent interface', function () {
 	$chat = new Chat($clientMock, 'claude-3-opus-20240229');
 
 	$result = $chat->setOptions(
-		maxTokens: 100,
+		maxOutputTokens: 100,
 		stopSequences: ['STOP'],
 		temperature: 0.7,
 		topK: 10,
@@ -63,7 +63,7 @@ test('Chat builds correct API payload with minimal options', function () {
 	Assert::count(1, $capturedPayload['messages']);
 	Assert::same('user', $capturedPayload['messages'][0]['role']);
 	Assert::same($userMessage, $capturedPayload['messages'][0]['content']);
-	Assert::same(1024, $capturedPayload['max_tokens']); // Default value
+	Assert::same(4096, $capturedPayload['max_tokens']); // Default value
 });
 
 
@@ -81,7 +81,7 @@ test('Chat builds correct API payload with all options', function () {
 
 	$chat = new Chat($clientMock, $modelName);
 	$chat->setOptions(
-		maxTokens: 500,
+		maxOutputTokens: 500,
 		stopSequences: ['STOP', 'END'],
 		temperature: 0.5,
 		topK: 20,
@@ -96,7 +96,7 @@ test('Chat builds correct API payload with all options', function () {
 	Assert::same(500, $capturedPayload['max_tokens']);
 	Assert::same(['STOP', 'END'], $capturedPayload['stop_sequences']);
 	Assert::same(0.5, $capturedPayload['temperature']);
-	Assert::same(20.0, $capturedPayload['top_k']);
+	Assert::same(20, $capturedPayload['top_k']);
 	Assert::same(0.8, $capturedPayload['top_p']);
 });
 
@@ -181,7 +181,7 @@ test('Chat handles empty system instruction', function () {
 	$chat->addMessage('Hello', Role::User);
 	$chat->sendMessage(null);
 
-	Assert::same('', $capturedPayload['system']);
+	Assert::false(isset($capturedPayload['system']));
 });
 
 

@@ -36,9 +36,8 @@ final class BatchResponse implements AIAccess\Batch\Response
 	public function getStatus(): Status
 	{
 		return match ($this->batchData['processing_status'] ?? null) {
-			'in_progress' => Status::InProgress,
+			'in_progress', 'canceling' => Status::InProgress,
 			'ended' => Status::Completed,
-			'canceling' => Status::Failed,
 			default => Status::Other,
 		};
 	}
@@ -157,6 +156,6 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 	public function getId(): string
 	{
-		return $this->batchData['id'];
+		return AIAccess\Helpers::expectString($this->batchData['id'] ?? null, 'batch id');
 	}
 }
