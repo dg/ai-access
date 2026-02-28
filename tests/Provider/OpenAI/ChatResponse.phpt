@@ -79,34 +79,20 @@ test('ChatResponse handles multiple message blocks', function () {
 
 
 test('ChatResponse handles finish reasons correctly', function () {
-	$testCases = [
-		['reason' => 'stop', 'expected' => FinishReason::Complete],
-		['reason' => 'length', 'expected' => FinishReason::TokenLimit],
-		['reason' => 'max_output_tokens', 'expected' => FinishReason::TokenLimit],
-		['reason' => 'content_filter', 'expected' => FinishReason::ContentFiltered],
-		['reason' => 'tool_calls', 'expected' => FinishReason::ToolCall],
-		['reason' => 'unknown_reason', 'expected' => FinishReason::Unknown],
-		['no_reason' => true, 'expected' => FinishReason::Complete],
+	$message = [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => 'Test text']]]];
+
+	$cases = [
+		[['status' => 'completed', 'output' => $message], FinishReason::Complete],
+		[['output' => $message], FinishReason::Complete],
+		[['status' => 'incomplete', 'incomplete_details' => ['reason' => 'max_output_tokens']], FinishReason::TokenLimit],
+		[['status' => 'incomplete', 'incomplete_details' => ['reason' => 'content_filter']], FinishReason::ContentFiltered],
+		[['status' => 'incomplete', 'incomplete_details' => ['reason' => 'whatever']], FinishReason::Unknown],
+		[['status' => 'cancelled'], FinishReason::Cancelled],
+		[['status' => 'queued'], FinishReason::Unknown],
 	];
 
-	foreach ($testCases as $testCase) {
-		$rawResponse = [
-			'output' => [
-				[
-					'type' => 'message',
-					'content' => [
-						['type' => 'output_text', 'text' => 'Test text'],
-					],
-				],
-			],
-		];
-
-		if (!($testCase['no_reason'] ?? false)) {
-			$rawResponse['incomplete_details'] = ['reason' => $testCase['reason']];
-		}
-
-		$response = new ChatResponse($rawResponse);
-		Assert::same($testCase['expected'], $response->getFinishReason());
+	foreach ($cases as [$raw, $expected]) {
+		Assert::same($expected, (new ChatResponse($raw))->getFinishReason());
 	}
 });
 
@@ -128,7 +114,7 @@ test('ChatResponse correctly extracts usage information', function () {
 		'usage' => [
 			'input_tokens' => $inputTokens,
 			'output_tokens' => $outputTokens,
-			'reasoning_tokens' => $reasoningTokens,
+			'output_tokens_details' => ['reasoning_tokens' => $reasoningTokens],
 			'total_tokens' => $inputTokens + $outputTokens,
 		],
 	];

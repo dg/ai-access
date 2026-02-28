@@ -28,13 +28,11 @@ test('Chat setOptions returns self for fluent interface', function () {
 		maxOutputTokens: 1000,
 		temperature: 0.7,
 		topP: 0.9,
-		truncation: 'auto',
 		metadata: ['user_id' => '12345'],
 		parallelToolCalls: true,
 		previousResponseId: 'resp_1234',
 		reasoning: ['enabled' => true],
 		store: true,
-		stream: false,
 		text: ['format' => 'paragraph'],
 		include: ['reasoning'],
 	);
@@ -103,12 +101,10 @@ test('Chat builds correct API payload with all options', function () {
 		maxOutputTokens: 1000,
 		temperature: 0.7,
 		topP: 0.9,
-		truncation: 'auto',
 		metadata: ['user_id' => '12345'],
 		parallelToolCalls: true,
 		reasoning: ['enabled' => true],
 		store: true,
-		stream: false,
 		text: ['format' => 'paragraph'],
 		include: ['reasoning'],
 		tools: [['type' => 'function', 'function' => ['name' => 'get_weather']]],
@@ -122,12 +118,10 @@ test('Chat builds correct API payload with all options', function () {
 	Assert::same(1000, $capturedPayload['max_output_tokens']);
 	Assert::same(0.7, $capturedPayload['temperature']);
 	Assert::same(0.9, $capturedPayload['top_p']);
-	Assert::same('auto', $capturedPayload['truncation']);
 	Assert::same(['user_id' => '12345'], $capturedPayload['metadata']);
 	Assert::true($capturedPayload['parallel_tool_calls']);
 	Assert::same(['enabled' => true], $capturedPayload['reasoning']);
 	Assert::true($capturedPayload['store']);
-	Assert::false($capturedPayload['stream']);
 	Assert::same(['format' => 'paragraph'], $capturedPayload['text']);
 	Assert::same(['reasoning'], $capturedPayload['include']);
 	Assert::count(1, $capturedPayload['tools']);

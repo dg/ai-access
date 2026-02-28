@@ -159,7 +159,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	/**
 	 * Sets or updates client-wide options.
 	 * @param  ?string  $customBaseUrl  Override the base API URL. Null leaves current setting unchanged.
-	 * @param  ?string  $organizationId  Set the OpenAI Organization ID. Null leaves current setting unchanged or removes it.
+	 * @param  ?string  $organizationId  Set the OpenAI Organization ID. Null leaves it unchanged, empty string removes it.
 	 */
 	public function setOptions(
 		?string $customBaseUrl = null,
@@ -170,7 +170,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			$this->baseUrl = rtrim($customBaseUrl, '/') . '/';
 		}
 		if ($organizationId !== null) {
-			$this->organizationId = $organizationId;
+			$this->organizationId = $organizationId === '' ? null : $organizationId;
 		}
 		return $this;
 	}

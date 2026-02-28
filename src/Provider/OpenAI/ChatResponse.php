@@ -9,6 +9,7 @@ namespace AIAccess\Provider\OpenAI;
 
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
+use AIAccess\Helpers;
 use function implode, is_array, is_string;
 
 
@@ -18,6 +19,7 @@ use function implode, is_array, is_string;
 final class ChatResponse implements Chat\Response
 {
 	private ?string $text = null;
+	private ?string $refusal = null;
 
 
 	public function __construct(
@@ -36,11 +38,18 @@ final class ChatResponse implements Chat\Response
 
 	public function getFinishReason(): FinishReason
 	{
-		return match ($this->getRawFinishReason()) {
-			'stop', null => FinishReason::Complete,
-			'length', 'max_output_tokens' => FinishReason::TokenLimit,
-			'content_filter' => FinishReason::ContentFiltered,
-			'tool_calls' => FinishReason::ToolCall,
+		if ($this->refusal !== null) {
+			return FinishReason::ContentFiltered;
+		}
+
+		return match ($this->rawResponse['status'] ?? null) {
+			'incomplete' => match ($this->getRawFinishReason()) {
+				'max_output_tokens' => FinishReason::TokenLimit,
+				'content_filter' => FinishReason::ContentFiltered,
+				default => FinishReason::Unknown,
+			},
+			'cancelled' => FinishReason::Cancelled,
+			'completed', null => $this->hasToolCall() ? FinishReason::ToolCall : FinishReason::Complete,
 			default => FinishReason::Unknown,
 		};
 	}
@@ -48,7 +57,27 @@ final class ChatResponse implements Chat\Response
 
 	public function getRawFinishReason(): mixed
 	{
-		return $this->rawResponse['incomplete_details']['reason'] ?? null;
+		return $this->rawResponse['incomplete_details']['reason'] ?? $this->rawResponse['status'] ?? null;
+	}
+
+
+	/**
+	 * Explanation of why the model declined to answer, if it did.
+	 */
+	public function getRefusal(): ?string
+	{
+		return $this->refusal;
+	}
+
+
+	private function hasToolCall(): bool
+	{
+		foreach ($this->rawResponse['output'] ?? [] as $item) {
+			if (($item['type'] ?? null) === 'function_call') {
+				return true;
+			}
+		}
+		return false;
 	}
 
 
@@ -57,9 +86,11 @@ final class ChatResponse implements Chat\Response
 		$usage = $this->rawResponse['usage'] ?? null;
 		return is_array($usage)
 			? new Chat\Usage(
-				inputTokens: $usage['input_tokens'] ?? null,
-				outputTokens: $usage['output_tokens'] ?? null,
-				reasoningTokens: $usage['reasoning_tokens'] ?? null,
+				inputTokens: Helpers::intOrNull($usage['input_tokens'] ?? null),
+				outputTokens: Helpers::intOrNull($usage['output_tokens'] ?? null),
+				reasoningTokens: Helpers::intOrNull($usage['output_tokens_details']['reasoning_tokens'] ?? null),
+				cacheReadTokens: Helpers::intOrNull($usage['input_tokens_details']['cached_tokens'] ?? null),
+				cacheWriteTokens: Helpers::intOrNull($usage['input_tokens_details']['cache_write_tokens'] ?? null),
 				raw: $usage,
 			)
 			: null;
@@ -75,29 +106,21 @@ final class ChatResponse implements Chat\Response
 	/** @param mixed[] $data */
 	private function parseRawResponse(array $data): void
 	{
-		if (isset($data['blocked']) && $data['blocked'] === true) {
-			return;
-		}
-
-		if (is_array($data['output'] ?? null)) {
-			$textParts = [];
-			foreach ($data['output'] as $item) {
-				if (
-					($item['type'] ?? null) === 'message'
-					&& is_array($item['content'] ?? null)
-				) {
-					foreach ($item['content'] as $block) {
-						if (
-							($block['type'] ?? null) === 'output_text'
-							&& is_string($block['text'] ?? null)
-						) {
-							$textParts[] = $block['text'];
-						}
-					}
+		$textParts = $refusals = [];
+		foreach ($data['output'] ?? [] as $item) {
+			if (($item['type'] ?? null) !== 'message' || !is_array($item['content'] ?? null)) {
+				continue;
+			}
+			foreach ($item['content'] as $block) {
+				if (($block['type'] ?? null) === 'output_text' && is_string($block['text'] ?? null)) {
+					$textParts[] = $block['text'];
+				} elseif (($block['type'] ?? null) === 'refusal' && is_string($block['refusal'] ?? null)) {
+					$refusals[] = $block['refusal'];
 				}
 			}
-
-			$this->text = $textParts ? implode("\n", $textParts) : null;
 		}
+
+		$this->text = ($text = implode("\n", $textParts)) === '' ? null : $text;
+		$this->refusal = ($refusal = implode("\n", $refusals)) === '' ? null : $refusal;
 	}
 }

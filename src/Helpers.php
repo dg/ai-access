@@ -36,6 +36,17 @@ final class Helpers
 	}
 
 
+	/**
+	 * Reads an optional integer from a response; anything else counts as absent. Token counts
+	 * feed ?int properties, and a foreign endpoint sending a float or a string must degrade
+	 * to null, not to an uncatchable TypeError.
+	 */
+	public static function intOrNull(mixed $value): ?int
+	{
+		return is_int($value) ? $value : null;
+	}
+
+
 	public static function expectString(mixed $value, string $what): string
 	{
 		return is_string($value)
