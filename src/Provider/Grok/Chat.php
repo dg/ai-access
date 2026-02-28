@@ -8,6 +8,7 @@
 namespace AIAccess\Provider\Grok;
 
 use AIAccess;
+use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use function array_filter, array_merge;
 
@@ -34,13 +35,11 @@ final class Chat extends AIAccess\Chat\Chat
 	 * @param  ?int  $maxOutputTokens  Maximum completion tokens (max_completion_tokens).
 	 * @param  ?float  $temperature  Sampling temperature (0.0-2.0).
 	 * @param  ?float  $topP  Nucleus sampling parameter (0.0-1.0).
-	 * @param  ?float  $frequencyPenalty  Penalizes new tokens based on frequency (-2.0 to 2.0).
-	 * @param  ?float  $presencePenalty  Penalizes new tokens based on presence (-2.0 to 2.0).
-	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating.
-	 * @param  ?bool  $stream  Enable streaming response.
+	 * @param  ?float  $frequencyPenalty  Penalizes new tokens based on frequency (-2.0 to 2.0). Not supported by reasoning models.
+	 * @param  ?float  $presencePenalty  Penalizes new tokens based on presence (-2.0 to 2.0). Not supported by reasoning models.
+	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating. Not supported by reasoning models.
 	 * @param  ?int  $seed  Seed for deterministic sampling (best effort).
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
-	 * @param  ?string $reasoningEffort Control thinking effort for reasoning models ('low', 'high').
 	 * @param  ?mixed[]  $tools  List of tools the model may call.
 	 * @param  string|mixed[]|null  $toolChoice  Controls which tool is called.
 	 */
@@ -51,10 +50,8 @@ final class Chat extends AIAccess\Chat\Chat
 		?float $frequencyPenalty = null,
 		?float $presencePenalty = null,
 		string|array|null $stop = null,
-		?bool $stream = null,
 		?int $seed = null,
 		?array $responseFormat = null,
-		?string $reasoningEffort = null,
 		?array $tools = null,
 		string|array|null $toolChoice = null,
 	): static
@@ -67,13 +64,10 @@ final class Chat extends AIAccess\Chat\Chat
 				'frequency_penalty' => $frequencyPenalty,
 				'presence_penalty' => $presencePenalty,
 				'stop' => $stop,
-				'stream' => $stream,
 				'seed' => $seed,
 				'response_format' => $responseFormat,
-				'reasoning_effort' => $reasoningEffort,
 				'tools' => $tools,
 				'tool_choice' => $toolChoice,
-				// Note: logprobs, top_logprobs could be added if needed
 			],
 			fn($value) => $value !== null,
 		));
@@ -116,9 +110,20 @@ final class Chat extends AIAccess\Chat\Chat
 			];
 		}
 
-		return [
+		$payload = [
 			'model' => $this->model,
 			'messages' => $messages,
 		] + $this->options;
+
+		if ($this->effort !== null) {
+			$payload['reasoning_effort'] = match ($this->effort) {
+				Effort::None => 'none',
+				Effort::Low => 'low',
+				Effort::Medium => 'medium',
+				Effort::High, Effort::XHigh, Effort::Max => 'high',
+			};
+		}
+
+		return $payload;
 	}
 }

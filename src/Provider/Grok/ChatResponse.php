@@ -41,7 +41,7 @@ final class ChatResponse implements Chat\Response
 		}
 
 		return match ($this->getRawFinishReason()) {
-			'stop', null => FinishReason::Complete,
+			'stop', 'end_turn', null => FinishReason::Complete,
 			'length' => FinishReason::TokenLimit,
 			'tool_calls' => FinishReason::ToolCall,
 			'content_filter' => FinishReason::ContentFiltered,
@@ -67,6 +67,7 @@ final class ChatResponse implements Chat\Response
 				inputTokens: $usage['prompt_tokens'] ?? null,
 				outputTokens: $usage['completion_tokens'] ?? null,
 				reasoningTokens: $usage['completion_tokens_details']['reasoning_tokens'] ?? null,
+				cacheReadTokens: $usage['prompt_tokens_details']['cached_tokens'] ?? null,
 				raw: $usage,
 			)
 			: null;

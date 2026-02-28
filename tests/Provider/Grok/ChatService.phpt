@@ -31,10 +31,8 @@ test('Chat setOptions returns self for fluent interface', function () {
 		frequencyPenalty: 0.5,
 		presencePenalty: 0.5,
 		stop: ['STOP'],
-		stream: false,
 		seed: 12345,
 		responseFormat: ['type' => 'json_object'],
-		reasoningEffort: 'high',
 	);
 
 	Assert::same($chat, $result);
@@ -101,10 +99,8 @@ test('Chat builds correct API payload with all options', function () {
 		frequencyPenalty: 0.3,
 		presencePenalty: 0.2,
 		stop: ['STOP', 'END'],
-		stream: false,
 		seed: 12345,
 		responseFormat: ['type' => 'json_object'],
-		reasoningEffort: 'high',
 		tools: [['type' => 'function', 'function' => ['name' => 'get_weather']]],
 		toolChoice: 'auto',
 	);
@@ -120,10 +116,8 @@ test('Chat builds correct API payload with all options', function () {
 	Assert::same(0.3, $capturedPayload['frequency_penalty']);
 	Assert::same(0.2, $capturedPayload['presence_penalty']);
 	Assert::same(['STOP', 'END'], $capturedPayload['stop']);
-	Assert::false($capturedPayload['stream']);
 	Assert::same(12345, $capturedPayload['seed']);
 	Assert::same(['type' => 'json_object'], $capturedPayload['response_format']);
-	Assert::same('high', $capturedPayload['reasoning_effort']);
 	Assert::count(1, $capturedPayload['tools']);
 	Assert::same('auto', $capturedPayload['tool_choice']);
 });
