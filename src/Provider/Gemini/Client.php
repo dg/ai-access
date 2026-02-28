@@ -50,28 +50,28 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 		?int $outputDimensionality = null,
 	): array
 	{
-		if (empty($input)) {
-			return [];
+		if (!$input) {
+			throw new AIAccess\LogicException('Input cannot be empty.');
 		}
+		if ($title !== null && $taskType !== 'RETRIEVAL_DOCUMENT') {
+			throw new AIAccess\LogicException("The 'title' parameter requires taskType RETRIEVAL_DOCUMENT.");
+		}
+
+		$config = array_filter([
+			'taskType' => $taskType,
+			'title' => $title,
+			'outputDimensionality' => $outputDimensionality,
+		], fn($v) => $v !== null);
 
 		$requests = [];
 		foreach ($input as $text) {
 			if ($text === '') {
 				throw new AIAccess\LogicException('All input elements must be non-empty strings.');
 			}
-			$content = ['parts' => [['text' => $text]]];
-			$request = ['model' => "models/$model", 'content' => $content];
-
-			if ($taskType !== null) {
-				$request['taskType'] = $taskType;
+			$request = ['model' => "models/$model", 'content' => ['parts' => [['text' => $text]]]];
+			if ($config) {
+				$request['embedContentConfig'] = $config;
 			}
-			if ($title !== null && $taskType === 'RETRIEVAL_DOCUMENT') {
-				$request['title'] = $title;
-			}
-			if ($outputDimensionality !== null) {
-				$request['outputDimensionality'] = $outputDimensionality;
-			}
-
 			$requests[] = $request;
 		}
 
@@ -87,7 +87,9 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 		}
 
 		if (count($results) !== count($input)) {
-			trigger_error('Number of returned embeddings does not match the number of inputs.', E_USER_WARNING);
+			throw new AIAccess\UnexpectedResponseException(
+				'Number of returned embeddings (' . count($results) . ') does not match the number of inputs (' . count($input) . ').',
+			);
 		}
 		return array_values($results);
 	}
@@ -116,8 +118,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 	 */
 	public function callApi(string $endpoint, array $payload): array
 	{
-		$url = $this->baseUrl . $endpoint . '?key=' . $this->apiKey;
-		$response = $this->httpClient->fetch($url, $payload);
+		$response = $this->httpClient->fetch($this->baseUrl . $endpoint, $payload, ['x-goog-api-key' => $this->apiKey]);
 		$data = $response->getData();
 
 		if ($response->getStatusCode() >= 400) {

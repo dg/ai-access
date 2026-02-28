@@ -49,7 +49,8 @@ test('ChatResponse parses multipart text response', function () {
 
 	$response = new ChatResponse($rawResponse);
 
-	Assert::same("Part 1\nPart 2", $response->getText());
+	// parts are slices of one continuous answer, so nothing is inserted between them
+	Assert::same('Part 1Part 2', $response->getText());
 });
 
 
@@ -76,7 +77,7 @@ test('ChatResponse handles finish reasons correctly', function () {
 		['finishReason' => 'MAX_TOKENS', 'expected' => FinishReason::TokenLimit],
 		['finishReason' => 'SAFETY', 'expected' => FinishReason::ContentFiltered],
 		['finishReason' => 'RECITATION', 'expected' => FinishReason::ContentFiltered],
-		['finishReason' => 'TOOL_CALLS', 'expected' => FinishReason::ToolCall],
+		['finishReason' => 'PROHIBITED_CONTENT', 'expected' => FinishReason::ContentFiltered],
 		['finishReason' => 'OTHER_REASON', 'expected' => FinishReason::Unknown],
 		// Test missing finishReason
 		['no_finish_reason' => true, 'expected' => FinishReason::Unknown],

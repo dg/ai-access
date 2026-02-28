@@ -8,16 +8,16 @@ use Tester\Assert;
 require __DIR__ . '/../../bootstrap.php';
 
 
-test('calculateEmbeddings returns empty array for empty input', function () {
+test('calculateEmbeddings rejects empty input', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$clientMock->makePartial();
-
-	// No API call should be made for empty input
 	$clientMock->shouldNotReceive('callApi');
 
-	$result = $clientMock->calculateEmbeddings('embedding-001', []);
-
-	Assert::same([], $result);
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', []),
+		AIAccess\LogicException::class,
+		'Input cannot be empty.',
+	);
 });
 
 
@@ -95,7 +95,7 @@ test('calculateEmbeddings with taskType parameter', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['taskType'] === $taskType))
+		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType))
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($model, $input, $taskType);
@@ -121,7 +121,7 @@ test('calculateEmbeddings with title for document retrieval', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['taskType'] === $taskType && $payload['requests'][0]['title'] === $title))
+		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType && $payload['requests'][0]['embedContentConfig']['title'] === $title))
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($model, $input, $taskType, $title);
@@ -146,7 +146,7 @@ test('calculateEmbeddings with outputDimensionality parameter', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['outputDimensionality'] === $dimensionality))
+		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['outputDimensionality'] === $dimensionality))
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($model, $input, null, null, $dimensionality);
@@ -157,57 +157,27 @@ test('calculateEmbeddings with outputDimensionality parameter', function () {
 });
 
 
-test('calculateEmbeddings ignores title when taskType is not RETRIEVAL_DOCUMENT', function () {
-	$model = 'embedding-001';
-	$input = ['Query text'];
-	$taskType = 'RETRIEVAL_QUERY';
-	$title = 'Should be ignored';
-
-	$mockValues = [0.1, 0.2, 0.3];
-	$expectedResponse = [
-		'embeddings' => [
-			['values' => $mockValues],
-		],
-	];
-
+test('calculateEmbeddings rejects title without RETRIEVAL_DOCUMENT', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
-	$clientMock->expects('callApi')
-		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['taskType'] === $taskType && !isset($payload['requests'][0]['title'])))
-		->andReturn($expectedResponse);
+	$clientMock->shouldNotReceive('callApi');
 
-	$results = $clientMock->calculateEmbeddings($model, $input, $taskType, $title);
-
-	Assert::count(1, $results);
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', ['text'], 'RETRIEVAL_QUERY', 'Title'),
+		AIAccess\LogicException::class,
+	);
 });
 
 
-test('calculateEmbeddings warns when embedding count mismatches input count', function () {
-	$model = 'embedding-001';
-	$input = ['Text 1', 'Text 2', 'Text 3'];
-
-	// Only return 2 embeddings for 3 inputs
-	$mockValues1 = [0.1, 0.2, 0.3];
-	$mockValues2 = [0.4, 0.5, 0.6];
-
-	$expectedResponse = [
-		'embeddings' => [
-			['values' => $mockValues1],
-			['values' => $mockValues2],
-		],
-	];
-
+test('calculateEmbeddings fails when the count does not match the input', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->andReturn($expectedResponse);
+		->andReturn(['embeddings' => [['values' => [0.1]], ['values' => [0.2]]]]);
 
-	Assert::error(function () use ($clientMock, $model, $input) {
-		$results = $clientMock->calculateEmbeddings($model, $input);
-
-		// Should still return the available embeddings
-		Assert::count(2, $results);
-	}, E_USER_WARNING, 'Number of returned embeddings does not match the number of inputs.');
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', ['Text 1', 'Text 2', 'Text 3']),
+		AIAccess\UnexpectedResponseException::class,
+	);
 });
 
 
@@ -228,22 +198,14 @@ test('calculateEmbeddings handles API errors', function () {
 });
 
 
-test('calculateEmbeddings handles malformed API response', function () {
-	$model = 'embedding-001';
-	$input = ['Malformed test'];
-
-	// Response without 'embeddings' array
-	$malformedResponse = ['other' => 'data'];
-
+test('calculateEmbeddings fails on a malformed API response', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->andReturn($malformedResponse);
+		->andReturn(['unexpected_key' => 'unexpected_value']);
 
-	Assert::error(function () use ($clientMock, $model, $input) {
-		$results = $clientMock->calculateEmbeddings($model, $input);
-
-		// Should return empty array for malformed response
-		Assert::count(0, $results);
-	}, E_USER_WARNING, 'Number of returned embeddings does not match the number of inputs.');
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', ['Text']),
+		AIAccess\UnexpectedResponseException::class,
+	);
 });

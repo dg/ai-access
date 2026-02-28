@@ -8,6 +8,7 @@
 namespace AIAccess\Provider\Gemini;
 
 use AIAccess;
+use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use function array_filter, array_flip, array_intersect_key, array_merge, compact;
 
@@ -34,16 +35,16 @@ final class Chat extends AIAccess\Chat\Chat
 	 * @param  ?int  $maxOutputTokens  Maximum tokens to generate.
 	 * @param  ?mixed[]  $safetySettings  Safety filter settings.
 	 * @param  ?string[]  $stopSequences  Sequences where the API will stop generating.
-	 * @param  ?float  $temperature  Controls randomness (0.0-1.0).
-	 * @param  ?float  $topK  Top-k sampling parameter.
-	 * @param  ?float  $topP  Nucleus sampling parameter.
+	 * @param  ?float  $temperature  Controls randomness (0.0-2.0). Deprecated, silently ignored by Gemini 3.6 and later.
+	 * @param  ?int  $topK  Top-k sampling parameter. Same deprecation as temperature.
+	 * @param  ?float  $topP  Nucleus sampling parameter. Same deprecation as temperature.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
 		?array $safetySettings = null,
 		?array $stopSequences = null,
 		?float $temperature = null,
-		?float $topK = null,
+		?int $topK = null,
 		?float $topP = null,
 	): static
 	{
@@ -104,6 +105,16 @@ final class Chat extends AIAccess\Chat\Chat
 		);
 		if ($generationConfig) {
 			$payload['generationConfig'] = $generationConfig;
+		}
+
+		if ($this->effort !== null) {
+			$payload['generationConfig']['thinkingConfig'] = $this->effort === Effort::None
+				? ['thinkingBudget' => 0]
+				: ['thinkingLevel' => match ($this->effort) {
+					Effort::Low => 'LOW',
+					Effort::Medium => 'MEDIUM',
+					Effort::High, Effort::XHigh, Effort::Max => 'HIGH',
+				}];
 		}
 
 		if (isset($this->options['safetySettings'])) {

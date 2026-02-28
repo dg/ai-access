@@ -9,6 +9,7 @@ namespace AIAccess\Provider\Gemini;
 
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
+use AIAccess\Helpers;
 use function implode, is_array, is_string;
 
 
@@ -18,6 +19,7 @@ use function implode, is_array, is_string;
 final class ChatResponse implements Chat\Response
 {
 	private ?string $text = null;
+	private ?string $reasoning = null;
 
 
 	public function __construct(
@@ -36,11 +38,16 @@ final class ChatResponse implements Chat\Response
 
 	public function getFinishReason(): FinishReason
 	{
+		// a blocked prompt has no candidates at all; the reason lives in promptFeedback
+		if (isset($this->rawResponse['promptFeedback']['blockReason'])) {
+			return FinishReason::ContentFiltered;
+		}
+
 		return match ($this->getRawFinishReason()) {
 			'STOP' => FinishReason::Complete,
 			'MAX_TOKENS' => FinishReason::TokenLimit,
-			'SAFETY', 'RECITATION' => FinishReason::ContentFiltered,
-			'TOOL_CALLS' => FinishReason::ToolCall,
+			'SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII',
+			'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT', 'IMAGE_RECITATION' => FinishReason::ContentFiltered,
 			default => FinishReason::Unknown,
 		};
 	}
@@ -48,7 +55,18 @@ final class ChatResponse implements Chat\Response
 
 	public function getRawFinishReason(): mixed
 	{
-		return $this->rawResponse['candidates'][0]['finishReason'] ?? null;
+		return $this->rawResponse['candidates'][0]['finishReason']
+			?? $this->rawResponse['promptFeedback']['blockReason']
+			?? null;
+	}
+
+
+	/**
+	 * Summary of the model's thinking, if it was requested. Not part of getText().
+	 */
+	public function getReasoning(): ?string
+	{
+		return $this->reasoning;
 	}
 
 
@@ -57,9 +75,10 @@ final class ChatResponse implements Chat\Response
 		$usage = $this->rawResponse['usageMetadata'] ?? null;
 		return is_array($usage)
 			? new Chat\Usage(
-				inputTokens: $usage['promptTokenCount'] ?? null,
-				outputTokens: $usage['candidatesTokenCount'] ?? null,
-				reasoningTokens: null,
+				inputTokens: Helpers::intOrNull($usage['promptTokenCount'] ?? null),
+				outputTokens: Helpers::intOrNull($usage['candidatesTokenCount'] ?? null),
+				reasoningTokens: Helpers::intOrNull($usage['thoughtsTokenCount'] ?? null),
+				cacheReadTokens: Helpers::intOrNull($usage['cachedContentTokenCount'] ?? null),
 				raw: $usage,
 			)
 			: null;
@@ -79,19 +98,24 @@ final class ChatResponse implements Chat\Response
 			return;
 		}
 
-		$textParts = [];
-		// Check standard candidates structure
+		$textParts = $thoughtParts = [];
 		if (is_array($data['candidates'][0]['content']['parts'] ?? null)) {
 			foreach ($data['candidates'][0]['content']['parts'] as $part) {
-				if (is_string($part['text'] ?? null)) {
+				if (!is_string($part['text'] ?? null)) {
+					continue;
+				} elseif ($part['thought'] ?? false) {
+					$thoughtParts[] = $part['text'];
+				} else {
 					$textParts[] = $part['text'];
 				}
 			}
-		// Fallback for simpler structures (less common)
 		} elseif (is_string($data['candidates'][0]['text'] ?? null)) {
 			$textParts[] = $data['candidates'][0]['text'];
 		}
 
-		$this->text = $textParts ? implode("\n", $textParts) : null;
+		// joined with nothing: Gemini text parts are slices of one continuous answer
+		// (a signature carrier, say), not separate blocks
+		$this->text = ($text = implode('', $textParts)) === '' ? null : $text;
+		$this->reasoning = ($thoughts = implode("\n", $thoughtParts)) === '' ? null : $thoughts;
 	}
 }

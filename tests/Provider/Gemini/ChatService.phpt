@@ -101,7 +101,7 @@ test('Chat builds correct API payload with all options', function () {
 	Assert::true(isset($capturedPayload['generationConfig']));
 	Assert::same(500, $capturedPayload['generationConfig']['maxOutputTokens']);
 	Assert::same(0.5, $capturedPayload['generationConfig']['temperature']);
-	Assert::same(20.0, $capturedPayload['generationConfig']['topK']);
+	Assert::same(20, $capturedPayload['generationConfig']['topK']);
 	Assert::same(0.8, $capturedPayload['generationConfig']['topP']);
 	Assert::same(['STOP', 'END'], $capturedPayload['generationConfig']['stopSequences']);
 

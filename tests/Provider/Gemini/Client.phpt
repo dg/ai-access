@@ -35,8 +35,9 @@ test('Successful API call returns correct data', function () {
 	$httpClient = Mockery::mock(HttpClient::class);
 	$httpClient->expects()
 		->fetch(
-			Mockery::on(fn($url) => str_starts_with($url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=')),
+			'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
 			$expectedPayload,
+			['x-goog-api-key' => 'test-api-key'],
 		)
 		->once()
 		->andReturn($mockResponse);
@@ -48,14 +49,15 @@ test('Successful API call returns correct data', function () {
 });
 
 
-test('API key is correctly appended to URL', function () {
+test('API key is sent in a header, never in the URL', function () {
 	$apiKey = 'test-api-key-12345';
 
 	$httpClient = Mockery::mock(HttpClient::class);
 	$httpClient->expects()
 		->fetch(
-			Mockery::on(fn($url) => str_contains($url, '?key=' . $apiKey)),
+			Mockery::on(fn($url) => !str_contains($url, $apiKey)),
 			Mockery::any(),
+			['x-goog-api-key' => $apiKey],
 		)
 		->once()
 		->andReturn(mockSuccessResponse());
@@ -72,7 +74,8 @@ test('setOptions changes base URL', function () {
 	$httpClient = Mockery::mock(HttpClient::class);
 	$httpClient->expects()
 		->fetch(
-			$customBaseUrl . '/models/gemini-pro:generateContent?key=' . $apiKey,
+			$customBaseUrl . '/models/gemini-pro:generateContent',
+			Mockery::any(),
 			Mockery::any(),
 		)
 		->once()
@@ -90,7 +93,8 @@ test('Base URL formatting handles trailing slashes correctly', function () {
 
 	$httpClient->expects()
 		->fetch(
-			'https://api.test.com/models/gemini-pro:generateContent?key=' . $apiKey,
+			'https://api.test.com/models/gemini-pro:generateContent',
+			Mockery::any(),
 			Mockery::any(),
 		)
 		->once()
@@ -123,6 +127,7 @@ test('API error response throws ApiException', function () {
 		->fetch(
 			Mockery::type('string'),
 			Mockery::type('array'),
+			Mockery::any(),
 		)
 		->once()
 		->andReturn($mockResponse);
@@ -147,6 +152,7 @@ test('Error without message shows generic error', function () {
 	$httpClient = Mockery::mock(HttpClient::class);
 	$httpClient->expects()
 		->fetch(
+			Mockery::any(),
 			Mockery::any(),
 			Mockery::any(),
 		)
@@ -185,6 +191,7 @@ test('Various HTTP error codes are handled properly', function () {
 			->fetch(
 				Mockery::any(),
 				Mockery::any(),
+				Mockery::any(),
 			)
 			->andReturn($mockResponse);
 
@@ -213,6 +220,7 @@ test('Non-array response throws ApiException', function () {
 		->fetch(
 			Mockery::type('string'),
 			Mockery::type('array'),
+			Mockery::any(),
 		)
 		->once()
 		->andReturn($mockResponse);
@@ -233,6 +241,7 @@ test('Network error propagates from HTTP client', function () {
 		->fetch(
 			Mockery::type('string'),
 			Mockery::type('array'),
+			Mockery::any(),
 		)
 		->once()
 		->andThrow(new CommunicationException('Connection timeout', 408));
