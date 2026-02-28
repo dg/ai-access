@@ -28,10 +28,7 @@ test('Chat setOptions returns self for fluent interface', function () {
 		maxOutputTokens: 100,
 		temperature: 0.7,
 		topP: 0.9,
-		frequencyPenalty: 0.5,
-		presencePenalty: 0.5,
 		stop: ['STOP'],
-		stream: false,
 		responseFormat: ['type' => 'json_object'],
 	);
 
@@ -96,10 +93,7 @@ test('Chat builds correct API payload with all options', function () {
 		maxOutputTokens: 500,
 		temperature: 0.5,
 		topP: 0.8,
-		frequencyPenalty: 0.3,
-		presencePenalty: 0.2,
 		stop: ['STOP', 'END'],
-		stream: false,
 		responseFormat: ['type' => 'json_object'],
 		tools: [['type' => 'function', 'function' => ['name' => 'get_weather']]],
 		toolChoice: 'auto',
@@ -113,66 +107,32 @@ test('Chat builds correct API payload with all options', function () {
 	Assert::same(500, $capturedPayload['max_tokens']);
 	Assert::same(0.5, $capturedPayload['temperature']);
 	Assert::same(0.8, $capturedPayload['top_p']);
-	Assert::same(0.3, $capturedPayload['frequency_penalty']);
-	Assert::same(0.2, $capturedPayload['presence_penalty']);
 	Assert::same(['STOP', 'END'], $capturedPayload['stop']);
-	Assert::false($capturedPayload['stream']);
 	Assert::same(['type' => 'json_object'], $capturedPayload['response_format']);
 	Assert::count(1, $capturedPayload['tools']);
 	Assert::same('auto', $capturedPayload['tool_choice']);
 });
 
 
-test('Chat handles deepseek-reasoner model specially by removing unsupported options', function () {
-	$modelName = 'deepseek-reasoner';
-	$userMessage = 'Hello DeepSeek Reasoner';
-
-	// Captured payload to verify
+test('effort maps to the thinking parameter', function () {
 	$capturedPayload = null;
 
 	$clientMock = Mockery::mock(Client::class);
 	$clientMock->expects('callApi')
+		->twice()
 		->with('chat/completions', Mockery::capture($capturedPayload))
-		->andReturn([
-			'choices' => [['message' => ['content' => 'Response text']]],
-			'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
-		]);
+		->andReturn(['choices' => [['message' => ['content' => 'x']]]]);
 
-	$chat = new Chat($clientMock, $modelName);
-	// Set options that should be removed for reasoner
-	$chat->setOptions(
-		maxOutputTokens: 500,
-		temperature: 0.5,
-		topP: 0.8,
-		frequencyPenalty: 0.3,
-		presencePenalty: 0.2,
-		stop: ['STOP'],
-		stream: false,
-		tools: [['type' => 'function', 'function' => ['name' => 'get_weather']]],
-		toolChoice: 'auto',
-	);
-	$chat->addMessage($userMessage, Role::User);
+	$chat = new Chat($clientMock, 'deepseek-v4-flash');
+	$chat->addMessage('Hello', Role::User);
 
-	// Trigger payload construction
+	$chat->setEffort(AIAccess\Chat\Effort::None);
 	$chat->sendMessage(null);
+	Assert::same(['type' => 'disabled'], $capturedPayload['thinking']);
 
-	// Verify model name is set
-	Assert::same($modelName, $capturedPayload['model']);
-
-	// Verify incompatible options are removed
-	Assert::false(isset($capturedPayload['temperature']));
-	Assert::false(isset($capturedPayload['top_p']));
-	Assert::false(isset($capturedPayload['frequency_penalty']));
-	Assert::false(isset($capturedPayload['presence_penalty']));
-	Assert::false(isset($capturedPayload['tools']));
-	Assert::false(isset($capturedPayload['tool_choice']));
-	Assert::false(isset($capturedPayload['logprobs']));
-	Assert::false(isset($capturedPayload['top_logprobs']));
-
-	// These options should still be present
-	Assert::same(500, $capturedPayload['max_tokens']);
-	Assert::same(['STOP'], $capturedPayload['stop']);
-	Assert::false($capturedPayload['stream']);
+	$chat->setEffort(AIAccess\Chat\Effort::Low);
+	$chat->sendMessage(null);
+	Assert::same(['type' => 'enabled', 'reasoning_effort' => 'low'], $capturedPayload['thinking']);
 });
 
 

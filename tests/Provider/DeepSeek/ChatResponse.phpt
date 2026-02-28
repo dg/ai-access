@@ -81,8 +81,8 @@ test('ChatResponse correctly extracts standard usage information', function () {
 			],
 		],
 		'usage' => [
-			'input_tokens' => $inputTokens,
-			'output_tokens' => $outputTokens,
+			'prompt_tokens' => $inputTokens,
+			'completion_tokens' => $outputTokens,
 			'total_tokens' => $inputTokens + $outputTokens,
 		],
 	];

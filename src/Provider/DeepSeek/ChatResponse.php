@@ -9,7 +9,7 @@ namespace AIAccess\Provider\DeepSeek;
 
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
-use function is_array;
+use function is_array, is_string;
 
 
 /**
@@ -46,6 +46,16 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	/**
+	 * Chain of thought of a thinking model. Must be passed back in tool call loops.
+	 */
+	public function getReasoning(): ?string
+	{
+		$content = $this->rawResponse['choices'][0]['message']['reasoning_content'] ?? null;
+		return is_string($content) && $content !== '' ? $content : null;
+	}
+
+
 	public function getRawFinishReason(): mixed
 	{
 		return $this->rawResponse['choices'][0]['finish_reason'] ?? null;
@@ -57,9 +67,10 @@ final class ChatResponse implements Chat\Response
 		$usage = $this->rawResponse['usage'] ?? null;
 		return is_array($usage)
 			? new Chat\Usage(
-				inputTokens: $usage['input_tokens'] ?? null,
-				outputTokens: $usage['output_tokens'] ?? null,
-				reasoningTokens: $usage['reasoning_tokens'] ?? $usage['completion_tokens_details']['reasoning_tokens'] ?? null,
+				inputTokens: $usage['prompt_tokens'] ?? null,
+				outputTokens: $usage['completion_tokens'] ?? null,
+				reasoningTokens: $usage['completion_tokens_details']['reasoning_tokens'] ?? null,
+				cacheReadTokens: $usage['prompt_cache_hit_tokens'] ?? null,
 				raw: $usage,
 			)
 			: null;
