@@ -90,32 +90,6 @@ test('calculateEmbeddings with dimensions parameter for text-embedding-3 model',
 });
 
 
-test('calculateEmbeddings warns when using dimensions with non-text-embedding-3 model', function () {
-	$model = 'text-embedding-ada-002';
-	$input = ['Test'];
-	$dimensions = 256;
-
-	$mockEmbedding = [0.1, 0.2, 0.3];
-	$expectedResponse = [
-		'data' => [
-			['index' => 0, 'embedding' => $mockEmbedding],
-		],
-	];
-
-	$clientMock = Mockery::mock(Client::class)->makePartial();
-	$clientMock->expects('callApi')
-		->once()
-		->andReturn($expectedResponse);
-
-	Assert::error(function () use ($clientMock, $model, $input, $dimensions) {
-		$results = $clientMock->calculateEmbeddings($model, $input, $dimensions);
-
-		// Should still return results despite the warning
-		Assert::count(1, $results);
-	}, E_USER_WARNING, "The 'dimensions' parameter is only supported for text-embedding-3 models.");
-});
-
-
 test('calculateEmbeddings handles unordered response indices', function () {
 	$model = 'text-embedding-ada-002';
 	$input = ['First', 'Second', 'Third'];
@@ -145,59 +119,32 @@ test('calculateEmbeddings handles unordered response indices', function () {
 });
 
 
-test('calculateEmbeddings warns about errors in individual embeddings', function () {
-	$model = 'text-embedding-ada-002';
-	$input = ['Valid text', 'Error text'];
-
-	// Response with one valid embedding and one error
-	$expectedResponse = [
-		'data' => [
-			['index' => 0, 'embedding' => [0.1, 0.2, 0.3]],
-			['index' => 1, 'error' => ['message' => 'Content policy violation']],
-		],
-	];
-
+test('calculateEmbeddings fails when an item could not be embedded', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->andReturn($expectedResponse);
+		->andReturn(['data' => [
+			['index' => 0, 'embedding' => [0.1, 0.2]],
+			['index' => 1, 'error' => ['message' => 'Too long']],
+		]]);
 
-	Assert::error(function () use ($clientMock, $model, $input) {
-		$results = $clientMock->calculateEmbeddings($model, $input);
-
-		// Should still return the valid embedding
-		Assert::count(1, $results);
-		Assert::same([0.1, 0.2, 0.3], $results[0]->toArray());
-	}, [
-		[E_USER_WARNING, 'Error processing input at index 1: Content policy violation'],
-		[E_USER_WARNING, 'Number of returned embeddings (1) does not match the number of inputs (2). Check for errors in the raw response.'],
-	]);
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('text-embedding-3-small', ['a', 'b']),
+		AIAccess\UnexpectedResponseException::class,
+	);
 });
 
 
-test('calculateEmbeddings warns when embedding count mismatches input count', function () {
-	$model = 'text-embedding-ada-002';
-	$input = ['Text 1', 'Text 2', 'Text 3'];
-
-	// Only return 2 embeddings for 3 inputs
-	$expectedResponse = [
-		'data' => [
-			['index' => 0, 'embedding' => [0.1, 0.2]],
-			['index' => 1, 'embedding' => [0.3, 0.4]],
-		],
-	];
-
+test('calculateEmbeddings fails when the count does not match the input', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->andReturn($expectedResponse);
+		->andReturn(['data' => [['index' => 0, 'embedding' => [0.1]]]]);
 
-	Assert::error(function () use ($clientMock, $model, $input) {
-		$results = $clientMock->calculateEmbeddings($model, $input);
-
-		// Should still return the available embeddings
-		Assert::count(2, $results);
-	}, E_USER_WARNING, 'Number of returned embeddings (2) does not match the number of inputs (3). Check for errors in the raw response.');
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('text-embedding-3-small', ['a', 'b']),
+		AIAccess\UnexpectedResponseException::class,
+	);
 });
 
 
@@ -218,22 +165,14 @@ test('calculateEmbeddings handles API errors', function () {
 });
 
 
-test('calculateEmbeddings handles malformed API response', function () {
-	$model = 'text-embedding-ada-002';
-	$input = ['Malformed test'];
-
-	// Response without 'data' array
-	$malformedResponse = ['other' => 'data'];
-
+test('calculateEmbeddings fails on a malformed API response', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->andReturn($malformedResponse);
+		->andReturn(['unexpected' => true]);
 
-	Assert::error(function () use ($clientMock, $model, $input) {
-		$results = $clientMock->calculateEmbeddings($model, $input);
-
-		// Should return empty array for malformed response
-		Assert::count(0, $results);
-	}, E_USER_WARNING, 'Number of returned embeddings (0) does not match the number of inputs (1). Check for errors in the raw response.');
+	Assert::exception(
+		fn() => $clientMock->calculateEmbeddings('text-embedding-3-small', ['a']),
+		AIAccess\UnexpectedResponseException::class,
+	);
 });

@@ -183,6 +183,6 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 	public function getId(): string
 	{
-		return $this->batchData['id'];
+		return AIAccess\Helpers::expectString($this->batchData['id'] ?? null, 'batch id');
 	}
 }

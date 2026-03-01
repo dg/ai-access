@@ -11,7 +11,7 @@ use AIAccess;
 use AIAccess\Embedding\Vector;
 use AIAccess\Http;
 use AIAccess\Http\FormData;
-use function array_filter, count, http_build_query, is_array, rtrim, str_contains, usort;
+use function array_filter, count, http_build_query, is_array, rtrim, usort;
 
 
 /**
@@ -72,19 +72,20 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 	public function cancelBatch(string $id): bool
 	{
-		return $this->callApi("batches/{$id}/cancel", '')['status'] === 'cancelling';
+		$response = $this->callApi("batches/{$id}/cancel", '');
+		return AIAccess\Helpers::expectString($response['status'] ?? null, 'batch status') === 'cancelling';
 	}
 
 
 	/**
 	 * Calculates embeddings for the given input text(s) using a specified OpenAI model.
 	 * @param  list<string>  $input
-	 * @param  ?int  $dimensions  The number of dimensions the resulting output embeddings should have. Only supported for 'text-embedding-3' models
+	 * @param  ?int  $dimensions  Size of the resulting vectors. Only supported by text-embedding-3 models. Maximum 2048 inputs per request.
 	 * @return list<Vector>
 	 */
 	public function calculateEmbeddings(string $model, array $input, ?int $dimensions = null): array
 	{
-		if (empty($input)) {
+		if (!$input) {
 			throw new AIAccess\LogicException('Input cannot be empty.');
 		}
 		foreach ($input as $text) {
@@ -98,30 +99,25 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			'input' => $input,
 		];
 		if ($dimensions !== null) {
-			if (!str_contains($model, 'text-embedding-3')) {
-				trigger_error("The 'dimensions' parameter is only supported for text-embedding-3 models.", E_USER_WARNING);
-			}
 			$payload['dimensions'] = $dimensions;
 		}
 
 		$response = $this->callApi('embeddings', $payload);
 
 		$results = [];
-		if (isset($response['data']) && is_array($response['data'])) {
+		if (is_array($response['data'] ?? null)) {
 			usort($response['data'], fn($a, $b) => $a['index'] <=> $b['index']);
 
 			foreach ($response['data'] as $data) {
 				if (is_array($values = $data['embedding'] ?? null)) {
 					/** @var list<float> $values */
 					$results[] = new Vector($values);
-				} elseif (isset($data['error'])) {
-					trigger_error("Error processing input at index {$data['index']}: " . ($data['error']['message'] ?? 'Unknown error'), E_USER_WARNING);
 				}
 			}
 		}
 
 		if (count($results) !== count($input)) {
-			trigger_error('Number of returned embeddings (' . count($results) . ') does not match the number of inputs (' . count($input) . '). Check for errors in the raw response.', E_USER_WARNING);
+			throw new AIAccess\UnexpectedResponseException('Number of returned embeddings (' . count($results) . ') does not match the number of inputs (' . count($input) . ').');
 		}
 
 		return $results;
@@ -138,7 +134,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			->addField('purpose', $purpose)
 			->addFileContent('file', $content, $fileName, $mimeType);
 		$response = $this->callApi('files', $formData);
-		return $response['id'];
+		return AIAccess\Helpers::expectString($response['id'] ?? null, 'file id');
 	}
 
 
@@ -152,7 +148,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			->addField('purpose', $purpose)
 			->addFile('file', $filePath, null, $mimeType);
 		$response = $this->callApi('files', $formData);
-		return $response['id'];
+		return AIAccess\Helpers::expectString($response['id'] ?? null, 'file id');
 	}
 
 
