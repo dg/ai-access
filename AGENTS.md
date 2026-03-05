@@ -192,12 +192,20 @@ Assert::exception(
 
 ## Feature Support Matrix
 
+What AIAccess implements today:
+
 | Feature | OpenAI | Claude | Gemini | DeepSeek | Grok |
 |---------|--------|--------|--------|----------|------|
 | Chat | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Reasoning effort | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Batch | ✓ | ✓ | - | - | - |
 | Embeddings | ✓ | - | ✓ | - | - |
 | File Upload | ✓ | - | - | - | - |
+
+Do not read a dash as "the provider cannot do this". Gemini and xAI both have
+batch APIs, xAI has a Files API, and three providers generate images; none of
+that is wrapped yet. Anthropic genuinely has no embedding endpoint and DeepSeek
+has neither batch nor embeddings.
 
 ## Provider-Specific Options
 

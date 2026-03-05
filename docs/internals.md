@@ -23,12 +23,12 @@ because the providers genuinely diverge on every axis:
 | axis | Claude | OpenAI | Gemini | Grok/DeepSeek |
 |---|---|---|---|---|
 | endpoint | `v1/messages` | `v1/responses` | `:generateContent` | `chat/completions` |
-| auth | `x-api-key` header | `Bearer` | **`?key=` in the URL** | `Bearer` |
+| auth | `x-api-key` header | `Bearer` | `x-goog-api-key` header | `Bearer` |
 | request | flat `messages[]` | `input[]` + `instructions` | `contents[].parts[]` | flat `messages[]` |
 | assistant role | `assistant` | `assistant` | **`model`** | `assistant` |
-| usage keys | `input_tokens`/`output_tokens` | same | same | `prompt_tokens`/`completion_tokens` |
-
-(Gemini's `?key=` in the URL leaks the API key into access logs — a known trap.)
+| usage keys | `input_tokens`/`output_tokens` | same | `promptTokenCount`/`candidatesTokenCount` | `prompt_tokens`/`completion_tokens` |
+| reasoning tokens | `output_tokens_details.thinking_tokens` | `output_tokens_details.reasoning_tokens` | `thoughtsTokenCount` | `completion_tokens_details.reasoning_tokens` |
+| finish reason source | `stop_reason` | **`status`, then `incomplete_details`** | `finishReason` (never signals tool use) | `finish_reason` |
 
 ## HTTP: buffered curl, no streaming, no retry
 
@@ -36,18 +36,27 @@ because the providers genuinely diverge on every axis:
 provider `Client` (default `new CurlClient`) — the seam for mocking in tests. Facts
 that surprise:
 
-- **There is no streaming / SSE anywhere.** `curl_exec` is fully buffered. The
-  `stream: true` option is accepted into the payload but the `text/event-stream`
-  response then fails JSON decoding — **streaming is a phantom in the API surface, not
-  a feature.** Adding it needs a new seam (`fetch` returns a finished `Response`, not a
-  generator).
+- **There is no streaming / SSE anywhere.** `curl_exec` is fully buffered, and the
+  `stream` option was removed from every provider because it produced a response the
+  JSON decoder could not read. Adding streaming needs a new seam (`fetch` returns a
+  finished `Response`, not a generator). When it lands, four different stream endings
+  have to be handled: OpenAI's terminal event carries the whole response, Claude's
+  `message_delta` usage is cumulative rather than incremental, Gemini sends no `[DONE]`
+  at all, and xAI puts usage in a chunk whose `choices` is empty. DeepSeek also injects
+  `: keep-alive` SSE comment lines that a naive parser will choke on.
 - **There is no retry / backoff** on 429/5xx.
 - **JSON decoding is content-type-driven** — the body is decoded only for
   `application/json`/`+json`, so `callApi(..., isJson: false)` returns a raw string
   (used for JSONL batch-result downloads). "Always decode JSON" breaks batch parsing.
 - Errors: HTTP ≥400 → `ApiException` (message from `data.error.message`), duplicated in
-  every `callApi`; transport/JSON errors → `CommunicationException`. Both under
-  `ServiceException`; `LogicException` is client misuse.
+  every `callApi`; transport and JSON-decoding failures → `CommunicationException`.
+  Both under `ServiceException`; `LogicException` is client misuse. **OpenAI can fail
+  inside HTTP 200**: `status: failed` carries a top-level `error`, which
+  `Chat::generateResponse()` turns into an `ApiException`.
+- **`trigger_error()` is gone from the library.** Per-item batch failures are readable
+  through `Batch\Response::getErrors()` (keyed by custom_id), and embedding count
+  mismatches raise `UnexpectedResponseException`. The single remaining warning is
+  Gemini's alternating-roles check, which predicts an API error we cannot prevent.
 
 ## The conversation model is text-only, and transactional
 
@@ -63,13 +72,18 @@ tool/function-call, no images, no multi-part. Consequences that are all traps:
   / blocked / refusal response adds **nothing** to history — a trap for multi-turn tool
   loops.
 - **Tool use is not abstracted.** You set `tools` via provider-specific `setOptions`,
-  and to *read* a tool call you must reach into a provider-specific
-  `ChatResponse::getContentBlocks()` (Claude only) or `getRawResponse()`. The shared
+  and to *read* a tool call you must reach into `getRawResponse()`. The shared
   `FinishReason::ToolCall` exists, but there is no shared way to get call arguments or
   return a result — tool use is raw passthrough.
-- **Claude "thinking" corrupts the round-trip:** a thinking block is wrapped as the
-  literal text `"[Thinking: …]"`, which then flows through `sendMessage` into history
-  and is sent back as an assistant text message next turn.
+- **Reasoning output is deliberately kept out of `getText()`**, because anything that
+  lands there flows through `sendMessage()` into the history and is echoed back to the
+  model next turn. Every provider that produces it exposes it under the same name,
+  `getReasoning()` — but the name is the only thing they share: Claude reads blocks
+  whose key is `thinking` (not `text`), Gemini parts flagged `thought: true`, DeepSeek
+  and OpenAI-compatible endpoints a `reasoning_content` field. It is a provider-level
+  method, not part of `Chat\Response`, until the message model lands. Tool calling will
+  have to round-trip these payloads verbatim, signatures included, or multi-turn loops
+  break — DeepSeek answers 400 without them.
 - **Gemini has extra rules no one else does:** the first message must be `User`, and it
   warns on two same-role messages in a row (strict alternation). A history valid on
   another provider can throw/warn on Gemini.
@@ -87,3 +101,22 @@ text-only messages keyed by `custom_id` (per-item errors become `E_USER_WARNING`
 exceptions). Status enums, date parsing (Claude ISO string vs OpenAI unix `@ts`), and
 embedding input/output-count mismatches (a `trigger_error`, returning partial results)
 all differ per provider — unifying any of them is a silent regression.
+
+## Effort is the one knob that is genuinely shared
+
+`Chat::setEffort()` is the only model-tuning method on the base class, and it exists
+because sampling parameters are dying: `temperature`/`top_p`/`top_k` are rejected with
+400 by Claude Opus 4.7 and the whole Claude 5 line, and by GPT-5.1+ (unless effort is
+`none`), silently ignored by
+Gemini 3.6+ and by DeepSeek whenever thinking is on, which is its default. Each
+provider maps the enum in its own `buildPayload()`: `output_config.effort`,
+`reasoning.effort`, `thinkingConfig.thinkingLevel`, `thinking.reasoning_effort`,
+`reasoning_effort`.
+
+Two rules hold the design together. **Nothing is sent unless the user calls
+`setEffort()`** — provider defaults are never overwritten, which is why DeepSeek keeps
+thinking on until asked otherwise. And **there is no table of model capabilities**: a
+model that lacks the dial answers with `ApiException` (Claude Haiku 4.5 does exactly
+that). A capability table would be stale within weeks and is the maintenance burden
+this library exists to avoid — the same reasoning that keeps model names as plain
+strings.

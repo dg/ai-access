@@ -39,10 +39,14 @@ Why AI Access
 **The whole workflow, not just chat.** Multi-turn conversations, system instructions, token usage tracking, batch processing at 50% cost, and embeddings with compact binary serialization built in.
 
 | Capability | OpenAI | Claude | Gemini | DeepSeek | Grok |
-|-----------------|:------:|:------:|:------:|:--------:|:----:|
-| Chat            | ✓      | ✓      | ✓      | ✓        | ✓    |
-| Batch (50% off) | ✓      | ✓      | –      | –        | –    |
-| Embeddings      | ✓      | –      | ✓      | –        | –    |
+|-------------------|:------:|:------:|:------:|:--------:|:----:|
+| Chat              | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Reasoning effort  | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
+| Embeddings        | ✓      | –      | ✓      | –        | –    |
+
+Where a dash appears, either the provider has no such API or AI Access does not
+wrap it yet; Gemini and xAI batch endpoints exist but are not wrapped.
 
  <!---->
 
@@ -80,7 +84,7 @@ Pick a model. Model names are ordinary strings, so new models work the day the p
 | Provider | Chat model | Embedding model |
 |----------|--------------------|-----------------|
 | OpenAI   | `gpt-5.6-luna`     | `text-embedding-3-small` |
-| Claude   | `claude-haiku-4-5` | – |
+| Claude   | `claude-sonnet-5`  | – |
 | Gemini   | `gemini-3.5-flash-lite` | `gemini-embedding-2` |
 | DeepSeek | `deepseek-v4-flash` | – |
 | Grok     | `grok-4.3`         | – |
@@ -89,6 +93,8 @@ Pick a model. Model names are ordinary strings, so new models work the day the p
 
 Chat
 ====
+▶ Full runnable examples: [examples/chat/](examples/chat)
+
 
 ```php
 $chat = $client->createChat('gpt-5.6-luna');
@@ -145,7 +151,11 @@ if ($response->getFinishReason() !== FinishReason::Complete) {
 
 $usage = $response->getUsage();
 echo "Tokens: {$usage->inputTokens} in / {$usage->outputTokens} out";
+echo "Reasoning: {$usage->reasoningTokens}, served from cache: {$usage->cacheReadTokens}";
 ```
+
+Cache hit rates are the main cost lever with today's models, so `Usage` reports
+them for every provider that exposes them.
 
 And when you need something the abstraction does not cover, `$response->getRawResponse()` hands you the provider's complete decoded payload. The unified interface is a convenience, never a cage.
 
@@ -153,21 +163,49 @@ And when you need something the abstraction does not cover, `$response->getRawRe
 Model Options
 -------------
 
-Options are provider-specific by nature, so AI Access exposes them as typed named arguments on each provider's `Chat` class, with IDE autocompletion instead of guesswork:
+How hard should the model think before answering? That is the one knob every
+provider now has, and AI Access unifies it:
 
 ```php
-$chat->setOptions(temperature: 0.5, maxTokens: 500);        // Claude
-$chat->setOptions(temperature: 0.5, maxOutputTokens: 500);  // OpenAI
+use AIAccess\Chat\Effort;
+
+$chat->setEffort(Effort::Low);   // fast and cheap
+$chat->setEffort(Effort::High);  // slow and careful
 ```
 
-See the `setOptions()` signature in each `src/Provider/*/Chat.php` for the complete, documented list. Heads-up: providers are steadily retiring classic sampling parameters like `temperature` on their newest reasoning models; check the parameter's docblock before relying on it.
+This matters more than it looks. Providers are retiring `temperature` on their
+newest reasoning models: Claude answers 400 on Opus 4.7 and on the whole Claude 5
+line, GPT-5.1+ answers 400 unless reasoning effort is none, Gemini ignores it
+silently, DeepSeek ignores it whenever thinking is on, which is by default.
+Effort is what replaced it.
+
+Older models may not have the dial and answer with an `ApiException`. That is
+deliberate: the library sends what you asked for instead of maintaining a table
+of model capabilities that would be stale within weeks.
+
+Everything else is genuinely provider-specific, so AI Access exposes it as typed
+named arguments on each provider's `Chat` class, with IDE autocompletion instead
+of guesswork:
+
+```php
+$chat->setOptions(maxOutputTokens: 500, stopSequences: ['END']);  // Claude
+$chat->setOptions(maxOutputTokens: 500, store: false);            // OpenAI
+```
+
+See the `setOptions()` signature in `src/Provider/*/Chat.php` for the full,
+documented list. There is no shared option array on purpose: it would silently
+swallow the names that do not apply to the provider you happen to be using.
+
+▶ Full runnable example of the effort dial: [examples/chat/options.php](examples/chat/options.php)
 
  <!---->
 
 Batch Processing
 ================
+▶ Full runnable examples: [examples/batch/](examples/batch)
 
-When you do not need answers immediately, batch processing gets you the same models at **half the price**. Supported by OpenAI and Claude; the two providers use completely different mechanics under the hood (file upload + JSONL vs. inline requests), and AI Access hides that difference entirely:
+
+When you do not need answers immediately, batch processing gets you the same models at **half the price**. Supported by OpenAI and Claude; the two providers use completely different mechanics under the hood (file upload + JSONL vs. inline requests), and AIAccess hides that difference entirely:
 
 ```php
 use AIAccess\Chat\Role;
@@ -205,6 +243,8 @@ if ($batch->getStatus() === Status::Completed) {
 
 Embeddings
 ==========
+▶ Full runnable examples: [examples/embeddings/](examples/embeddings)
+
 
 Embeddings turn text into numeric vectors that capture meaning, the foundation of semantic search, clustering, recommendations and RAG. Supported by OpenAI and Gemini:
 
@@ -231,6 +271,8 @@ Provider-specific options (OpenAI `dimensions`, Gemini `taskType`, ...) are agai
 
 Error Handling
 ==============
+▶ Full runnable example: [examples/errors/handling.php](examples/errors/handling.php)
+
 
 The exception hierarchy is organized around recovery strategy, so a `catch` block reads like an incident-response plan:
 
