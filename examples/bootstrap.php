@@ -62,7 +62,7 @@ function chatModel(object $client): string
 {
 	$models = [
 		AIAccess\Provider\OpenAI\Client::class => 'gpt-5.6-luna',
-		AIAccess\Provider\Claude\Client::class => 'claude-haiku-4-5',
+		AIAccess\Provider\Claude\Client::class => 'claude-sonnet-5',
 		AIAccess\Provider\Gemini\Client::class => 'gemini-3.5-flash-lite',
 		AIAccess\Provider\DeepSeek\Client::class => 'deepseek-v4-flash',
 		AIAccess\Provider\Grok\Client::class => 'grok-4.3',
