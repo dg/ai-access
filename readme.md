@@ -42,6 +42,7 @@ Why AI Access
 |-------------------|:------:|:------:|:------:|:--------:|:----:|
 | Chat              | ✓      | ✓      | ✓      | ✓        | ✓    |
 | Reasoning effort  | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Images            | ✓      | –      | –      | –        | ✓    |
 | Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
 
@@ -282,6 +283,7 @@ ServiceException                  base for everything the service can throw
 ├── CommunicationException        network failure or unparseable response → retry may help
 └── UnexpectedResponseException   response structure changed → log and investigate
 LogicException                    a bug in your code → fix it in development
+IOException                       a local file could not be read or written
 ```
 
 ```php
@@ -302,7 +304,7 @@ try {
 }
 ```
 
-`LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production. It extends PHP's own `\LogicException`, which is where any PHP developer expects to find it.
+`LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production. It extends PHP's own `\LogicException`, which is where any PHP developer expects to find it. `IOException` sits outside for a similar reason: a file that cannot be read or written (`Media::fromFile()`, saving media, uploading a batch) is a local filesystem problem, not something the service said, and it extends PHP's `\RuntimeException`.
 
  <!---->
 

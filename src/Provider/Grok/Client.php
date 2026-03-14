@@ -15,7 +15,7 @@ use function is_array, rtrim;
 /**
  * Client implementation for accessing Grok (xAI) API models.
  */
-final class Client implements AIAccess\Chat\Service
+final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 {
 	private string $baseUrl = 'https://api.x.ai/v1/';
 
@@ -30,6 +30,35 @@ final class Client implements AIAccess\Chat\Service
 	public function createChat(string $model): Chat
 	{
 		return new Chat($this, $model);
+	}
+
+
+	/**
+	 * Generates an image.
+	 * @param  list<AIAccess\Media>  $references  not supported by xAI, must be empty
+	 */
+	public function generateImage(string $model, string $prompt, array $references = []): AIAccess\Media
+	{
+		if ($references) {
+			throw new AIAccess\LogicException('Grok image generation does not accept reference images.');
+		}
+
+		$response = $this->callApi('images/generations', [
+			'model' => $model,
+			'prompt' => $prompt,
+			'n' => 1,
+			'response_format' => 'b64_json',
+		]);
+
+		$encoded = AIAccess\Helpers::expectString($response['data'][0]['b64_json'] ?? null, 'image data');
+		$data = base64_decode($encoded, strict: true);
+		if ($data === false) {
+			throw new AIAccess\UnexpectedResponseException('Image data is not valid base64.');
+		}
+
+		// the response carries no mime type; xAI generates JPEG, but the bytes know best
+		$mime = (new \finfo(\FILEINFO_MIME_TYPE))->buffer($data);
+		return new AIAccess\Media($data, $mime === false ? 'image/jpeg' : $mime, $response);
 	}
 
 

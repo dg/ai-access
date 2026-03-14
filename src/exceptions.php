@@ -42,3 +42,10 @@ class CommunicationException extends ServiceException
 class UnexpectedResponseException extends ServiceException
 {
 }
+
+/**
+ * A file cannot be read or written.
+ */
+class IOException extends \RuntimeException
+{
+}
