@@ -57,7 +57,8 @@ AIAccess\Chat\Service (interface)
   ├── Claude\Client
   ├── Gemini\Client
   ├── DeepSeek\Client
-  └── Grok\Client
+  ├── Grok\Client
+  └── OpenAICompatible\Client   # generic, for any endpoint speaking that dialect
 ```
 
 Each provider implements core interfaces:
@@ -206,6 +207,11 @@ Do not read a dash as "the provider cannot do this". Gemini and xAI both have
 batch APIs, xAI has a Files API, and three providers generate images; none of
 that is wrapped yet. Anthropic genuinely has no embedding endpoint and DeepSeek
 has neither batch nor embeddings.
+
+`OpenAICompatible` has no column because it has no fixed answer: it is a chat client for
+any endpoint speaking `chat/completions`, so what works is decided by that endpoint, not
+by this library. Chat, streaming and tool calling are what it sends; everything else
+depends on who answers.
 
 ## Provider-Specific Options
 

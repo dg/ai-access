@@ -5,17 +5,16 @@
  * Copyright (c) 2024 David Grudl (https://davidgrudl.com)
  */
 
-namespace AIAccess\Provider\Grok;
+namespace AIAccess\Provider\OpenAICompatible;
 
 use AIAccess\Chat\Effort;
-use AIAccess\Provider\OpenAICompatible;
 use function array_filter, array_merge;
 
 
 /**
- * Grok (xAI) implementation of a chat session state container.
+ * Chat session against an OpenAI-compatible endpoint.
  */
-final class Chat extends OpenAICompatible\BaseChat
+final class Chat extends BaseChat
 {
 	public function __construct(
 		private readonly Client $client,
@@ -26,18 +25,11 @@ final class Chat extends OpenAICompatible\BaseChat
 
 
 	/**
-	 * Sets options specific to this Grok chat session.
-	 *
-	 * @param  ?int  $maxOutputTokens  Maximum completion tokens (max_completion_tokens).
-	 * @param  ?float  $temperature  Sampling temperature (0.0-2.0).
-	 * @param  ?float  $topP  Nucleus sampling parameter (0.0-1.0).
-	 * @param  ?float  $frequencyPenalty  Penalizes new tokens based on frequency (-2.0 to 2.0). Not supported by reasoning models.
-	 * @param  ?float  $presencePenalty  Penalizes new tokens based on presence (-2.0 to 2.0). Not supported by reasoning models.
-	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating. Not supported by reasoning models.
-	 * @param  ?int  $seed  Seed for deterministic sampling (best effort).
+	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating.
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
 	 * @param  ?mixed[]  $tools  List of tools the model may call.
 	 * @param  string|mixed[]|null  $toolChoice  Controls which tool is called.
+	 * @param  ?mixed[]  $custom  Anything else the endpoint accepts, merged into the payload as is.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
@@ -50,11 +42,12 @@ final class Chat extends OpenAICompatible\BaseChat
 		?array $responseFormat = null,
 		?array $tools = null,
 		string|array|null $toolChoice = null,
+		?array $custom = null,
 	): static
 	{
 		$this->options = array_merge($this->options, array_filter(
 			[
-				'max_completion_tokens' => $maxOutputTokens,
+				'max_tokens' => $maxOutputTokens,
 				'temperature' => $temperature,
 				'top_p' => $topP,
 				'frequency_penalty' => $frequencyPenalty,
@@ -66,7 +59,7 @@ final class Chat extends OpenAICompatible\BaseChat
 				'tool_choice' => $toolChoice,
 			],
 			fn($value) => $value !== null,
-		));
+		), $custom ?? []);
 		return $this;
 	}
 

@@ -41,6 +41,7 @@ Read them in this order; each directory has its own readme with the details.
 | [batch/](batch) | queue many requests at half the price and collect them later |
 | [images/](images) | generate a picture, or edit from reference images |
 | [errors/](errors) | the exception hierarchy and what to do about each case |
+| [providers/](providers) | Ollama, OpenRouter, Azure and anything else speaking the OpenAI dialect |
 
 ## A note on output
 

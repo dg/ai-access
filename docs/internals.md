@@ -1,6 +1,7 @@
 # AIAccess internals
 
-A multi-provider AI client (Anthropic Claude, OpenAI, Gemini, Grok, DeepSeek). The
+A multi-provider AI client (Anthropic Claude, OpenAI, Gemini, Grok, DeepSeek, plus a
+generic client for anything else speaking the `chat/completions` dialect). The
 value is a cross-cutting model you cannot read off the signatures: **the interfaces
 converge, every implementation diverges**, and the shared conversation model is
 deliberately narrow. One file.

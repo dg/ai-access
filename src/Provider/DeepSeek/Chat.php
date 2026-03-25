@@ -7,25 +7,21 @@
 
 namespace AIAccess\Provider\DeepSeek;
 
-use AIAccess;
 use AIAccess\Chat\Effort;
-use AIAccess\Chat\Role;
+use AIAccess\Provider\OpenAICompatible;
 use function array_filter, array_merge;
 
 
 /**
  * DeepSeek implementation of a chat session state container.
  */
-final class Chat extends AIAccess\Chat\Chat
+final class Chat extends OpenAICompatible\BaseChat
 {
-	/** @var mixed[] */
-	private array $options = [];
-
-
 	public function __construct(
 		private readonly Client $client,
-		private readonly string $model,
+		string $model,
 	) {
+		parent::__construct($model);
 	}
 
 
@@ -66,46 +62,20 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
-	protected function generateResponse(): ChatResponse
+	protected function callApi(array $payload): array
 	{
-		$response = $this->client->callApi('chat/completions', $this->buildPayload());
-		return new ChatResponse($response);
+		return $this->client->callApi('chat/completions', $payload);
 	}
 
 
-	/**
-	 * Builds the payload for the DeepSeek API chat completions request.
-	 * @return mixed[]
-	 */
-	private function buildPayload(): array
+	protected function createResponse(array $raw): ChatResponse
 	{
-		if (!$this->messages) {
-			throw new AIAccess\LogicException('Cannot send request with empty message history.');
-		}
+		return new ChatResponse($raw);
+	}
 
-		$messages = [];
-		if ($this->systemInstruction !== null) {
-			$messages[] = [
-				'role' => 'system',
-				'content' => $this->systemInstruction,
-			];
-		}
 
-		foreach ($this->messages as $message) {
-			$messages[] = [
-				'role' => match ($message->getRole()) {
-					Role::User => 'user',
-					Role::Model => 'assistant',
-				},
-				'content' => $message->getText(),
-			];
-		}
-
-		$payload = [
-			'model' => $this->model,
-			'messages' => $messages,
-		] + $this->options;
-
+	protected function amendPayload(array &$payload): void
+	{
 		if ($this->effort !== null) {
 			$payload['thinking'] = $this->effort === Effort::None
 				? ['type' => 'disabled']
@@ -115,7 +85,5 @@ final class Chat extends AIAccess\Chat\Chat
 					Effort::XHigh, Effort::Max => 'max',
 				}];
 		}
-
-		return $payload;
 	}
 }

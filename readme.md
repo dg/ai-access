@@ -46,6 +46,9 @@ Why AI Access
 | Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
 
+Plus a generic client for anything speaking the OpenAI dialect: Ollama,
+Mistral, OpenRouter, Together, vLLM, Azure.
+
 Where a dash appears, either the provider has no such API or AI Access does not
 wrap it yet; Gemini and xAI batch endpoints exist but are not wrapped.
 
