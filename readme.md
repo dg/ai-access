@@ -46,6 +46,7 @@ Why AI Access
 | Images            | ✓      | –      | –      | –        | ✓    |
 | Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
+| List models       | ✓      | ✓      | ✓      | ✓        | ✓    |
 
 Plus a generic client for anything speaking the OpenAI dialect: Ollama,
 Mistral, OpenRouter, Together, vLLM, Azure.

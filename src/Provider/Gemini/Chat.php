@@ -70,6 +70,19 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
+	/**
+	 * Counts tokens of the current history and system instruction.
+	 * @throws AIAccess\ServiceException
+	 */
+	public function countTokens(): int
+	{
+		$response = $this->client->callApi('models/' . $this->model . ':countTokens', [
+			'generateContentRequest' => ['model' => 'models/' . $this->model] + $this->buildPayload(),
+		]);
+		return AIAccess\Helpers::expectInt($response['totalTokens'] ?? null, 'totalTokens');
+	}
+
+
 	protected function generateResponse(): ChatResponse
 	{
 		$response = $this->client->callApi('models/' . $this->model . ':generateContent', $this->buildPayload());

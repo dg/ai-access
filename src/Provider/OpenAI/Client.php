@@ -36,6 +36,19 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	}
 
 
+	/** @return list<AIAccess\Model> */
+	public function listModels(): array
+	{
+		$res = [];
+		foreach ($this->callApi('models')['data'] ?? [] as $model) {
+			if (isset($model['id'])) {
+				$res[] = new AIAccess\Model($model['id'], $model);
+			}
+		}
+		return $res;
+	}
+
+
 	public function createBatch(): Batch
 	{
 		return new Batch($this);

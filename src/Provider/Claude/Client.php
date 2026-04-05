@@ -34,6 +34,27 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 	}
 
 
+	/**
+	 * Lists models offered by the provider, following pagination.
+	 * @return list<AIAccess\Model>
+	 */
+	public function listModels(): array
+	{
+		$res = [];
+		$after = null;
+		do {
+			$response = $this->callApi('v1/models?limit=100' . ($after === null ? '' : '&after_id=' . $after));
+			foreach ($response['data'] ?? [] as $model) {
+				if (isset($model['id'])) {
+					$res[] = new AIAccess\Model($model['id'], $model);
+				}
+			}
+			$after = ($response['has_more'] ?? false) ? ($response['last_id'] ?? null) : null;
+		} while ($after !== null);
+		return $res;
+	}
+
+
 	public function createBatch(): Batch
 	{
 		return new Batch($this);

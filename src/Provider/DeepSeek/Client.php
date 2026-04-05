@@ -33,6 +33,19 @@ final class Client implements AIAccess\Chat\Service
 	}
 
 
+	/** @return list<AIAccess\Model> */
+	public function listModels(): array
+	{
+		$res = [];
+		foreach ($this->callApi('models')['data'] ?? [] as $model) {
+			if (isset($model['id'])) {
+				$res[] = new AIAccess\Model($model['id'], $model);
+			}
+		}
+		return $res;
+	}
+
+
 	/**
 	 * Sets or updates client-wide options.
 	 * @param  ?string  $customBaseUrl Override the base API URL. Null leaves current setting unchanged.
@@ -49,12 +62,12 @@ final class Client implements AIAccess\Chat\Service
 
 
 	/**
-	 * @param  mixed[]  $payload
+	 * @param  ?mixed[]  $payload
 	 * @return mixed[]
 	 * @throws AIAccess\ServiceException
 	 * @internal
 	 */
-	public function callApi(string $endpoint, array $payload): array
+	public function callApi(string $endpoint, ?array $payload = null): array
 	{
 		$headers = [
 			'Authorization' => 'Bearer ' . $this->apiKey,

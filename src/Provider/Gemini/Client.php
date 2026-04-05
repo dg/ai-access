@@ -35,6 +35,27 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 
 
 	/**
+	 * Lists models offered by the provider, following pagination.
+	 * @return list<AIAccess\Model>
+	 */
+	public function listModels(): array
+	{
+		$res = [];
+		$token = null;
+		do {
+			$response = $this->callApi('models?pageSize=200' . ($token === null ? '' : '&pageToken=' . urlencode($token)));
+			foreach ($response['models'] ?? [] as $model) {
+				if (isset($model['name'])) {
+					$res[] = new AIAccess\Model(preg_replace('~^models/~', '', $model['name']), $model);
+				}
+			}
+			$token = $response['nextPageToken'] ?? null;
+		} while ($token !== null);
+		return $res;
+	}
+
+
+	/**
 	 * Calculates embeddings using Gemini models via the batch endpoint.
 	 * @param  list<string>  $input
 	 * @param  ?string  $taskType Optional task type hint (e.g., RETRIEVAL_QUERY, RETRIEVAL_DOCUMENT)
@@ -111,12 +132,12 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 
 
 	/**
-	 * @param  mixed[]  $payload
+	 * @param  ?mixed[]  $payload
 	 * @return mixed[]
 	 * @throws AIAccess\ServiceException
 	 * @internal
 	 */
-	public function callApi(string $endpoint, array $payload): array
+	public function callApi(string $endpoint, ?array $payload = null): array
 	{
 		$response = $this->httpClient->fetch($this->baseUrl . $endpoint, $payload, ['x-goog-api-key' => $this->apiKey]);
 		$data = $response->getData();

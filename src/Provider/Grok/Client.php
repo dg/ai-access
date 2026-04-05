@@ -33,6 +33,19 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 	}
 
 
+	/** @return list<AIAccess\Model> */
+	public function listModels(): array
+	{
+		$res = [];
+		foreach ($this->callApi('models')['data'] ?? [] as $model) {
+			if (isset($model['id'])) {
+				$res[] = new AIAccess\Model($model['id'], $model);
+			}
+		}
+		return $res;
+	}
+
+
 	/**
 	 * Generates an image.
 	 * @param  list<AIAccess\Media>  $references  not supported by xAI, must be empty
@@ -78,12 +91,12 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 
 
 	/**
-	 * @param  mixed[]  $payload
+	 * @param  ?mixed[]  $payload
 	 * @return mixed[]
 	 * @throws AIAccess\ServiceException
 	 * @internal
 	 */
-	public function callApi(string $endpoint, array $payload): array
+	public function callApi(string $endpoint, ?array $payload = null): array
 	{
 		$headers = [
 			'Authorization' => 'Bearer ' . $this->apiKey,

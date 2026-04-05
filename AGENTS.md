@@ -201,7 +201,7 @@ What AIAccess implements today:
 | Reasoning effort | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Batch | ✓ | ✓ | - | - | - |
 | Embeddings | ✓ | - | ✓ | - | - |
-| File Upload | ✓ | - | - | - | - |
+| List of models | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 Do not read a dash as "the provider cannot do this". Gemini and xAI both have
 batch APIs, xAI has a Files API, and three providers generate images; none of

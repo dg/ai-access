@@ -42,6 +42,7 @@ Read them in this order; each directory has its own readme with the details.
 | [structured-output/](structured-output) | ask for data instead of prose, validated against a JSON schema |
 | [images/](images) | generate a picture, or edit from reference images |
 | [errors/](errors) | the exception hierarchy and what to do about each case |
+| [models/](models) | what the provider offers right now, and whether your model is still there |
 | [providers/](providers) | Ollama, OpenRouter, Azure and anything else speaking the OpenAI dialect |
 
 ## A note on output
