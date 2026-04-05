@@ -48,8 +48,8 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 
 
 	/**
-	 * Finishes the payload with what the dialects spell differently, the reasoning effort
-	 * above all.
+	 * Finishes the payload with what the dialects spell differently: the response schema
+	 * and the reasoning effort.
 	 * @param  mixed[]  $payload
 	 */
 	abstract protected function amendPayload(array &$payload): void;

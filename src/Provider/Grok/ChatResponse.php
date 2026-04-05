@@ -9,6 +9,7 @@ namespace AIAccess\Provider\Grok;
 
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
+use AIAccess\Helpers;
 use function is_array;
 
 
@@ -71,6 +72,12 @@ final class ChatResponse implements Chat\Response
 				raw: $usage,
 			)
 			: null;
+	}
+
+
+	public function getJson(): mixed
+	{
+		return Helpers::decodeResponseJson($this->getText());
 	}
 
 

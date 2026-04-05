@@ -37,6 +37,22 @@ final class Helpers
 
 
 	/**
+	 * Decodes text the model produced under a response schema.
+	 */
+	public static function decodeResponseJson(?string $text): mixed
+	{
+		if ($text === null) {
+			return null;
+		}
+		try {
+			return json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+		} catch (\JsonException $e) {
+			throw new UnexpectedResponseException('Response is not valid JSON: ' . $e->getMessage(), 0, $e);
+		}
+	}
+
+
+	/**
 	 * Reads an optional integer from a response; anything else counts as absent. Token counts
 	 * feed ?int properties, and a foreign endpoint sending a float or a string must degrade
 	 * to null, not to an uncatchable TypeError.

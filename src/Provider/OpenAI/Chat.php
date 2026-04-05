@@ -21,6 +21,9 @@ final class Chat extends AIAccess\Chat\Chat
 	/** @var mixed[] */
 	private array $options = [];
 
+	/** @var mixed[]|null */
+	private ?array $responseSchema = null;
+
 
 	public function __construct(
 		private readonly Client $client,
@@ -30,7 +33,8 @@ final class Chat extends AIAccess\Chat\Chat
 
 
 	/**
-	 * Sets options specific to this OpenAI chat session.
+	 * Sets options specific to this OpenAI chat session. Options win over what the dedicated
+	 * setters build: $text overrides setResponseSchema(), $reasoning overrides setEffort().
 	 *
 	 * @param  ?int  $maxOutputTokens  An upper bound for tokens in the response (minimum 16).
 	 * @param  ?float  $temperature  Sampling temperature (0–2). Rejected by GPT-5.1 and later unless reasoning effort is none.
@@ -78,6 +82,19 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
+	/**
+	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
+	 * Sent with strict mode on, so the schema must meet its rules: every property required,
+	 * additionalProperties: false.
+	 * @param  mixed[]  $schema
+	 */
+	public function setResponseSchema(array $schema): static
+	{
+		$this->responseSchema = $schema;
+		return $this;
+	}
+
+
 	protected function generateResponse(): ChatResponse
 	{
 		$response = $this->client->callApi('responses', $this->buildPayload());
@@ -120,6 +137,15 @@ final class Chat extends AIAccess\Chat\Chat
 
 		if ($this->systemInstruction !== null) {
 			$payload['instructions'] = $this->systemInstruction;
+		}
+
+		if ($this->responseSchema !== null) {
+			$payload['text']['format'] = [
+				'type' => 'json_schema',
+				'name' => 'response',
+				'schema' => $this->responseSchema,
+				'strict' => true,
+			];
 		}
 
 		if ($this->effort !== null) {

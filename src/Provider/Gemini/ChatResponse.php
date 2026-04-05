@@ -85,6 +85,12 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	public function getJson(): mixed
+	{
+		return Helpers::decodeResponseJson($this->getText());
+	}
+
+
 	public function getRawResponse(): mixed
 	{
 		return $this->rawResponse;

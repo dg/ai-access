@@ -6,6 +6,7 @@
  */
 
 namespace AIAccess\Chat;
+use AIAccess\UnexpectedResponseException;
 
 
 /**
@@ -28,6 +29,12 @@ interface Response
 	 * Gets provider-specific token usage information, if available.
 	 */
 	function getUsage(): ?Usage;
+
+	/**
+	 * Decodes the response text as JSON. Use together with setResponseSchema().
+	 * @throws UnexpectedResponseException  when the text is not valid JSON
+	 */
+	function getJson(): mixed;
 
 	/**
 	 * Gets the raw, unprocessed response data from the API provider.

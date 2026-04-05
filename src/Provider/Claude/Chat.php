@@ -22,6 +22,9 @@ final class Chat extends AIAccess\Chat\Chat
 	/** @var mixed[] */
 	private array $options = [];
 
+	/** @var mixed[]|null */
+	private ?array $responseSchema = null;
+
 
 	public function __construct(
 		private readonly Client $client,
@@ -73,6 +76,17 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
+	/**
+	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
+	 * @param  mixed[]  $schema
+	 */
+	public function setResponseSchema(array $schema): static
+	{
+		$this->responseSchema = $schema;
+		return $this;
+	}
+
+
 	protected function generateResponse(): ChatResponse
 	{
 		return new ChatResponse($this->client->callApi('v1/messages', $this->buildPayload()));
@@ -109,6 +123,10 @@ final class Chat extends AIAccess\Chat\Chat
 
 		if ($this->systemInstruction !== null) {
 			$payload['system'] = $this->systemInstruction;
+		}
+
+		if ($this->responseSchema !== null) {
+			$payload['output_config']['format'] = ['type' => 'json_schema', 'schema' => $this->responseSchema];
 		}
 
 		if ($this->effort === Effort::None) {

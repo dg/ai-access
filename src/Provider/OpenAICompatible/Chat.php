@@ -16,6 +16,10 @@ use function array_filter, array_merge;
  */
 final class Chat extends BaseChat
 {
+	/** @var mixed[]|null */
+	private ?array $responseSchema = null;
+
+
 	public function __construct(
 		private readonly Client $client,
 		string $model,
@@ -64,6 +68,17 @@ final class Chat extends BaseChat
 	}
 
 
+	/**
+	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
+	 * @param  mixed[]  $schema
+	 */
+	public function setResponseSchema(array $schema): static
+	{
+		$this->responseSchema = $schema;
+		return $this;
+	}
+
+
 	protected function callApi(array $payload): array
 	{
 		return $this->client->callApi('chat/completions', $payload);
@@ -78,6 +93,13 @@ final class Chat extends BaseChat
 
 	protected function amendPayload(array &$payload): void
 	{
+		if ($this->responseSchema !== null) {
+			$payload['response_format'] = [
+				'type' => 'json_schema',
+				'json_schema' => ['name' => 'response', 'schema' => $this->responseSchema, 'strict' => true],
+			];
+		}
+
 		if ($this->effort !== null) {
 			$payload['reasoning_effort'] = match ($this->effort) {
 				Effort::None => 'none',

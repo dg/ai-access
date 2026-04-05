@@ -42,6 +42,7 @@ Why AI Access
 |-------------------|:------:|:------:|:------:|:--------:|:----:|
 | Chat              | ✓      | ✓      | ✓      | ✓        | ✓    |
 | Reasoning effort  | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Structured output | ✓      | ✓      | ✓      | –        | ✓    |
 | Images            | ✓      | –      | –      | –        | ✓    |
 | Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
@@ -203,6 +204,38 @@ swallow the names that do not apply to the provider you happen to be using.
 ▶ Full runnable example of the effort dial: [examples/chat/options.php](examples/chat/options.php)
 
  <!---->
+
+Structured Output
+=================
+
+▶ Full runnable example: [examples/structured-output/extraction.php](examples/structured-output/extraction.php)
+
+Ask for data instead of prose. Hand the model a JSON Schema and read the result
+as a PHP array:
+
+```php
+$chat->setResponseSchema([
+	'type' => 'object',
+	'properties' => [
+		'name' => ['type' => 'string'],
+		'founded' => ['type' => 'integer'],
+	],
+	'required' => ['name', 'founded'],
+	'additionalProperties' => false,
+]);
+
+$data = $chat->sendMessage($text)->getJson();
+echo $data['name'];
+```
+
+The four providers that support this want the schema in four different shapes,
+one of them nested two levels deeper than the rest. You write it once.
+
+DeepSeek has no schema enforcement, so it simply has no `setResponseSchema()`
+method: your IDE and PHPStan say so before you run the code, instead of the API
+saying so afterwards. That is the honest-abstraction principle in practice.
+
+ <!---->
 
 Batch Processing
 ================
