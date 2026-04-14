@@ -14,7 +14,6 @@ use function defined, is_array, is_string;
 
 /**
  * cURL-based implementation of the HTTP Client interface.
- * @internal
  */
 final class CurlClient implements Client
 {

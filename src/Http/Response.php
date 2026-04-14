@@ -10,7 +10,6 @@ namespace AIAccess\Http;
 
 /**
  * HTTP Response.
- * @internal
  */
 final class Response
 {

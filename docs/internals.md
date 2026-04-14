@@ -45,7 +45,11 @@ that surprise:
   `message_delta` usage is cumulative rather than incremental, Gemini sends no `[DONE]`
   at all, and xAI puts usage in a chunk whose `choices` is empty. DeepSeek also injects
   `: keep-alive` SSE comment lines that a naive parser will choke on.
-- **There is no retry / backoff** on 429/5xx.
+- **Retrying, logging and caching are decorators, not behaviour of the client.**
+  `RetryClient` backs off on 408/429/5xx and network failures, `ObservableClient` times
+  requests and redacts the auth headers, `CachingClient` replays identical requests from
+  disk for development. They compose, and the order changes what you see: observing a
+  retrying client logs every attempt, the other way round logs only the outcome.
 - **JSON decoding is content-type-driven** — the body is decoded only for
   `application/json`/`+json`, so `callApi(..., isJson: false)` returns a raw string
   (used for JSONL batch-result downloads). "Always decode JSON" breaks batch parsing.
