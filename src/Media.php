@@ -11,7 +11,7 @@ namespace AIAccess;
 /**
  * Binary media content (an image, a PDF, ...) together with its mime type.
  */
-final class Media
+final class Media implements Chat\Part
 {
 	private ?string $base64 = null;
 

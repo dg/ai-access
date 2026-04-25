@@ -23,9 +23,10 @@ abstract class Chat
 	/**
 	 * Sends the next message to the model or continues generation based on history.
 	 * Updates internal message history with user input and model response.
+	 * @param  string|Part|list<string|Part>|null  $message
 	 * @throws ServiceException
 	 */
-	public function sendMessage(?string $message = null): Response
+	public function sendMessage(string|Part|array|null $message = null): Response
 	{
 		$save = $this->messages;
 		if ($message !== null) {
@@ -50,8 +51,9 @@ abstract class Chat
 
 	/**
 	 * Adds a message to the chat history without sending it to the API.
+	 * @param  string|Part|list<string|Part>  $message
 	 */
-	public function addMessage(string $message, Role $role): Message
+	public function addMessage(string|Part|array $message, Role $role): Message
 	{
 		return $this->messages[] = new Message($message, $role);
 	}

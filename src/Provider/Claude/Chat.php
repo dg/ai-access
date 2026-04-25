@@ -111,7 +111,7 @@ final class Chat extends AIAccess\Chat\Chat
 					Role::User => 'user',
 					Role::Model => 'assistant',
 				},
-				'content' => $message->getText(),
+				'content' => $this->buildContent($message),
 			];
 		}
 
@@ -142,5 +142,16 @@ final class Chat extends AIAccess\Chat\Chat
 		}
 
 		return $payload;
+	}
+
+
+	private function buildContent(AIAccess\Chat\Message $message): string
+	{
+		foreach ($message->getParts() as $part) {
+			if (!$part instanceof AIAccess\Chat\TextPart) {
+				throw new AIAccess\LogicException('Claude chat supports text content only, ' . get_debug_type($part) . ' given.');
+			}
+		}
+		return $message->getText();
 	}
 }

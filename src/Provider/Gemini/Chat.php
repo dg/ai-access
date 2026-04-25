@@ -115,7 +115,7 @@ final class Chat extends AIAccess\Chat\Chat
 			}
 			$payload['contents'][] = [
 				'role' => $role,
-				'parts' => [['text' => $message->getText()]],
+				'parts' => $this->buildParts($message),
 			];
 			$lastRole = $role;
 		}
@@ -154,5 +154,17 @@ final class Chat extends AIAccess\Chat\Chat
 		}
 
 		return $payload;
+	}
+
+
+	/** @return list<mixed[]> */
+	private function buildParts(AIAccess\Chat\Message $message): array
+	{
+		foreach ($message->getParts() as $part) {
+			if (!$part instanceof AIAccess\Chat\TextPart) {
+				throw new AIAccess\LogicException('Gemini chat supports text content only, ' . get_debug_type($part) . ' given.');
+			}
+		}
+		return [['text' => $message->getText()]];
 	}
 }

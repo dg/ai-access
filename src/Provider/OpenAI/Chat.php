@@ -107,6 +107,17 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
+	private function buildContent(AIAccess\Chat\Message $message): string
+	{
+		foreach ($message->getParts() as $part) {
+			if (!$part instanceof AIAccess\Chat\TextPart) {
+				throw new AIAccess\LogicException('OpenAI chat supports text content only, ' . get_debug_type($part) . ' given.');
+			}
+		}
+		return $message->getText();
+	}
+
+
 	/**
 	 * Builds the payload for the OpenAI API responses request.
 	 * @return mixed[]
@@ -126,7 +137,7 @@ final class Chat extends AIAccess\Chat\Chat
 			};
 			$input[] = [
 				'role' => $role,
-				'content' => $message->getText(),
+				'content' => $this->buildContent($message),
 			];
 		}
 

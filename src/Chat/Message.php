@@ -7,16 +7,34 @@
 
 namespace AIAccess\Chat;
 
+use AIAccess\LogicException;
+use function implode, is_string;
+
 
 /**
- * Represents a chat message.
+ * Represents a chat message. Content is a list of parts; a plain string becomes a single TextPart.
  */
 class Message
 {
+	/** @var list<Part> */
+	private readonly array $parts;
+
+
+	/** @param string|Part|mixed[] $content  elements are strings or Parts, validated at runtime */
 	public function __construct(
-		private readonly string $text,
+		string|Part|array $content,
 		private readonly Role $role,
 	) {
+		$parts = [];
+		foreach (is_string($content) || $content instanceof Part ? [$content] : $content as $part) {
+			if (is_string($part)) {
+				$part = new TextPart($part);
+			} elseif (!$part instanceof Part) {
+				throw new LogicException('Message content must be a string or a Part, ' . get_debug_type($part) . ' given.');
+			}
+			$parts[] = $part;
+		}
+		$this->parts = $parts;
 	}
 
 
@@ -26,8 +44,38 @@ class Message
 	}
 
 
+	/** @return list<Part> */
+	public function getParts(): array
+	{
+		return $this->parts;
+	}
+
+
+	/**
+	 * Text of the message; parts that are not text are skipped.
+	 */
 	public function getText(): string
 	{
-		return $this->text;
+		$texts = [];
+		foreach ($this->parts as $part) {
+			if ($part instanceof TextPart) {
+				$texts[] = $part->text;
+			}
+		}
+		return implode("\n", $texts);
+	}
+
+
+	/**
+	 * True when the message carries nothing but text, i.e. every provider can send it as a plain string.
+	 */
+	public function isTextOnly(): bool
+	{
+		foreach ($this->parts as $part) {
+			if (!$part instanceof TextPart) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
