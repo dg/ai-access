@@ -133,6 +133,22 @@ test('ChatResponse ignores content that is not a list of blocks', function () {
 });
 
 
+test('a block whose text is not a string degrades instead of a TypeError', function () {
+	$response = new ChatResponse([
+		'content' => [
+			['type' => 'text', 'text' => ['nested' => 'nonsense']],
+			['type' => 'thinking', 'thinking' => 42],
+			['type' => 'text', 'text' => 'the readable half'],
+		],
+		'stop_reason' => 'end_turn',
+	]);
+
+	// a TypeError from a constructor is not something a caller can catch and retry
+	Assert::same('the readable half', $response->getText());
+	Assert::null($response->getReasoning());
+});
+
+
 test('ChatResponse handles filtered content', function () {
 	$rawResponse = [
 		'content' => [['type' => 'text', 'text' => '']],

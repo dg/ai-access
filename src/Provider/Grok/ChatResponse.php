@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Grok;
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
 use AIAccess\Helpers;
-use function is_array;
+use function is_array, is_string;
 
 
 /**
@@ -18,7 +18,12 @@ use function is_array;
  */
 final class ChatResponse implements Chat\Response
 {
+	public const Provider = 'grok';
+
 	private ?string $text = null;
+
+	/** @var list<Chat\Part> */
+	private array $parts = [];
 
 
 	public function __construct(
@@ -48,6 +53,16 @@ final class ChatResponse implements Chat\Response
 			'content_filter' => FinishReason::ContentFiltered,
 			default => FinishReason::Unknown,
 		};
+	}
+
+
+	/**
+	 * Chain of thought of a reasoning model. Must be passed back in tool call loops.
+	 */
+	public function getReasoning(): ?string
+	{
+		$content = $this->rawResponse['choices'][0]['message']['reasoning_content'] ?? null;
+		return is_string($content) && $content !== '' ? $content : null;
 	}
 
 
@@ -81,6 +96,12 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	public function getMessage(): Chat\Message
+	{
+		return new Chat\Message($this->parts, Chat\Role::Model);
+	}
+
+
 	public function getRawResponse(): mixed
 	{
 		return $this->rawResponse;
@@ -92,5 +113,12 @@ final class ChatResponse implements Chat\Response
 	{
 		$text = $data['choices'][0]['message']['content'] ?? null;
 		$this->text = $text === '' ? null : $text;
+
+		if (($reasoning = $this->getReasoning()) !== null) {
+			$this->parts[] = new Chat\ReasoningPart($reasoning, self::Provider, $reasoning);
+		}
+		if (is_string($this->text)) {
+			$this->parts[] = new Chat\TextPart($this->text, self::Provider);
+		}
 	}
 }

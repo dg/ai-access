@@ -105,6 +105,11 @@ final class Chat extends AIAccess\Chat\Chat
 		$payload = [];
 		$lastRole = null;
 		foreach ($this->messages as $message) {
+			// a turn left with nothing to send (only another provider's payload, say)
+			// must be dropped, because the API rejects empty parts
+			if (!$parts = $this->buildParts($message)) {
+				continue;
+			}
 			$role = match ($message->getRole()) {
 				Role::User => 'user',
 				Role::Model => 'model',
@@ -115,7 +120,7 @@ final class Chat extends AIAccess\Chat\Chat
 			}
 			$payload['contents'][] = [
 				'role' => $role,
-				'parts' => $this->buildParts($message),
+				'parts' => $parts,
 			];
 			$lastRole = $role;
 		}
@@ -157,14 +162,30 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
-	/** @return list<mixed[]> */
+	/**
+	 * Raw parts are replayed verbatim because they may carry a thoughtSignature;
+	 * without it Gemini answers finishReason: MISSING_THOUGHT_SIGNATURE.
+	 * @return list<mixed>
+	 */
 	private function buildParts(AIAccess\Chat\Message $message): array
 	{
+		$parts = [];
 		foreach ($message->getParts() as $part) {
-			if (!$part instanceof AIAccess\Chat\TextPart) {
+			if ($part instanceof AIAccess\Chat\ReasoningPart) {
+				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
+					$parts[] = $part->raw;
+				}
+			} elseif ($part instanceof AIAccess\Chat\TextPart) {
+				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
+					// the raw part travels even with no text: it is where thoughtSignature hangs
+					$parts[] = $part->raw;
+				} elseif ($part->text !== '') {
+					$parts[] = ['text' => $part->text];
+				}
+			} else {
 				throw new AIAccess\LogicException('Gemini chat supports text content only, ' . get_debug_type($part) . ' given.');
 			}
 		}
-		return [['text' => $message->getText()]];
+		return $parts;
 	}
 }

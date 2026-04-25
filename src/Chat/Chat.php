@@ -40,9 +40,10 @@ abstract class Chat
 			throw $e;
 		}
 
-		$responseText = $response->getText();
-		if ($responseText !== null) {
-			$this->addMessage($responseText, Role::Model);
+		// a turn with no text but with reasoning or (later) tool calls still belongs in the history
+		$message = $response->getMessage();
+		if ($message->getParts()) {
+			$this->messages[] = $message;
 		}
 
 		return $response;

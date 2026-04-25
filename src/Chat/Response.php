@@ -21,6 +21,16 @@ interface Response
 	function getText(): ?string;
 
 	/**
+	 * The whole model turn as parts, including reasoning. This is what goes into the chat history.
+	 */
+	function getMessage(): Message;
+
+	/**
+	 * The model's chain of thought, if it produced a readable one. Never part of getText().
+	 */
+	function getReasoning(): ?string;
+
+	/**
 	 * Gets the reason the model stopped generating output (provider-specific).
 	 */
 	function getFinishReason(): FinishReason;

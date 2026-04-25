@@ -106,12 +106,17 @@ final class Chat extends AIAccess\Chat\Chat
 
 		$messages = [];
 		foreach ($this->messages as $message) {
+			// a turn left with nothing to send (only another provider's payload, say)
+			// must be dropped, because the API rejects empty content
+			if (($content = $this->buildContent($message)) === '' || $content === []) {
+				continue;
+			}
 			$messages[] = [
 				'role' => match ($message->getRole()) {
 					Role::User => 'user',
 					Role::Model => 'assistant',
 				},
-				'content' => $this->buildContent($message),
+				'content' => $content,
 			];
 		}
 
@@ -145,13 +150,30 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
-	private function buildContent(AIAccess\Chat\Message $message): string
+	/**
+	 * A plain string while the message is only text; thinking blocks force the block form
+	 * and must be returned byte for byte, signature included, in their original position
+	 * (interleaved thinking sits between tool calls), or the API answers 400.
+	 * @return string|list<mixed>
+	 */
+	private function buildContent(AIAccess\Chat\Message $message): string|array
 	{
+		if ($message->isTextOnly()) {
+			return $message->getText();
+		}
+
+		$blocks = [];
 		foreach ($message->getParts() as $part) {
-			if (!$part instanceof AIAccess\Chat\TextPart) {
+			if ($part instanceof AIAccess\Chat\ReasoningPart) {
+				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
+					$blocks[] = $part->raw;
+				}
+			} elseif ($part instanceof AIAccess\Chat\TextPart) {
+				$blocks[] = ['type' => 'text', 'text' => $part->text];
+			} else {
 				throw new AIAccess\LogicException('Claude chat supports text content only, ' . get_debug_type($part) . ' given.');
 			}
 		}
-		return $message->getText();
+		return $blocks;
 	}
 }

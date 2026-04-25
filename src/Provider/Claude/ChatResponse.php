@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Claude;
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
 use AIAccess\Helpers;
-use function implode, is_array;
+use function implode, is_array, is_string;
 
 
 /**
@@ -18,8 +18,13 @@ use function implode, is_array;
  */
 final class ChatResponse implements Chat\Response
 {
+	public const Provider = 'claude';
+
 	private ?string $text = null;
 	private ?string $reasoning = null;
+
+	/** @var list<Chat\Part> */
+	private array $parts = [];
 
 
 	public function __construct(
@@ -79,6 +84,12 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	public function getMessage(): Chat\Message
+	{
+		return new Chat\Message($this->parts, Chat\Role::Model);
+	}
+
+
 	public function getJson(): mixed
 	{
 		return Helpers::decodeResponseJson($this->getText());
@@ -100,10 +111,16 @@ final class ChatResponse implements Chat\Response
 
 		$textParts = $thinkingParts = [];
 		foreach ($data['content'] as $block) {
-			if (($block['type'] ?? null) === 'text' && isset($block['text'])) {
+			$type = $block['type'] ?? null;
+			if ($type === 'text' && is_string($block['text'] ?? null)) {
 				$textParts[] = $block['text'];
-			} elseif (($block['type'] ?? null) === 'thinking' && isset($block['thinking'])) {
+				$this->parts[] = new Chat\TextPart($block['text'], self::Provider, $block);
+			} elseif ($type === 'thinking' && is_string($block['thinking'] ?? null)) {
 				$thinkingParts[] = $block['thinking'];
+				// signature must come back unchanged, and display:omitted leaves the text empty
+				$this->parts[] = new Chat\ReasoningPart($block['thinking'] === '' ? null : $block['thinking'], self::Provider, $block);
+			} elseif ($type === 'redacted_thinking') {
+				$this->parts[] = new Chat\ReasoningPart(null, self::Provider, $block);
 			}
 		}
 

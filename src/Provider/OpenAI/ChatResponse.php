@@ -18,8 +18,14 @@ use function implode, is_array, is_string;
  */
 final class ChatResponse implements Chat\Response
 {
+	public const Provider = 'openai';
+
 	private ?string $text = null;
 	private ?string $refusal = null;
+	private ?string $reasoning = null;
+
+	/** @var list<Chat\Part> */
+	private array $parts = [];
 
 
 	public function __construct(
@@ -70,6 +76,18 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	public function getReasoning(): ?string
+	{
+		return $this->reasoning;
+	}
+
+
+	public function getMessage(): Chat\Message
+	{
+		return new Chat\Message($this->parts, Chat\Role::Model);
+	}
+
+
 	private function hasToolCall(): bool
 	{
 		foreach ($this->rawResponse['output'] ?? [] as $item) {
@@ -112,21 +130,41 @@ final class ChatResponse implements Chat\Response
 	/** @param mixed[] $data */
 	private function parseRawResponse(array $data): void
 	{
-		$textParts = $refusals = [];
+		$textParts = $refusals = $summaries = [];
 		foreach ($data['output'] ?? [] as $item) {
-			if (($item['type'] ?? null) !== 'message' || !is_array($item['content'] ?? null)) {
+			if (($item['type'] ?? null) === 'reasoning') {
+				$own = [];
+				foreach ($item['summary'] ?? [] as $block) {
+					if (is_string($block['text'] ?? null)) {
+						$own[] = $block['text'];
+						$summaries[] = $block['text'];
+					}
+				}
+				// the raw item is kept whole; whether it can be replayed (by id with store on,
+				// or via encrypted_content) is decided when the payload is built
+				$this->parts[] = new Chat\ReasoningPart(
+					($text = implode("\n", $own)) === '' ? null : $text,
+					self::Provider,
+					$item,
+				);
+				continue;
+			} elseif (($item['type'] ?? null) !== 'message' || !is_array($item['content'] ?? null)) {
 				continue;
 			}
 			foreach ($item['content'] as $block) {
 				if (($block['type'] ?? null) === 'output_text' && is_string($block['text'] ?? null)) {
 					$textParts[] = $block['text'];
+					$this->parts[] = new Chat\TextPart($block['text'], self::Provider, $block);
 				} elseif (($block['type'] ?? null) === 'refusal' && is_string($block['refusal'] ?? null)) {
 					$refusals[] = $block['refusal'];
+					// the turn stays in the history, so a validate loop sees what was declined
+					$this->parts[] = new Chat\TextPart($block['refusal'], self::Provider, $block);
 				}
 			}
 		}
 
 		$this->text = ($text = implode("\n", $textParts)) === '' ? null : $text;
 		$this->refusal = ($refusal = implode("\n", $refusals)) === '' ? null : $refusal;
+		$this->reasoning = ($reasoning = implode("\n", $summaries)) === '' ? null : $reasoning;
 	}
 }

@@ -107,17 +107,6 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
-	private function buildContent(AIAccess\Chat\Message $message): string
-	{
-		foreach ($message->getParts() as $part) {
-			if (!$part instanceof AIAccess\Chat\TextPart) {
-				throw new AIAccess\LogicException('OpenAI chat supports text content only, ' . get_debug_type($part) . ' given.');
-			}
-		}
-		return $message->getText();
-	}
-
-
 	/**
 	 * Builds the payload for the OpenAI API responses request.
 	 * @return mixed[]
@@ -131,14 +120,10 @@ final class Chat extends AIAccess\Chat\Chat
 
 		$input = [];
 		foreach ($this->messages as $message) {
-			$role = match ($message->getRole()) {
+			$this->appendMessage($input, $message, match ($message->getRole()) {
 				Role::User => 'user',
 				Role::Model => 'assistant',
-			};
-			$input[] = [
-				'role' => $role,
-				'content' => $this->buildContent($message),
-			];
+			});
 		}
 
 		$payload = [
@@ -170,6 +155,48 @@ final class Chat extends AIAccess\Chat\Chat
 			};
 		}
 
-		return array_merge($payload, $this->options);
+		$payload = array_merge($payload, $this->options);
+
+		// without store the reasoning items exist nowhere server-side, so their encrypted copy
+		// must travel with the answer, or tool loops on reasoning models break with a 400
+		if (($payload['store'] ?? true) === false) {
+			$payload['include'] = array_values(array_unique(array_merge(
+				$payload['include'] ?? [],
+				['reasoning.encrypted_content'],
+			)));
+		}
+
+		return $payload;
+	}
+
+
+	/**
+	 * Input is a flat item list, so one message can expand into several items:
+	 * reasoning items go in front of the message they belong to.
+	 * @param  list<mixed>  $input
+	 */
+	private function appendMessage(array &$input, AIAccess\Chat\Message $message, string $role): void
+	{
+		if ($message->isTextOnly()) {
+			$input[] = ['role' => $role, 'content' => $message->getText()];
+			return;
+		}
+
+		foreach ($message->getParts() as $part) {
+			if ($part instanceof AIAccess\Chat\ReasoningPart) {
+				// with store on (the default) the server resolves the item by its id, so the raw
+				// item is replayed as is; without it only an encrypted_content copy can travel
+				if ($part->provider === ChatResponse::Provider && $part->raw !== null
+					&& (isset($part->raw['encrypted_content']) || ($this->options['store'] ?? true) !== false)) {
+					$input[] = $part->raw;
+				}
+			} elseif (!$part instanceof AIAccess\Chat\TextPart) {
+				throw new AIAccess\LogicException('OpenAI chat supports text content only, ' . get_debug_type($part) . ' given.');
+			}
+		}
+
+		if (($text = $message->getText()) !== '') {
+			$input[] = ['role' => $role, 'content' => $text];
+		}
 	}
 }

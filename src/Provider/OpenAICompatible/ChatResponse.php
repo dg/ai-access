@@ -18,7 +18,12 @@ use function is_array, is_string;
  */
 final class ChatResponse implements Chat\Response
 {
+	public const Provider = 'openai-compatible';
+
 	private ?string $text = null;
+
+	/** @var list<Chat\Part> */
+	private array $parts = [];
 
 
 	public function __construct(
@@ -27,6 +32,19 @@ final class ChatResponse implements Chat\Response
 	) {
 		$text = $this->rawResponse['choices'][0]['message']['content'] ?? null;
 		$this->text = $text === '' ? null : $text;
+
+		if (($reasoning = $this->getReasoning()) !== null) {
+			$this->parts[] = new Chat\ReasoningPart($reasoning, self::Provider, $reasoning);
+		}
+		if (is_string($this->text)) {
+			$this->parts[] = new Chat\TextPart($this->text, self::Provider);
+		}
+	}
+
+
+	public function getMessage(): Chat\Message
+	{
+		return new Chat\Message($this->parts, Chat\Role::Model);
 	}
 
 

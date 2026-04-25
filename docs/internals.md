@@ -63,32 +63,44 @@ that surprise:
   mismatches raise `UnexpectedResponseException`. The single remaining warning is
   Gemini's alternating-roles check, which predicts an API error we cannot prevent.
 
-## The conversation model is text-only, and transactional
+## The conversation model is part-based, and transactional
 
 `Chat\Chat::sendMessage` is **transactional**: it snapshots `$messages`, appends the
 user turn, calls the abstract `generateResponse()`, and **rolls the history back on
 exception**. So a subclass must manage history *only* through the base, and
 `generateResponse()` must be pure w.r.t. `$messages`.
 
-The shared `Message` is **text-only** (`string text` + `Role{User, Model}`) — no
-tool/function-call, no images, no multi-part. Consequences that are all traps:
+A `Message` holds a **list of `Part`s** (`TextPart`, `ReasoningPart`, and `Media`),
+plus a `Role`. A plain string becomes one `TextPart`, so `addMessage('hi', Role::User)`
+still works and **a text-only conversation produces exactly the payload it always
+did** — the parts are internal until something non-text appears. Consequences:
 
-- The assistant turn is appended **only when `getText() !== null`**. A pure `tool_use`
-  / blocked / refusal response adds **nothing** to history — a trap for multi-turn tool
-  loops.
-- **Tool use is not abstracted.** You set `tools` via provider-specific `setOptions`,
-  and to *read* a tool call you must reach into `getRawResponse()`. The shared
-  `FinishReason::ToolCall` exists, but there is no shared way to get call arguments or
-  return a result — tool use is raw passthrough.
-- **Reasoning output is deliberately kept out of `getText()`**, because anything that
-  lands there flows through `sendMessage()` into the history and is echoed back to the
-  model next turn. Every provider that produces it exposes it under the same name,
-  `getReasoning()` — but the name is the only thing they share: Claude reads blocks
-  whose key is `thinking` (not `text`), Gemini parts flagged `thought: true`, DeepSeek
-  and OpenAI-compatible endpoints a `reasoning_content` field. It is a provider-level
-  method, not part of `Chat\Response`, until the message model lands. Tool calling will
-  have to round-trip these payloads verbatim, signatures included, or multi-turn loops
-  break — DeepSeek answers 400 without them.
+- **`getText()` joins text parts and nothing else.** Reasoning never leaks into it,
+  because anything that lands there flows through `sendMessage()` into the history and
+  is echoed back to the model next turn.
+- The model turn is appended **when it has at least one part**, so a turn carrying only
+  reasoning (or, later, only a tool call) is no longer silently dropped. `getMessage()`
+  on the response is exactly what goes into the history.
+- **An opaque payload belongs to the provider that issued it.** `ReasoningPart` (and
+  `TextPart`, because Gemini hangs `thoughtSignature` off ordinary text parts) carries
+  `$provider` + `$raw`, and `buildPayload()` replays `$raw` **only when the tag matches
+  its own provider**. Nothing is ever translated between providers: replaying a Claude
+  history on OpenAI works, it just loses the earlier reasoning. Get this wrong and
+  multi-turn breaks loudly — Claude 400s on a modified signature, Gemini answers
+  `MISSING_THOUGHT_SIGNATURE`.
+- **The chat/completions providers deliberately do not replay reasoning yet.** DeepSeek,
+  Grok and the generic OpenAI-compatible client parse `reasoning_content` into a part so
+  it is readable, but do not send it back: it is undocumented whether the input accepts
+  it at all, and a 400 there would break plain chat. Tool calls will need it in the
+  turn, and that is where it will be settled. OpenAI replays a reasoning item **only when it
+  carries `encrypted_content`** — without it the item is a server-side reference we
+  cannot reconstruct.
+- **A part in the history is not automatically content on the wire**, so every
+  `buildPayload()` drops a turn that boils down to nothing: an unreplayable payload,
+  or reasoning alone. Sending it as empty content is not the safe fallback — Claude and
+  Gemini reject empty content outright.
+- **Tool use is not abstracted yet.** You set `tools` via provider-specific
+  `setOptions`, and to *read* a tool call you must reach into `getRawResponse()`.
 - **Gemini has extra rules no one else does:** the first message must be `User`, and it
   warns on two same-role messages in a row (strict alternation). A history valid on
   another provider can throw/warn on Gemini.

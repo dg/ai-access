@@ -58,7 +58,9 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 	protected function buildContent(AIAccess\Chat\Message $message): string
 	{
 		foreach ($message->getParts() as $part) {
-			if (!$part instanceof AIAccess\Chat\TextPart) {
+			// reasoning is deliberately not sent back yet: outside a tool loop it is undocumented
+			// whether the endpoint accepts reasoning_content on input, and a 400 would break plain chat
+			if (!$part instanceof AIAccess\Chat\TextPart && !$part instanceof AIAccess\Chat\ReasoningPart) {
 				throw new AIAccess\LogicException('This chat supports text content only, ' . get_debug_type($part) . ' given.');
 			}
 		}
@@ -79,12 +81,17 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 		}
 
 		foreach ($this->messages as $message) {
+			// a turn left with nothing to send, such as one carrying reasoning alone,
+			// is dropped rather than sent as an empty message
+			if (($content = $this->buildContent($message)) === '') {
+				continue;
+			}
 			$messages[] = [
 				'role' => match ($message->getRole()) {
 					Role::User => 'user',
 					Role::Model => 'assistant',
 				},
-				'content' => $this->buildContent($message),
+				'content' => $content,
 			];
 		}
 

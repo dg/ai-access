@@ -18,8 +18,13 @@ use function implode, is_array, is_string;
  */
 final class ChatResponse implements Chat\Response
 {
+	public const Provider = 'gemini';
+
 	private ?string $text = null;
 	private ?string $reasoning = null;
+
+	/** @var list<Chat\Part> */
+	private array $parts = [];
 
 
 	public function __construct(
@@ -70,6 +75,12 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	public function getMessage(): Chat\Message
+	{
+		return new Chat\Message($this->parts, Chat\Role::Model);
+	}
+
+
 	public function getUsage(): ?Chat\Usage
 	{
 		$usage = $this->rawResponse['usageMetadata'] ?? null;
@@ -111,8 +122,11 @@ final class ChatResponse implements Chat\Response
 					continue;
 				} elseif ($part['thought'] ?? false) {
 					$thoughtParts[] = $part['text'];
+					$this->parts[] = new Chat\ReasoningPart($part['text'], self::Provider, $part);
 				} else {
 					$textParts[] = $part['text'];
+					// the raw part may carry a thoughtSignature, which Gemini wants back verbatim
+					$this->parts[] = new Chat\TextPart($part['text'], self::Provider, $part);
 				}
 			}
 		} elseif (is_string($data['candidates'][0]['text'] ?? null)) {
