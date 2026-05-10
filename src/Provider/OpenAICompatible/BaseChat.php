@@ -9,12 +9,13 @@ namespace AIAccess\Provider\OpenAICompatible;
 
 use AIAccess;
 use AIAccess\Chat\Role;
+use function array_filter, is_array, is_string;
 
 
 /**
  * Shared request side of the chat/completions dialect, which several providers speak
- * verbatim: message serialization lives here once. What genuinely differs - option
- * names, effort mapping, the response subclass - stays in the subclasses.
+ * verbatim: message serialization and tool definitions live here once. What genuinely
+ * differs - option names, effort mapping, the response subclass - stays in the subclasses.
  *
  * @internal
  */
@@ -48,24 +49,17 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 
 
 	/**
+	 * The ChatResponse::Provider tag whose raw parts this chat replays verbatim.
+	 */
+	abstract protected function provider(): string;
+
+
+	/**
 	 * Finishes the payload with what the dialects spell differently: the response schema
 	 * and the reasoning effort.
 	 * @param  mixed[]  $payload
 	 */
 	abstract protected function amendPayload(array &$payload): void;
-
-
-	protected function buildContent(AIAccess\Chat\Message $message): string
-	{
-		foreach ($message->getParts() as $part) {
-			// reasoning is deliberately not sent back yet: outside a tool loop it is undocumented
-			// whether the endpoint accepts reasoning_content on input, and a 400 would break plain chat
-			if (!$part instanceof AIAccess\Chat\TextPart && !$part instanceof AIAccess\Chat\ReasoningPart) {
-				throw new AIAccess\LogicException('This chat supports text content only, ' . get_debug_type($part) . ' given.');
-			}
-		}
-		return $message->getText();
-	}
 
 
 	/** @return mixed[] */
@@ -81,18 +75,7 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 		}
 
 		foreach ($this->messages as $message) {
-			// a turn left with nothing to send, such as one carrying reasoning alone,
-			// is dropped rather than sent as an empty message
-			if (($content = $this->buildContent($message)) === '') {
-				continue;
-			}
-			$messages[] = [
-				'role' => match ($message->getRole()) {
-					Role::User => 'user',
-					Role::Model => 'assistant',
-				},
-				'content' => $content,
-			];
+			$this->appendMessage($messages, $message);
 		}
 
 		$payload = [
@@ -100,7 +83,90 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 			'messages' => $messages,
 		] + $this->options;
 
+		foreach ($this->tools as $tool) {
+			$payload['tools'][] = [
+				'type' => 'function',
+				'function' => array_filter([
+					'name' => $tool->name,
+					'description' => $tool->description,
+					'parameters' => $tool->parameters ?: ['type' => 'object', 'properties' => new \stdClass],
+					'strict' => $tool->strict ?: null,
+				], fn($value) => $value !== null),
+			];
+		}
+
+		if ($this->toolChoice !== null) {
+			$payload['tool_choice'] = ['type' => 'function', 'function' => ['name' => $this->toolChoice]];
+		}
+
 		$this->amendPayload($payload);
 		return $payload;
+	}
+
+
+	/**
+	 * One message can expand into several: every tool result is a message of its own.
+	 * @param  list<mixed>  $messages
+	 */
+	private function appendMessage(array &$messages, AIAccess\Chat\Message $message): void
+	{
+		if ($message->getRole() === Role::Tool) {
+			foreach ($message->getParts() as $part) {
+				if (!$part instanceof AIAccess\Chat\ToolResultPart) {
+					throw new AIAccess\LogicException('A tool message accepts tool results only, ' . get_debug_type($part) . ' given.');
+				}
+				$messages[] = [
+					'role' => 'tool',
+					'tool_call_id' => $part->callId,
+					// there is no error flag here, so the model has to read it in the text
+					'content' => ($part->isError ? 'ERROR: ' : '')
+						. (is_array($part->content) ? AIAccess\Helpers::encodeJson($part->content) : $part->content),
+				];
+			}
+			return;
+		}
+
+		$calls = [];
+		$reasoning = null;
+		foreach ($message->getParts() as $part) {
+			if ($part instanceof AIAccess\Chat\ToolCallPart) {
+				$calls[] = $part->provider === $this->provider() && $part->raw !== null
+					? $part->raw
+					: [
+						'id' => $part->callId,
+						'type' => 'function',
+						// [] would serialize as a JSON array, and arguments must be an object
+						'function' => [
+							'name' => $part->name,
+							'arguments' => $part->arguments ? AIAccess\Helpers::encodeJson($part->arguments) : '{}',
+						],
+					];
+			} elseif ($part instanceof AIAccess\Chat\ReasoningPart) {
+				if ($part->provider === $this->provider() && is_string($part->raw)) {
+					$reasoning = $part->raw;
+				}
+			} elseif (!$part instanceof AIAccess\Chat\TextPart) {
+				throw new AIAccess\LogicException('This chat supports text content only, ' . get_debug_type($part) . ' given.');
+			}
+		}
+
+		$text = $message->getText();
+		if ($text === '' && !$calls) {
+			return;
+		}
+
+		$item = [
+			'role' => $message->getRole() === Role::User ? 'user' : 'assistant',
+			'content' => $text === '' ? null : $text,
+		];
+		if ($calls) {
+			$item['tool_calls'] = $calls;
+			// the endpoint accepts a tool call turn without it, but returning it keeps the
+			// chain of thought intact across rounds, which is what the docs ask for
+			if ($reasoning !== null) {
+				$item['reasoning_content'] = $reasoning;
+			}
+		}
+		$messages[] = $item;
 	}
 }

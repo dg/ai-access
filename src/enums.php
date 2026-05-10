@@ -14,6 +14,9 @@ namespace AIAccess\Chat {
 	{
 		case User = 'user';
 		case Model = 'model';
+
+		/** Results of tool calls; providers map it to whatever their wire format calls for. */
+		case Tool = 'tool';
 	}
 
 	/**

@@ -1,0 +1,49 @@
+{
+	"id": "6ba0d524-4cf3-97e5-8892-47a3f5bc78f8",
+	"object": "chat.completion",
+	"created": 1785838146,
+	"model": "grok-4.3",
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "",
+				"reasoning_content": "The user asked: \"What is the weather in Brno? Use the tool.\"\n",
+				"tool_calls": [
+					{
+						"id": "call-2b5332e7-fb76-4361-b835-5fd736874882-0",
+						"function": {
+							"name": "get_weather",
+							"arguments": "{\"city\":\"Brno\"}"
+						},
+						"type": "function"
+					}
+				],
+				"refusal": null
+			},
+			"finish_reason": "tool_calls"
+		}
+	],
+	"usage": {
+		"prompt_tokens": 294,
+		"completion_tokens": 12,
+		"total_tokens": 451,
+		"prompt_tokens_details": {
+			"text_tokens": 294,
+			"audio_tokens": 0,
+			"image_tokens": 0,
+			"cached_tokens": 192
+		},
+		"completion_tokens_details": {
+			"reasoning_tokens": 145,
+			"audio_tokens": 0,
+			"accepted_prediction_tokens": 0,
+			"rejected_prediction_tokens": 0
+		},
+		"num_sources_used": 0,
+		"cost_in_usd_ticks": 5584000
+	},
+	"system_fingerprint": "fp_eb3c003fc66c14ed",
+	"service_tier": "default"
+}

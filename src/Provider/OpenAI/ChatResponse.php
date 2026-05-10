@@ -88,6 +88,13 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	/** @return list<Chat\ToolCallPart> */
+	public function getToolCalls(): array
+	{
+		return array_values(array_filter($this->parts, fn($part) => $part instanceof Chat\ToolCallPart));
+	}
+
+
 	private function hasToolCall(): bool
 	{
 		foreach ($this->rawResponse['output'] ?? [] as $item) {
@@ -144,6 +151,18 @@ final class ChatResponse implements Chat\Response
 				// or via encrypted_content) is decided when the payload is built
 				$this->parts[] = new Chat\ReasoningPart(
 					($text = implode("\n", $own)) === '' ? null : $text,
+					self::Provider,
+					$item,
+				);
+				continue;
+			} elseif (($item['type'] ?? null) === 'function_call') {
+				// the pairing key is call_id, not the item's own id
+				$decoded = Helpers::decodeArguments($item['arguments'] ?? null);
+				$this->parts[] = new Chat\ToolCallPart(
+					(string) ($item['call_id'] ?? ''),
+					(string) ($item['name'] ?? ''),
+					$decoded[0],
+					$decoded[1],
 					self::Provider,
 					$item,
 				);

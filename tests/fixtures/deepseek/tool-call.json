@@ -1,0 +1,43 @@
+{
+	"id": "f004aa87-9457-4b13-a2e2-5ee047634b93",
+	"object": "chat.completion",
+	"created": 1785838143,
+	"model": "deepseek-v4-flash",
+	"choices": [
+		{
+			"index": 0,
+			"message": {
+				"role": "assistant",
+				"content": "",
+				"reasoning_content": "The user asks for the weather in Brno. I'll use the get_weather tool.",
+				"tool_calls": [
+					{
+						"index": 0,
+						"id": "call_00_I4RHrIuu8ISa4xBvKfJG9687",
+						"type": "function",
+						"function": {
+							"name": "get_weather",
+							"arguments": "{\"city\": \"Brno\"}"
+						}
+					}
+				]
+			},
+			"logprobs": null,
+			"finish_reason": "tool_calls"
+		}
+	],
+	"usage": {
+		"prompt_tokens": 377,
+		"completion_tokens": 65,
+		"total_tokens": 442,
+		"prompt_tokens_details": {
+			"cached_tokens": 0
+		},
+		"completion_tokens_details": {
+			"reasoning_tokens": 19
+		},
+		"prompt_cache_hit_tokens": 0,
+		"prompt_cache_miss_tokens": 377
+	},
+	"system_fingerprint": "fp_a18b46594c_prod0820_fp8_kvcache_20260402"
+}

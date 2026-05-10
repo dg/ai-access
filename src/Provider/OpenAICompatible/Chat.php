@@ -31,8 +31,6 @@ final class Chat extends BaseChat
 	/**
 	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating.
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
-	 * @param  ?mixed[]  $tools  List of tools the model may call.
-	 * @param  string|mixed[]|null  $toolChoice  Controls which tool is called.
 	 * @param  ?mixed[]  $custom  Anything else the endpoint accepts, merged into the payload as is.
 	 */
 	public function setOptions(
@@ -44,8 +42,6 @@ final class Chat extends BaseChat
 		string|array|null $stop = null,
 		?int $seed = null,
 		?array $responseFormat = null,
-		?array $tools = null,
-		string|array|null $toolChoice = null,
 		?array $custom = null,
 	): static
 	{
@@ -59,8 +55,6 @@ final class Chat extends BaseChat
 				'stop' => $stop,
 				'seed' => $seed,
 				'response_format' => $responseFormat,
-				'tools' => $tools,
-				'tool_choice' => $toolChoice,
 			],
 			fn($value) => $value !== null,
 		), $custom ?? []);
@@ -88,6 +82,12 @@ final class Chat extends BaseChat
 	protected function createResponse(array $raw): ChatResponse
 	{
 		return new ChatResponse($raw);
+	}
+
+
+	protected function provider(): string
+	{
+		return ChatResponse::Provider;
 	}
 
 

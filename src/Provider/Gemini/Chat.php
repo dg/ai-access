@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Gemini;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
-use function array_filter, array_flip, array_intersect_key, array_merge, compact;
+use function array_filter, array_flip, array_intersect_key, array_merge, compact, is_array;
 
 
 /**
@@ -110,8 +110,9 @@ final class Chat extends AIAccess\Chat\Chat
 			if (!$parts = $this->buildParts($message)) {
 				continue;
 			}
+			// Gemini has no tool role; results travel as a user turn
 			$role = match ($message->getRole()) {
-				Role::User => 'user',
+				Role::User, Role::Tool => 'user',
 				Role::Model => 'model',
 			};
 			if ($lastRole === $role) {
@@ -142,6 +143,23 @@ final class Chat extends AIAccess\Chat\Chat
 		if ($this->responseSchema !== null) {
 			$payload['generationConfig']['responseMimeType'] = 'application/json';
 			$payload['generationConfig']['responseJsonSchema'] = $this->responseSchema;
+		}
+
+		foreach ($this->tools as $tool) {
+			// parametersJsonSchema takes plain JSON Schema; the older parameters field wants
+			// OpenAPI with upper-case types
+			$payload['tools'][0]['functionDeclarations'][] = [
+				'name' => $tool->name,
+				'description' => $tool->description,
+				'parametersJsonSchema' => $tool->parameters ?: ['type' => 'object', 'properties' => new \stdClass],
+			];
+		}
+
+		if ($this->toolChoice !== null) {
+			$payload['toolConfig']['functionCallingConfig'] = [
+				'mode' => 'ANY',
+				'allowedFunctionNames' => [$this->toolChoice],
+			];
 		}
 
 		if ($this->effort !== null) {
@@ -175,6 +193,36 @@ final class Chat extends AIAccess\Chat\Chat
 				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
 					$parts[] = $part->raw;
 				}
+			} elseif ($part instanceof AIAccess\Chat\ToolCallPart) {
+				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
+					$parts[] = $part->raw;
+				} else {
+					// a foreign call keeps its id, so the paired functionResponse below matches;
+					// empty args must serialize as an object, not as []
+					$call = ['name' => $part->name, 'args' => $part->arguments ?: new \stdClass];
+					if (!str_starts_with($part->callId, $part->name . '#')) {
+						$call = ['id' => $part->callId] + $call;
+					}
+					$parts[] = ['functionCall' => $call];
+				}
+			} elseif ($part instanceof AIAccess\Chat\ToolResultPart) {
+				// the response has to be an object - a Struct - so a list or an empty array
+				// gets wrapped; the id goes along whenever the call carried one, otherwise
+				// parallel calls of the same function could not be told apart
+				$response = [
+					'name' => $part->name,
+					'response' => match (true) {
+						$part->isError => ['error' => $part->content],
+						!is_array($part->content) => ['result' => $part->content],
+						$part->content === [] => new \stdClass,
+						array_is_list($part->content) => ['result' => $part->content],
+						default => $part->content,
+					},
+				];
+				if (!str_starts_with($part->callId, $part->name . '#')) {
+					$response['id'] = $part->callId;
+				}
+				$parts[] = ['functionResponse' => $response];
 			} elseif ($part instanceof AIAccess\Chat\TextPart) {
 				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
 					// the raw part travels even with no text: it is where thoughtSignature hangs

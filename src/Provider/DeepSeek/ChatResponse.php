@@ -95,6 +95,13 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	/** @return list<Chat\ToolCallPart> */
+	public function getToolCalls(): array
+	{
+		return array_values(array_filter($this->parts, fn($part) => $part instanceof Chat\ToolCallPart));
+	}
+
+
 	public function getRawResponse(): mixed
 	{
 		return $this->rawResponse;
@@ -112,6 +119,18 @@ final class ChatResponse implements Chat\Response
 		}
 		if (is_string($this->text)) {
 			$this->parts[] = new Chat\TextPart($this->text, self::Provider);
+		}
+
+		foreach ($data['choices'][0]['message']['tool_calls'] ?? [] as $call) {
+			[$arguments, $error] = Helpers::decodeArguments($call['function']['arguments'] ?? null);
+			$this->parts[] = new Chat\ToolCallPart(
+				(string) ($call['id'] ?? ''),
+				(string) ($call['function']['name'] ?? ''),
+				$arguments,
+				$error,
+				self::Provider,
+				$call,
+			);
 		}
 	}
 }

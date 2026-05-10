@@ -11,7 +11,7 @@ use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use AIAccess\ServiceException;
-use function array_filter, array_flip, array_intersect_key, array_merge;
+use function array_filter, array_flip, array_intersect_key, array_merge, is_array;
 
 
 /**
@@ -64,13 +64,13 @@ final class Chat extends AIAccess\Chat\Chat
 
 
 	/**
-	 * Counts tokens for the current chat history, system instruction.
+	 * Counts tokens for the current chat history, system instruction, tools and thinking mode.
 	 * @throws ServiceException
 	 */
 	public function countTokens(): int
 	{
 		$payload = $this->buildPayload();
-		$payload = array_intersect_key($payload, array_flip(['model', 'messages', 'system']));
+		$payload = array_intersect_key($payload, array_flip(['model', 'messages', 'system', 'tools', 'tool_choice', 'thinking']));
 		$response = $this->client->callApi('v1/messages/count_tokens', $payload);
 		return AIAccess\Helpers::expectInt($response['input_tokens'] ?? null, 'input_tokens');
 	}
@@ -113,7 +113,7 @@ final class Chat extends AIAccess\Chat\Chat
 			}
 			$messages[] = [
 				'role' => match ($message->getRole()) {
-					Role::User => 'user',
+					Role::User, Role::Tool => 'user',
 					Role::Model => 'assistant',
 				},
 				'content' => $content,
@@ -132,6 +132,18 @@ final class Chat extends AIAccess\Chat\Chat
 
 		if ($this->responseSchema !== null) {
 			$payload['output_config']['format'] = ['type' => 'json_schema', 'schema' => $this->responseSchema];
+		}
+
+		foreach ($this->tools as $tool) {
+			$payload['tools'][] = [
+				'name' => $tool->name,
+				'description' => $tool->description,
+				'input_schema' => $tool->parameters ?: ['type' => 'object', 'properties' => new \stdClass],
+			];
+		}
+
+		if ($this->toolChoice !== null) {
+			$payload['tool_choice'] = ['type' => 'tool', 'name' => $this->toolChoice];
 		}
 
 		if ($this->effort === Effort::None) {
@@ -162,18 +174,36 @@ final class Chat extends AIAccess\Chat\Chat
 			return $message->getText();
 		}
 
-		$blocks = [];
+		$first = $blocks = [];
 		foreach ($message->getParts() as $part) {
 			if ($part instanceof AIAccess\Chat\ReasoningPart) {
 				if ($part->provider === ChatResponse::Provider && $part->raw !== null) {
 					$blocks[] = $part->raw;
 				}
+			} elseif ($part instanceof AIAccess\Chat\ToolResultPart) {
+				$first[] = array_filter([
+					'type' => 'tool_result',
+					'tool_use_id' => $part->callId,
+					'content' => is_array($part->content) ? AIAccess\Helpers::encodeJson($part->content) : $part->content,
+					'is_error' => $part->isError ?: null,
+				], fn($value) => $value !== null);
+			} elseif ($part instanceof AIAccess\Chat\ToolCallPart) {
+				$block = $part->provider === ChatResponse::Provider && $part->raw !== null
+					? $part->raw
+					: ['type' => 'tool_use', 'id' => $part->callId, 'name' => $part->name, 'input' => $part->arguments];
+				// an empty argument list decodes to [], which would serialize back as a JSON
+				// array; the API insists input is an object
+				if (($block['input'] ?? null) === []) {
+					$block['input'] = new \stdClass;
+				}
+				$blocks[] = $block;
 			} elseif ($part instanceof AIAccess\Chat\TextPart) {
 				$blocks[] = ['type' => 'text', 'text' => $part->text];
 			} else {
 				throw new AIAccess\LogicException('Claude chat supports text content only, ' . get_debug_type($part) . ' given.');
 			}
 		}
-		return $blocks;
+		// tool_result blocks are rejected unless they lead the turn
+		return array_merge($first, $blocks);
 	}
 }

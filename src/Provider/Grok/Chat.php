@@ -40,8 +40,6 @@ final class Chat extends OpenAICompatible\BaseChat
 	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating. Not supported by reasoning models.
 	 * @param  ?int  $seed  Seed for deterministic sampling (best effort).
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
-	 * @param  ?mixed[]  $tools  List of tools the model may call.
-	 * @param  string|mixed[]|null  $toolChoice  Controls which tool is called.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
@@ -52,8 +50,6 @@ final class Chat extends OpenAICompatible\BaseChat
 		string|array|null $stop = null,
 		?int $seed = null,
 		?array $responseFormat = null,
-		?array $tools = null,
-		string|array|null $toolChoice = null,
 	): static
 	{
 		$this->options = array_merge($this->options, array_filter(
@@ -66,8 +62,6 @@ final class Chat extends OpenAICompatible\BaseChat
 				'stop' => $stop,
 				'seed' => $seed,
 				'response_format' => $responseFormat,
-				'tools' => $tools,
-				'tool_choice' => $toolChoice,
 			],
 			fn($value) => $value !== null,
 		));
@@ -95,6 +89,12 @@ final class Chat extends OpenAICompatible\BaseChat
 	protected function createResponse(array $raw): ChatResponse
 	{
 		return new ChatResponse($raw);
+	}
+
+
+	protected function provider(): string
+	{
+		return ChatResponse::Provider;
 	}
 
 

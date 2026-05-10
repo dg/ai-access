@@ -43,6 +43,11 @@ final class ChatResponse implements Chat\Response
 
 	public function getFinishReason(): FinishReason
 	{
+		// a function call is announced in the parts, never in finishReason, which stays STOP
+		if ($this->getToolCalls()) {
+			return FinishReason::ToolCall;
+		}
+
 		// a blocked prompt has no candidates at all; the reason lives in promptFeedback
 		if (isset($this->rawResponse['promptFeedback']['blockReason'])) {
 			return FinishReason::ContentFiltered;
@@ -78,6 +83,13 @@ final class ChatResponse implements Chat\Response
 	public function getMessage(): Chat\Message
 	{
 		return new Chat\Message($this->parts, Chat\Role::Model);
+	}
+
+
+	/** @return list<Chat\ToolCallPart> */
+	public function getToolCalls(): array
+	{
+		return array_values(array_filter($this->parts, fn($part) => $part instanceof Chat\ToolCallPart));
 	}
 
 
@@ -117,8 +129,19 @@ final class ChatResponse implements Chat\Response
 
 		$textParts = $thoughtParts = [];
 		if (is_array($data['candidates'][0]['content']['parts'] ?? null)) {
-			foreach ($data['candidates'][0]['content']['parts'] as $part) {
-				if (!is_string($part['text'] ?? null)) {
+			foreach ($data['candidates'][0]['content']['parts'] as $index => $part) {
+				if (is_array($part['functionCall'] ?? null)) {
+					// Gemini often omits the id and pairs the result by name instead
+					$call = $part['functionCall'];
+					$this->parts[] = new Chat\ToolCallPart(
+						(string) ($call['id'] ?? ($call['name'] ?? '') . '#' . $index),
+						(string) ($call['name'] ?? ''),
+						is_array($call['args'] ?? null) ? $call['args'] : [],
+						provider: self::Provider,
+						raw: $part,
+					);
+					continue;
+				} elseif (!is_string($part['text'] ?? null)) {
 					continue;
 				} elseif ($part['thought'] ?? false) {
 					$thoughtParts[] = $part['text'];

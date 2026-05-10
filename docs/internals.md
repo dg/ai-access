@@ -88,19 +88,37 @@ did** — the parts are internal until something non-text appears. Consequences:
   history on OpenAI works, it just loses the earlier reasoning. Get this wrong and
   multi-turn breaks loudly — Claude 400s on a modified signature, Gemini answers
   `MISSING_THOUGHT_SIGNATURE`.
-- **The chat/completions providers deliberately do not replay reasoning yet.** DeepSeek,
-  Grok and the generic OpenAI-compatible client parse `reasoning_content` into a part so
-  it is readable, but do not send it back: it is undocumented whether the input accepts
-  it at all, and a 400 there would break plain chat. Tool calls will need it in the
-  turn, and that is where it will be settled. OpenAI replays a reasoning item **only when it
-  carries `encrypted_content`** — without it the item is a server-side reference we
-  cannot reconstruct.
+- **The chat/completions providers replay reasoning only next to a tool call.** DeepSeek,
+  Grok and the generic OpenAI-compatible client put `reasoning_content` back on an
+  assistant turn that carries `tool_calls`, and leave it out everywhere else. Neither
+  half of that is a hard requirement — a tool turn returned without it is accepted, as a
+  live check confirmed — but keeping it there preserves the chain of thought across
+  rounds, while replaying it in plain chat is untested territory not worth the risk.
+  OpenAI replays a reasoning item **only when it carries `encrypted_content`** — without
+  it the item is a server-side reference we cannot reconstruct.
 - **A part in the history is not automatically content on the wire**, so every
   `buildPayload()` drops a turn that boils down to nothing: an unreplayable payload,
   or reasoning alone. Sending it as empty content is not the safe fallback — Claude and
   Gemini reject empty content outright.
-- **Tool use is not abstracted yet.** You set `tools` via provider-specific
-  `setOptions`, and to *read* a tool call you must reach into `getRawResponse()`.
+- **Tool calls are one API over five wire formats.** `addTool()` and
+  `setToolChoice()` on the chat, `getToolCalls()` on the response, `addToolResult()`
+  back on the chat; the loop itself is still the caller's to drive. What each provider
+  demands underneath has nothing in common:
+
+| | tool definition | pairing key | result travels as |
+|---|---|---|---|
+| Claude | `{name, input_schema}` | `tool_use.id` | `tool_result` block, **first** in a user turn |
+| OpenAI | **flat** `{type, name, parameters}` | **`call_id`**, not `id` | `function_call_output` item |
+| Gemini | `functionDeclarations[].parametersJsonSchema` | `functionCall.id`, often absent | `functionResponse` in a **user** turn, matched by **name** |
+| DeepSeek / Grok | nested under `function` | `tool_calls[].id` | one `role: tool` message **per result** |
+
+  Hence `ToolResultPart` carries the name as well as the id, and one `Role::Tool`
+  message expands into several wire messages where the format demands it. All results
+  for one turn stay in a single message, because Claude rejects them spread apart.
+- **Malformed arguments are the model's mistake, not a transport failure.** A tool call
+  whose JSON will not decode arrives with empty `arguments` and a filled
+  `argumentsError`, so the caller can hand the model its own error instead of catching
+  an exception.
 - **Gemini has extra rules no one else does:** the first message must be `User`, and it
   warns on two same-role messages in a row (strict alternation). A history valid on
   another provider can throw/warn on Gemini.
@@ -114,10 +132,11 @@ so request-shaping is **shared with live chat** — which is why `buildPayload()
 **`public` (@internal) only for Batch's sake**; changing its signature breaks batch
 across layers. `BatchResponse::getMessages()` is **lazy + memoized + status-gated** —
 a **getter that makes an HTTP call**, only when the batch is `Completed`, returning
-text-only messages keyed by `custom_id` (per-item errors become `E_USER_WARNING`, not
-exceptions). Status enums, date parsing (Claude ISO string vs OpenAI unix `@ts`), and
-embedding input/output-count mismatches (a `trigger_error`, returning partial results)
-all differ per provider — unifying any of them is a silent regression.
+`Message` objects keyed by `custom_id`, with per-item failures in `getErrors()`
+alongside. Tools work in a batch only as far as the model asking: a returned message
+can carry a `ToolCallPart`, but nothing runs it, because a batch has no round to answer
+in. Status enums and date parsing (Claude ISO string vs OpenAI unix `@ts`) differ per
+provider — unifying them is a silent regression.
 
 ## Effort is the one knob that is genuinely shared
 

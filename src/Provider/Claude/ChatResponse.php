@@ -90,6 +90,13 @@ final class ChatResponse implements Chat\Response
 	}
 
 
+	/** @return list<Chat\ToolCallPart> */
+	public function getToolCalls(): array
+	{
+		return array_values(array_filter($this->parts, fn($part) => $part instanceof Chat\ToolCallPart));
+	}
+
+
 	public function getJson(): mixed
 	{
 		return Helpers::decodeResponseJson($this->getText());
@@ -121,6 +128,14 @@ final class ChatResponse implements Chat\Response
 				$this->parts[] = new Chat\ReasoningPart($block['thinking'] === '' ? null : $block['thinking'], self::Provider, $block);
 			} elseif ($type === 'redacted_thinking') {
 				$this->parts[] = new Chat\ReasoningPart(null, self::Provider, $block);
+			} elseif ($type === 'tool_use' && isset($block['id'], $block['name'])) {
+				$this->parts[] = new Chat\ToolCallPart(
+					(string) $block['id'],
+					(string) $block['name'],
+					is_array($block['input'] ?? null) ? $block['input'] : [],
+					provider: self::Provider,
+					raw: $block,
+				);
 			}
 		}
 

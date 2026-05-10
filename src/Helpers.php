@@ -7,7 +7,7 @@
 
 namespace AIAccess;
 
-use function is_int, is_string;
+use function is_array, is_int, is_string;
 use const JSON_THROW_ON_ERROR;
 
 
@@ -49,6 +49,33 @@ final class Helpers
 		} catch (\JsonException $e) {
 			throw new UnexpectedResponseException('Response is not valid JSON: ' . $e->getMessage(), 0, $e);
 		}
+	}
+
+
+	/**
+	 * Reads tool call arguments, which most providers send as a JSON string. A model can emit
+	 * malformed JSON, and that is its mistake to correct, not a transport failure - hence the
+	 * message instead of an exception.
+	 * @return array{mixed[], ?string}  arguments and the reason they could not be read
+	 */
+	public static function decodeArguments(mixed $value): array
+	{
+		if (is_array($value)) {
+			return [$value, null];
+		} elseif ($value === null || $value === '') {
+			return [[], null];
+		} elseif (!is_string($value)) {
+			return [[], 'Arguments are ' . get_debug_type($value) . ', expected a JSON object.'];
+		}
+
+		try {
+			$decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+		} catch (\JsonException $e) {
+			return [[], 'Arguments are not valid JSON: ' . $e->getMessage()];
+		}
+		return is_array($decoded)
+			? [$decoded, null]
+			: [[], 'Arguments decoded to ' . get_debug_type($decoded) . ', expected a JSON object.'];
 	}
 
 

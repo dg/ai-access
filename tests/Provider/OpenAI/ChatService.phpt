@@ -107,8 +107,9 @@ test('Chat builds correct API payload with all options', function () {
 		store: true,
 		text: ['format' => 'paragraph'],
 		include: ['reasoning'],
-		tools: [['type' => 'function', 'function' => ['name' => 'get_weather']]],
 	);
+	$chat->addTool(new AIAccess\Chat\Tool('get_weather', 'Weather for a city'));
+	$chat->setToolChoice('get_weather');
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction
@@ -124,7 +125,7 @@ test('Chat builds correct API payload with all options', function () {
 	Assert::true($capturedPayload['store']);
 	Assert::same(['format' => 'paragraph'], $capturedPayload['text']);
 	Assert::same(['reasoning'], $capturedPayload['include']);
-	Assert::count(1, $capturedPayload['tools']);
+	Assert::same('get_weather', $capturedPayload['tools'][0]['name']);
 });
 
 

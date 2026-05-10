@@ -10,7 +10,7 @@ namespace AIAccess\Provider\OpenAI;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
-use function array_filter, array_merge;
+use function array_filter, array_merge, is_array;
 
 
 /**
@@ -46,7 +46,6 @@ final class Chat extends AIAccess\Chat\Chat
 	 * @param  ?bool  $store  Whether to store the generated model response. Defaults to true on the API side.
 	 * @param  ?mixed[]  $text  Configuration options for text response formatting.
 	 * @param  ?string[]  $include  Specify additional output data to include.
-	 * @param  ?mixed[]  $tools  An array of tools the model may call.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
@@ -59,7 +58,6 @@ final class Chat extends AIAccess\Chat\Chat
 		?bool $store = null,
 		?array $text = null,
 		?array $include = null,
-		?array $tools = null,
 	): static
 	{
 		$this->options = array_merge($this->options, array_filter(
@@ -74,7 +72,6 @@ final class Chat extends AIAccess\Chat\Chat
 				'store' => $store,
 				'text' => $text,
 				'include' => $include,
-				'tools' => $tools,
 			],
 			fn($value) => $value !== null,
 		));
@@ -121,7 +118,7 @@ final class Chat extends AIAccess\Chat\Chat
 		$input = [];
 		foreach ($this->messages as $message) {
 			$this->appendMessage($input, $message, match ($message->getRole()) {
-				Role::User => 'user',
+				Role::User, Role::Tool => 'user',
 				Role::Model => 'assistant',
 			});
 		}
@@ -133,6 +130,22 @@ final class Chat extends AIAccess\Chat\Chat
 
 		if ($this->systemInstruction !== null) {
 			$payload['instructions'] = $this->systemInstruction;
+		}
+
+		foreach ($this->tools as $tool) {
+			// flat here, unlike the chat/completions dialect where it nests under "function";
+			// strict goes out even when false, because the API defaults to true
+			$payload['tools'][] = [
+				'type' => 'function',
+				'name' => $tool->name,
+				'description' => $tool->description,
+				'parameters' => $tool->parameters ?: ['type' => 'object', 'properties' => new \stdClass],
+				'strict' => $tool->strict,
+			];
+		}
+
+		if ($this->toolChoice !== null) {
+			$payload['tool_choice'] = ['type' => 'function', 'name' => $this->toolChoice];
 		}
 
 		if ($this->responseSchema !== null) {
@@ -190,6 +203,24 @@ final class Chat extends AIAccess\Chat\Chat
 					&& (isset($part->raw['encrypted_content']) || ($this->options['store'] ?? true) !== false)) {
 					$input[] = $part->raw;
 				}
+			} elseif ($part instanceof AIAccess\Chat\ToolCallPart) {
+				$input[] = $part->provider === ChatResponse::Provider && $part->raw !== null
+					? $part->raw
+					: [
+						'type' => 'function_call',
+						'call_id' => $part->callId,
+						'name' => $part->name,
+						// [] would serialize as a JSON array, and arguments must be an object
+						'arguments' => $part->arguments ? AIAccess\Helpers::encodeJson($part->arguments) : '{}',
+					];
+			} elseif ($part instanceof AIAccess\Chat\ToolResultPart) {
+				// there is no error flag here, so the model has to read it in the text
+				$input[] = [
+					'type' => 'function_call_output',
+					'call_id' => $part->callId,
+					'output' => ($part->isError ? 'ERROR: ' : '')
+						. (is_array($part->content) ? AIAccess\Helpers::encodeJson($part->content) : $part->content),
+				];
 			} elseif (!$part instanceof AIAccess\Chat\TextPart) {
 				throw new AIAccess\LogicException('OpenAI chat supports text content only, ' . get_debug_type($part) . ' given.');
 			}

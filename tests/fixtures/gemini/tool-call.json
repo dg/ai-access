@@ -1,0 +1,38 @@
+{
+	"candidates": [
+		{
+			"content": {
+				"parts": [
+					{
+						"functionCall": {
+							"name": "get_weather",
+							"args": {
+								"city": "Brno"
+							},
+							"id": "j3Fa6Hji"
+						},
+						"thoughtSignature": "EjQKMgERTTIPW8lDIjOWy5j0C65BTjoWVHEOHoh9O9SO7QRlGmFPxKrQojNcO9esIqFBPZj0"
+					}
+				],
+				"role": "model"
+			},
+			"finishReason": "STOP",
+			"index": 0,
+			"finishMessage": "Model generated function call(s)."
+		}
+	],
+	"usageMetadata": {
+		"promptTokenCount": 57,
+		"candidatesTokenCount": 17,
+		"totalTokenCount": 74,
+		"promptTokensDetails": [
+			{
+				"modality": "TEXT",
+				"tokenCount": 57
+			}
+		],
+		"serviceTier": "standard"
+	},
+	"modelVersion": "gemini-3.5-flash-lite",
+	"responseId": "f7pxavPiJvucnsEP-5DS4Aw"
+}

@@ -95,7 +95,7 @@ test('claude replays thinking blocks exactly where they arrived', function () {
 });
 
 
-test('deepseek keeps reasoning readable but out of the payload', function () {
+test('deepseek keeps reasoning readable but out of a plain chat payload', function () {
 	$http = (new FakeHttpClient)
 		->queue(fixture('deepseek/thinking'))
 		->queue(fixture('deepseek/chat'));

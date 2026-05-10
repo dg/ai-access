@@ -31,6 +31,12 @@ interface Response
 	function getReasoning(): ?string;
 
 	/**
+	 * Tool calls the model is asking for. Answer them with Chat::addToolResult().
+	 * @return list<ToolCallPart>
+	 */
+	function getToolCalls(): array;
+
+	/**
 	 * Gets the reason the model stopped generating output (provider-specific).
 	 */
 	function getFinishReason(): FinishReason;
