@@ -39,6 +39,7 @@ Read them in this order; each directory has its own readme with the details.
 | [chat/](chat) | send a message, keep a conversation, set the rules, control cost and thinking effort |
 | [embeddings/](embeddings) | compare texts by meaning, store vectors compactly |
 | [batch/](batch) | queue many requests at half the price and collect them later |
+| [tools/](tools) | let the model call your code, with the loop run for you or by you |
 | [structured-output/](structured-output) | ask for data instead of prose, validated against a JSON schema |
 | [images/](images) | generate a picture, or edit from reference images |
 | [errors/](errors) | the exception hierarchy and what to do about each case |

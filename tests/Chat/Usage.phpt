@@ -64,3 +64,19 @@ test('getTotalTokens sums input and output', function () {
 	Assert::same(100, (new Usage(inputTokens: 100))->getTotalTokens());
 	Assert::null((new Usage)->getTotalTokens());
 });
+
+
+test('add() sums counts and keeps null only where neither side knows', function () {
+	$a = new Usage(inputTokens: 10, outputTokens: 5, reasoningTokens: null, cacheReadTokens: 3, raw: ['x' => 1]);
+	$b = new Usage(inputTokens: 20, outputTokens: null, reasoningTokens: 7, cacheReadTokens: null, raw: ['y' => 2]);
+
+	$sum = $a->add($b);
+
+	Assert::same(30, $sum->inputTokens);
+	Assert::same(5, $sum->outputTokens);
+	Assert::same(7, $sum->reasoningTokens);
+	Assert::same(3, $sum->cacheReadTokens);
+	Assert::null($sum->cacheWriteTokens);
+	// a merged raw would lie about its origin, so the sum has none
+	Assert::same([], $sum->raw);
+});

@@ -318,7 +318,8 @@ The exception hierarchy is organized around recovery strategy, so a `catch` bloc
 ServiceException                  base for everything the service can throw
 ├── ApiException                  the API returned an error (rate limit, invalid key...)
 ├── CommunicationException        network failure or unparseable response → retry may help
-└── UnexpectedResponseException   response structure changed → log and investigate
+├── UnexpectedResponseException   response structure changed → log and investigate
+└── TooManyRoundsException        the tool loop hit its round limit → the last response rides along
 LogicException                    a bug in your code → fix it in development
 IOException                       a local file could not be read or written
 ```

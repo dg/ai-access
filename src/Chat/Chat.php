@@ -8,7 +8,8 @@
 namespace AIAccess\Chat;
 use AIAccess\LogicException;
 use AIAccess\ServiceException;
-use function array_reverse, count;
+use AIAccess\TooManyRoundsException;
+use function array_key_exists, array_reverse, array_slice, count, is_array, is_bool, is_float, is_int, is_scalar, is_string;
 
 
 /**
@@ -24,35 +25,220 @@ abstract class Chat
 	/** @var array<string, Tool> */
 	protected array $tools = [];
 	protected ?string $toolChoice = null;
+	private int $maxRounds = 8;
+	private bool $catchToolErrors = false;
+	private ?Usage $totalUsage = null;
 
 
 	/**
 	 * Sends the next message to the model or continues generation based on history.
-	 * Updates internal message history with user input and model response.
+	 * Runs the tool loop on its own when every requested tool has a handler.
 	 * @param  string|Part|list<string|Part>|null  $message
+	 * @param  ?\Closure(Response): ?string  $validate  returning a string sends it back as
+	 *         another user message, so the model can correct itself; null accepts the answer.
+	 *         Not consulted while the answer still waits for tool results the caller handles itself.
 	 * @throws ServiceException
 	 */
-	public function sendMessage(string|Part|array|null $message = null): Response
+	public function sendMessage(string|Part|array|null $message = null, ?\Closure $validate = null): Response
 	{
 		$save = $this->messages;
 		if ($message !== null) {
 			$this->addMessage($message, Role::User);
 		}
 
+		$round = 0;
+		$response = null;
+		$toolChoice = $this->toolChoice;
 		try {
-			$response = $this->generateResponse();
+			while (true) {
+				if ($round++ >= $this->maxRounds) {
+					throw new TooManyRoundsException("The conversation did not settle within $this->maxRounds rounds.", $response);
+				}
+
+				try {
+					$response = $this->generateResponse();
+				} catch (\Throwable $e) {
+					// rolling back rounds that already happened would throw away paid-for work
+					// and tool side effects, so only an unanswered first round is undone
+					if ($round === 1) {
+						$this->messages = $save;
+					}
+					throw $e;
+				}
+
+				// a turn with no text but with reasoning or tool calls still belongs in the history
+				$turn = $response->getMessage();
+				if ($turn->getParts()) {
+					$this->messages[] = $turn;
+				}
+				if ($usage = $response->getUsage()) {
+					$this->totalUsage = $this->totalUsage?->add($usage) ?? $usage;
+				}
+
+				if ($calls = $response->getToolCalls()) {
+					if (!$this->canRunTools($calls)) {
+						// the caller answers these itself; validating a turn that still waits
+						// for tool results would only corrupt the exchange
+						return $response;
+					}
+					$this->runTools($calls);
+					// a forced tool has been called now; keeping the force up would demand it
+					// again in every round and the loop could never settle
+					$this->toolChoice = null;
+					continue;
+				}
+
+				if ($validate !== null && ($feedback = $validate($response)) !== null) {
+					$this->addMessage($feedback, Role::User);
+					continue;
+				}
+
+				return $response;
+			}
+		} finally {
+			$this->toolChoice = $toolChoice;
+		}
+	}
+
+
+	/**
+	 * Configures the automatic tool loop. The round limit covers tool rounds and
+	 * validate() iterations together.
+	 */
+	public function setToolLoop(int $maxRounds = 8, bool $catchErrors = false): static
+	{
+		if ($maxRounds < 1) {
+			throw new LogicException('At least one round is needed.');
+		}
+		$this->maxRounds = $maxRounds;
+		$this->catchToolErrors = $catchErrors;
+		return $this;
+	}
+
+
+	/**
+	 * Tokens spent by this conversation so far, summed over every round.
+	 */
+	public function getTotalUsage(): ?Usage
+	{
+		return $this->totalUsage;
+	}
+
+
+	/**
+	 * The loop only runs while the caller has nothing to do: some tool must have a handler,
+	 * and no requested tool may be one the caller wants to answer itself.
+	 * @param  list<ToolCallPart>  $calls
+	 */
+	private function canRunTools(array $calls): bool
+	{
+		$handlers = false;
+		foreach ($this->tools as $tool) {
+			$handlers = $handlers || $tool->handler !== null;
+		}
+		if (!$handlers) {
+			return false;
+		}
+
+		foreach ($calls as $call) {
+			$tool = $this->tools[$call->name] ?? null;
+			if ($tool !== null && $tool->handler === null) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+
+	/**
+	 * Answers every call of the round. When a handler blows up, the remaining calls still get
+	 * an error result before the exception continues - a round answered halfway would make
+	 * every following request invalid, with no public API to mend it.
+	 * @param  list<ToolCallPart>  $calls
+	 */
+	private function runTools(array $calls): void
+	{
+		foreach ($calls as $i => $call) {
+			try {
+				[$result, $isError] = $this->executeTool($call);
+			} catch (\Throwable $e) {
+				foreach (array_slice($calls, $i) as $unanswered) {
+					$this->addToolResult($unanswered, 'The tool run was interrupted by an error.', isError: true);
+				}
+				throw $e;
+			}
+			$this->addToolResult($call, $result, $isError);
+		}
+	}
+
+
+	/**
+	 * A mistake the model can fix - an invented tool, unreadable arguments, arguments that
+	 * do not match the schema - goes back to it as an error result rather than an exception.
+	 * @return array{string|mixed[], bool}
+	 */
+	private function executeTool(ToolCallPart $call): array
+	{
+		$tool = $this->tools[$call->name] ?? null;
+		if ($tool === null) {
+			return ["Unknown tool '$call->name'.", true];
+		} elseif ($tool->handler === null) {
+			return ["Tool '$call->name' has no handler.", true];
+		} elseif ($call->argumentsError !== null) {
+			return [$call->argumentsError, true];
+		} elseif ($error = $this->checkArguments($tool, $call->arguments)) {
+			return [$error, true];
+		}
+
+		try {
+			$result = ($tool->handler)($call->arguments, $call);
 		} catch (\Throwable $e) {
-			$this->messages = $save;
-			throw $e;
+			// a failed tool is the model's business, but an \Error is a bug in the handler;
+			// feeding that to the model would hide it behind a plausible-looking conversation
+			if (!$this->catchToolErrors || $e instanceof \Error) {
+				throw $e;
+			}
+			return [$e->getMessage(), true];
 		}
 
-		// a turn with no text but with reasoning or (later) tool calls still belongs in the history
-		$message = $response->getMessage();
-		if ($message->getParts()) {
-			$this->messages[] = $message;
+		return match (true) {
+			is_array($result), is_string($result) => [$result, false],
+			is_scalar($result), $result === null => [(string) $result, false],
+			default => throw new LogicException("Tool '$call->name' returned " . get_debug_type($result) . ', expected a string or an array.'),
+		};
+	}
+
+
+	/**
+	 * Required keys and scalar types only; a full JSON Schema validator is not worth
+	 * a dependency when the model gets the error message anyway.
+	 * @param  mixed[]  $arguments
+	 */
+	private function checkArguments(Tool $tool, array $arguments): ?string
+	{
+		foreach ($tool->parameters['required'] ?? [] as $name) {
+			if (!array_key_exists($name, $arguments)) {
+				return "Missing required argument '$name'.";
+			}
 		}
 
-		return $response;
+		foreach ($tool->parameters['properties'] ?? [] as $name => $spec) {
+			if (!array_key_exists($name, $arguments) || !isset($spec['type'])) {
+				continue;
+			}
+			$valid = match ($spec['type']) {
+				'string' => is_string($arguments[$name]),
+				'integer' => is_int($arguments[$name]),
+				'number' => is_int($arguments[$name]) || is_float($arguments[$name]),
+				'boolean' => is_bool($arguments[$name]),
+				'array', 'object' => is_array($arguments[$name]),
+				default => true,
+			};
+			if (!$valid) {
+				return "Argument '$name' must be of type {$spec['type']}, " . get_debug_type($arguments[$name]) . ' given.';
+			}
+		}
+		return null;
 	}
 
 
@@ -160,7 +346,7 @@ abstract class Chat
 
 
 	/**
-	 * Removes all messages from the history.
+	 * Removes all messages from the history. Tokens already spent stay in getTotalUsage().
 	 */
 	public function clearMessages(): static
 	{

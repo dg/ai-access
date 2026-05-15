@@ -103,16 +103,20 @@ Exception design focuses on **recovery strategy**:
 ServiceException                    (Base for all service errors)
 ├── ApiException                   (API returned error response - may be retriable)
 ├── CommunicationException         (Network or parse errors - potentially retriable)
-└── UnexpectedResponseException    (Response structure mismatch - not retriable)
+├── UnexpectedResponseException    (Response structure mismatch - not retriable)
+└── TooManyRoundsException         (Tool/validation loop hit its round limit)
 
 LogicException                      (Programming errors - fix during development)
+IOException                         (Local file cannot be read or written; extends \RuntimeException)
 ```
 
 **Error Handling Pattern:**
 - `ApiException`: API explicitly returned an error (rate limits, validation, etc.)
 - `CommunicationException`: Network issues or invalid JSON - retry may help
 - `UnexpectedResponseException`: Response doesn't match expected schema - log and investigate
+- `TooManyRoundsException`: carries `$lastResponse`; the history keeps every finished round, so the conversation can continue
 - `LogicException`: Invalid parameters or wrong method call order - fix in development
+- `IOException`: local filesystem problem (`Media::fromFile()`/`save()`, batch upload), deliberately outside the `ServiceException` tree
 
 ## Code Organization Principles
 

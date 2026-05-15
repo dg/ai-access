@@ -44,6 +44,20 @@ class UnexpectedResponseException extends ServiceException
 }
 
 /**
+ * The tool/validation loop hit its round limit before the model settled on an answer.
+ * The history keeps every finished round, so the conversation can be continued.
+ */
+class TooManyRoundsException extends ServiceException
+{
+	public function __construct(
+		string $message,
+		public readonly ?Chat\Response $lastResponse = null,
+	) {
+		parent::__construct($message);
+	}
+}
+
+/**
  * A file cannot be read or written.
  */
 class IOException extends \RuntimeException

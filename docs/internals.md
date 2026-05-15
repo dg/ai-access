@@ -65,10 +65,23 @@ that surprise:
 
 ## The conversation model is part-based, and transactional
 
-`Chat\Chat::sendMessage` is **transactional**: it snapshots `$messages`, appends the
-user turn, calls the abstract `generateResponse()`, and **rolls the history back on
-exception**. So a subclass must manage history *only* through the base, and
-`generateResponse()` must be pure w.r.t. `$messages`.
+`Chat\Chat::sendMessage` is **transactional, but only until the first answer arrives**.
+It snapshots `$messages`, appends the user turn, calls the abstract
+`generateResponse()`, and rolls the history back if that first call throws — a failed
+attempt leaves nothing behind, exactly as before. Once a round has succeeded the
+snapshot is abandoned: the tool loop may have run handlers with real side effects and
+spent real tokens, and throwing that away to keep a tidy transaction would be the worse
+trade. A subclass must manage history *only* through the base, and `generateResponse()`
+must be pure w.r.t. `$messages`.
+
+**One `sendMessage()` can be several requests.** While every requested tool has a
+handler the loop executes them, appends a `Role::Tool` turn and asks again; a
+`validate:` callback that returns a string does the same with a user turn. Both share
+one `maxRounds` budget (8 by default) and overrunning it **throws** — a half-finished
+answer that looks complete is the worse failure. The loop stands down the moment the
+caller might want control: no handlers registered at all, or a call naming a tool whose
+handler was deliberately left out. `Chat::getTotalUsage()` sums every round, because
+`Response::getUsage()` from the last one says little about what the exchange cost.
 
 A `Message` holds a **list of `Part`s** (`TextPart`, `ReasoningPart`, and `Media`),
 plus a `Role`. A plain string becomes one `TextPart`, so `addMessage('hi', Role::User)`

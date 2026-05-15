@@ -63,6 +63,8 @@ class TestChat extends Chat
 
 		if ($this->mockedResponse === null) {
 			$response = Mockery::mock(Response::class);
+			$response->allows()->getToolCalls()->andReturn([]);
+			$response->allows()->getUsage()->andReturn(null);
 			$response->allows()->getMessage()->andReturn(new Message('Default response', Role::Model));
 			return $response;
 		}
@@ -112,6 +114,8 @@ test('Chat sendMessage basic flow', function () {
 
 	// Mock a response
 	$mockResponse = Mockery::mock(Response::class);
+	$mockResponse->allows()->getToolCalls()->andReturn([]);
+	$mockResponse->allows()->getUsage()->andReturn(null);
 	$mockResponse->allows()->getMessage()->andReturn(new Message('Model reply', Role::Model));
 	$chat->setMockedResponse($mockResponse);
 
@@ -134,6 +138,8 @@ test('Chat sendMessage with null input continues conversation', function () {
 
 	// Mock a response
 	$mockResponse = Mockery::mock(Response::class);
+	$mockResponse->allows()->getToolCalls()->andReturn([]);
+	$mockResponse->allows()->getUsage()->andReturn(null);
 	$mockResponse->allows()->getMessage()->andReturn(new Message('Model continuation', Role::Model));
 	$chat->setMockedResponse($mockResponse);
 
@@ -171,6 +177,8 @@ test('an empty model turn is not appended to the history', function () {
 
 	// Mock a refusal: no parts at all, so nothing is appended to the history
 	$mockResponse = Mockery::mock(Response::class);
+	$mockResponse->allows()->getToolCalls()->andReturn([]);
+	$mockResponse->allows()->getUsage()->andReturn(null);
 	$mockResponse->allows()->getMessage()->andReturn(new Message([], Role::Model));
 	$chat->setMockedResponse($mockResponse);
 

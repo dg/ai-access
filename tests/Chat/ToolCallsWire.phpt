@@ -18,6 +18,25 @@ function geminiAnswer(): array
 }
 
 
+test('an argument-less tool call replays as an object, never as []', function () {
+	// json_decode turns {} into [], and sending [] back is a 400 on Claude
+	$http = (new FakeHttpClient)->queue([
+		'id' => 'msg', 'role' => 'assistant', 'model' => 'm',
+		'content' => [['type' => 'tool_use', 'id' => 't1', 'name' => 'get_time', 'input' => []]],
+		'stop_reason' => 'tool_use',
+		'usage' => ['input_tokens' => 1, 'output_tokens' => 1],
+	])->queue(fixture('claude/chat'));
+
+	$chat = (new AIAccess\Provider\Claude\Client('key', $http))->createChat('claude-sonnet-5');
+	$chat->addTool(new Tool('get_time', 'Time. No parameters.', handler: fn() => '12:00'));
+	$chat->sendMessage('Time?');
+
+	$block = $http->lastPayload()['messages'][1]['content'][0];
+	Assert::same('tool_use', $block['type']);
+	Assert::type(stdClass::class, $block['input']);
+});
+
+
 test('a foreign call with no arguments replays as an object on every wire', function () {
 	$foreign = new ToolCallPart('call_x', 'get_time', [], provider: 'someone-else');
 	$openai = fn($http) => (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
