@@ -20,6 +20,7 @@ final class Media implements Chat\Part
 		private readonly string $data,
 		private readonly string $mimeType,
 		private readonly mixed $rawResponse = null,
+		private readonly ?string $fileName = null,
 	) {
 	}
 
@@ -31,13 +32,30 @@ final class Media implements Chat\Part
 			throw new IOException("Cannot read file '$path'.");
 		}
 		$mime = (new \finfo(\FILEINFO_MIME_TYPE))->buffer($data);
-		return new static($data, $mime === false ? 'application/octet-stream' : $mime);
+		return new static($data, $mime === false ? 'application/octet-stream' : $mime, fileName: basename($path));
 	}
 
 
-	public static function fromBinary(string $data, string $mimeType): static
+	public static function fromBinary(string $data, string $mimeType, ?string $fileName = null): static
 	{
-		return new static($data, $mimeType);
+		return new static($data, $mimeType, fileName: $fileName);
+	}
+
+
+	public function isImage(): bool
+	{
+		return str_starts_with($this->mimeType, 'image/');
+	}
+
+
+	/**
+	 * Name to show the model; documents need one, so a generic one stands in when unknown.
+	 */
+	public function getFileName(): string
+	{
+		// a structured subtype like application/vnd.* hides no extension in its first word
+		$subtype = explode('/', $this->mimeType)[1] ?? '';
+		return $this->fileName ?? 'file.' . (preg_match('~^[a-z0-9]+(?=$|\+)~i', $subtype, $m) ? $m[0] : 'bin');
 	}
 
 

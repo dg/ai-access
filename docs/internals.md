@@ -132,6 +132,14 @@ did** — the parts are internal until something non-text appears. Consequences:
   whose JSON will not decode arrives with empty `arguments` and a filled
   `argumentsError`, so the caller can hand the model its own error instead of catching
   an exception.
+- **`Media` is one class for images and documents**, and the mime type decides which the
+  wire format calls for: Claude `image` vs `document` blocks, OpenAI `input_image` vs
+  `input_file` (which is the only one needing a filename), Gemini `inlineData` for both,
+  Grok an OpenAI-style `image_url` and nothing else. DeepSeek has no vision model at all.
+  What a provider cannot carry raises `LogicException` **before the request**, naming the
+  mime type, rather than letting the API answer with a puzzling 400. Media travel inline
+  as base64, computed lazily and cached on the object, because `buildPayload()` runs
+  again on every turn of a conversation that keeps the picture in its history.
 - **Gemini has extra rules no one else does:** the first message must be `User`, and it
   warns on two same-role messages in a row (strict alternation). A history valid on
   another provider can throw/warn on Gemini.

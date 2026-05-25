@@ -42,8 +42,11 @@ Why AI Access
 |-------------------|:------:|:------:|:------:|:--------:|:----:|
 | Chat              | ✓      | ✓      | ✓      | ✓        | ✓    |
 | Reasoning effort  | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Tool calling      | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Image input       | ✓      | ✓      | ✓      | –        | ✓    |
+| Document input    | ✓      | ✓      | ✓      | –        | –    |
 | Structured output | ✓      | ✓      | ✓      | –        | ✓    |
-| Images            | ✓      | –      | –      | –        | ✓    |
+| Image generation  | ✓      | –      | –      | –        | ✓    |
 | Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
 | List models       | ✓      | ✓      | ✓      | ✓        | ✓    |
@@ -203,6 +206,95 @@ documented list. There is no shared option array on purpose: it would silently
 swallow the names that do not apply to the provider you happen to be using.
 
 ▶ Full runnable example of the effort dial: [examples/chat/options.php](examples/chat/options.php)
+
+ <!---->
+
+Tool Calling
+============
+
+▶ Full runnable examples: [examples/tools/](examples/tools)
+
+Describe a function, give it a handler, and the model can call your code:
+
+```php
+use AIAccess\Chat\Tool;
+
+$chat->addTool(new Tool(
+	name: 'get_weather',
+	description: 'Returns the current weather for a city.',
+	parameters: [
+		'type' => 'object',
+		'properties' => ['city' => ['type' => 'string']],
+		'required' => ['city'],
+	],
+	handler: fn(array $args) => $weatherService->for($args['city']),
+));
+
+echo $chat->sendMessage('What should I wear in Brno today?')->getText();
+```
+
+That single call covers the whole exchange: the model asks for the tool, AI
+Access runs your handler, sends the result back, and returns when the model is
+done. Parallel calls, several rounds, whatever it takes.
+
+The five providers disagree on every detail underneath. Tool definitions are
+flat for one and nested for another; the key pairing a result with its call is
+named differently everywhere, and Gemini matches by function name instead;
+results travel as a leading content block, a flat item, a user turn, or one
+message per result. None of that reaches your code.
+
+**Mistakes the model makes are handed back to it**, not thrown at you: an
+invented tool name, arguments that will not decode, arguments that do not match
+your schema. It corrects itself on the next round. Your handler throwing is a
+different matter and propagates, unless you ask for
+`setToolLoop(catchErrors: true)`.
+
+Prefer to drive the loop yourself? Leave the handler out and nothing happens
+behind your back:
+
+```php
+$response = $chat->sendMessage('What is the weather in Brno?');
+
+foreach ($response->getToolCalls() as $call) {
+	$chat->addToolResult($call, $weatherService->for($call->arguments['city']));
+}
+
+echo $chat->sendMessage()->getText();
+```
+
+Because one exchange can span several requests, `$chat->getTotalUsage()` reports
+what the whole thing cost; `$response->getUsage()` is only the last round.
+
+ <!---->
+
+Images and Documents
+====================
+
+▶ Full runnable example: [examples/multimodal/image-input.php](examples/multimodal/image-input.php)
+
+A message is not only text. Pass a picture or a PDF alongside the words:
+
+```php
+use AIAccess\Media;
+
+$response = $chat->sendMessage([
+	'What is on this invoice?',
+	Media::fromFile('invoice.pdf'),
+]);
+```
+
+`Media::fromFile()` reads the mime type from the file itself, `Media::fromBinary()`
+takes data you already hold. It is the same object image generation returns, so a
+generated picture can go straight back into a conversation without touching the
+disk.
+
+Where a provider cannot take the content, DeepSeek having no vision model and
+Grok no documents, you get a `LogicException` naming the mime type **before** the
+request leaves, rather than a puzzling 400 afterwards.
+
+The picture stays in the history, so follow-up questions still see it. It is also
+sent again on every turn, which is what the APIs require and what you pay for, so
+drop it from the history once you are done with it.
 
  <!---->
 

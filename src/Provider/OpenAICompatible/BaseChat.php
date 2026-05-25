@@ -126,7 +126,8 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 			return;
 		}
 
-		$calls = [];
+		$calls = $content = [];
+		$hasMedia = false;
 		$reasoning = null;
 		foreach ($message->getParts() as $part) {
 			if ($part instanceof AIAccess\Chat\ToolCallPart) {
@@ -145,19 +146,26 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 				if ($part->provider === $this->provider() && is_string($part->raw)) {
 					$reasoning = $part->raw;
 				}
-			} elseif (!$part instanceof AIAccess\Chat\TextPart) {
-				throw new AIAccess\LogicException('This chat supports text content only, ' . get_debug_type($part) . ' given.');
+			} elseif ($part instanceof AIAccess\Media) {
+				$content[] = $this->mediaContent($part);
+				$hasMedia = true;
+			} elseif ($part instanceof AIAccess\Chat\TextPart) {
+				$content[] = ['type' => 'text', 'text' => $part->text];
+			} else {
+				throw new AIAccess\LogicException('This chat cannot send ' . get_debug_type($part) . ' content.');
 			}
 		}
 
 		$text = $message->getText();
-		if ($text === '' && !$calls) {
+		if ($text === '' && !$calls && !$hasMedia) {
 			return;
 		}
 
 		$item = [
 			'role' => $message->getRole() === Role::User ? 'user' : 'assistant',
-			'content' => $text === '' ? null : $text,
+			// media force the parts form, in the order the parts came in;
+			// plain text stays a plain string
+			'content' => $hasMedia ? $content : ($text === '' ? null : $text),
 		];
 		if ($calls) {
 			$item['tool_calls'] = $calls;
@@ -168,5 +176,18 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 			}
 		}
 		$messages[] = $item;
+	}
+
+
+	/**
+	 * How a Media part goes on the wire; a provider that takes none overrides with a throw.
+	 * @return mixed[]
+	 */
+	protected function mediaContent(AIAccess\Media $part): array
+	{
+		if (!$part->isImage()) {
+			throw new AIAccess\LogicException('This endpoint cannot send ' . $part->getMimeType() . ' content, only images.');
+		}
+		return ['type' => 'image_url', 'image_url' => ['url' => 'data:' . $part->getMimeType() . ';base64,' . $part->getBase64()]];
 	}
 }

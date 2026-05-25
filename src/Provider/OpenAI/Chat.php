@@ -10,7 +10,7 @@ namespace AIAccess\Provider\OpenAI;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
-use function array_filter, array_merge, is_array;
+use function array_filter, array_merge, count, is_array;
 
 
 /**
@@ -184,8 +184,9 @@ final class Chat extends AIAccess\Chat\Chat
 
 
 	/**
-	 * Input is a flat item list, so one message can expand into several items:
-	 * reasoning items go in front of the message they belong to.
+	 * Input is a flat item list, so one message can expand into several items, and they must
+	 * keep the order the parts came in: a reasoning item names the item that has to follow it,
+	 * so text collected before one goes out ahead of it rather than at the end of the message.
 	 * @param  list<mixed>  $input
 	 */
 	private function appendMessage(array &$input, AIAccess\Chat\Message $message, string $role): void
@@ -195,8 +196,10 @@ final class Chat extends AIAccess\Chat\Chat
 			return;
 		}
 
+		$content = [];
 		foreach ($message->getParts() as $part) {
 			if ($part instanceof AIAccess\Chat\ReasoningPart) {
+				$this->flushContent($input, $content, $role);
 				// with store on (the default) the server resolves the item by its id, so the raw
 				// item is replayed as is; without it only an encrypted_content copy can travel
 				if ($part->provider === ChatResponse::Provider && $part->raw !== null
@@ -204,6 +207,7 @@ final class Chat extends AIAccess\Chat\Chat
 					$input[] = $part->raw;
 				}
 			} elseif ($part instanceof AIAccess\Chat\ToolCallPart) {
+				$this->flushContent($input, $content, $role);
 				$input[] = $part->provider === ChatResponse::Provider && $part->raw !== null
 					? $part->raw
 					: [
@@ -214,6 +218,7 @@ final class Chat extends AIAccess\Chat\Chat
 						'arguments' => $part->arguments ? AIAccess\Helpers::encodeJson($part->arguments) : '{}',
 					];
 			} elseif ($part instanceof AIAccess\Chat\ToolResultPart) {
+				$this->flushContent($input, $content, $role);
 				// there is no error flag here, so the model has to read it in the text
 				$input[] = [
 					'type' => 'function_call_output',
@@ -221,13 +226,47 @@ final class Chat extends AIAccess\Chat\Chat
 					'output' => ($part->isError ? 'ERROR: ' : '')
 						. (is_array($part->content) ? AIAccess\Helpers::encodeJson($part->content) : $part->content),
 				];
-			} elseif (!$part instanceof AIAccess\Chat\TextPart) {
-				throw new AIAccess\LogicException('OpenAI chat supports text content only, ' . get_debug_type($part) . ' given.');
+			} elseif ($part instanceof AIAccess\Chat\TextPart) {
+				// the answer side of the history speaks in output_text; input_text there is a 400
+				$content[] = ['type' => $role === 'assistant' ? 'output_text' : 'input_text', 'text' => $part->text];
+			} elseif ($part instanceof AIAccess\Media) {
+				$content[] = $part->isImage()
+					? ['type' => 'input_image', 'image_url' => $this->dataUri($part)]
+					: ['type' => 'input_file', 'filename' => $part->getFileName(), 'file_data' => $this->dataUri($part)];
+			} else {
+				throw new AIAccess\LogicException('OpenAI chat cannot send ' . get_debug_type($part) . ' content.');
 			}
 		}
 
-		if (($text = $message->getText()) !== '') {
-			$input[] = ['role' => $role, 'content' => $text];
+		$this->flushContent($input, $content, $role);
+	}
+
+
+	/**
+	 * Turns the text and media piled up so far into an item of their own, so that a standalone
+	 * item that follows them does not jump ahead of them.
+	 * @param  list<mixed>  $input
+	 * @param  list<mixed>  $content
+	 */
+	private function flushContent(array &$input, array &$content, string $role): void
+	{
+		if (!$content) {
+			return;
 		}
+
+		// a plain string says the same thing as a lone text block and keeps the payload smaller
+		$input[] = [
+			'role' => $role,
+			'content' => count($content) === 1 && $content[0]['type'] !== 'input_image' && $content[0]['type'] !== 'input_file'
+				? $content[0]['text']
+				: $content,
+		];
+		$content = [];
+	}
+
+
+	private function dataUri(AIAccess\Media $media): string
+	{
+		return 'data:' . $media->getMimeType() . ';base64,' . $media->getBase64();
 	}
 }

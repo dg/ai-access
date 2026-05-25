@@ -104,3 +104,55 @@ test('gemini wraps a list result, because a JSON array is not a Struct', functio
 });
 
 
+test('openai replays assistant text parts as output_text, not input_text', function () {
+	// two texts side by side are the turn that forces the block form
+	$call = new ToolCallPart('call_1', 'get_time', [], provider: 'someone-else');
+	$http = (new FakeHttpClient)->queue(fixture('openai/chat'));
+	$chat = (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
+	$chat->addMessage('Q', Role::User);
+	$chat->addMessage([
+		new AIAccess\Chat\TextPart('Let me check.'),
+		new AIAccess\Chat\TextPart('Checking now.'),
+		$call,
+	], Role::Model);
+	$chat->addToolResult($call, 'noon');
+	$chat->sendMessage('Next');
+
+	$assistant = null;
+	foreach ($http->lastPayload()['input'] as $item) {
+		if (($item['role'] ?? null) === 'assistant') {
+			$assistant = $item;
+		}
+	}
+	Assert::same(['output_text', 'output_text'], array_column($assistant['content'], 'type'));
+});
+
+
+test('openai keeps the parts of a turn in the order the model produced them', function () {
+	// the flat input list has to read as the answer did: a text that came before a call
+	// must not end up behind it, or a reasoning item loses the item required to follow it
+	$call = new ToolCallPart('call_1', 'get_time', [], provider: 'someone-else');
+	$http = (new FakeHttpClient)->queue(fixture('openai/chat'));
+	$chat = (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
+	$chat->addMessage('Q', Role::User);
+	$chat->addMessage([
+		new AIAccess\Chat\TextPart('Let me check.'),
+		$call,
+		new AIAccess\Chat\TextPart('Checking now.'),
+	], Role::Model);
+	$chat->addToolResult($call, 'noon');
+	$chat->sendMessage('Next');
+
+	$shape = array_map(
+		fn($item) => [$item['type'] ?? $item['role'], $item['content'] ?? $item['call_id']],
+		$http->lastPayload()['input'],
+	);
+	Assert::same([
+		['user', 'Q'],
+		['assistant', 'Let me check.'],
+		['function_call', 'call_1'],
+		['assistant', 'Checking now.'],
+		['function_call_output', 'call_1'],
+		['user', 'Next'],
+	], $shape);
+});

@@ -7,6 +7,7 @@
 
 namespace AIAccess\Provider\Grok;
 
+use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Provider\OpenAICompatible;
 use function array_filter, array_merge;
@@ -95,6 +96,15 @@ final class Chat extends OpenAICompatible\BaseChat
 	protected function provider(): string
 	{
 		return ChatResponse::Provider;
+	}
+
+
+	protected function mediaContent(AIAccess\Media $part): array
+	{
+		if (!$part->isImage()) {
+			throw new AIAccess\LogicException('Grok cannot send ' . $part->getMimeType() . ' content, only images.');
+		}
+		return parent::mediaContent($part);
 	}
 
 

@@ -65,3 +65,22 @@ test('save reports an unwritable path', function () {
 		AIAccess\IOException::class,
 	);
 });
+
+
+test('the generated file name takes the extension only where the subtype is one', function () {
+	$cases = [
+		'application/pdf' => 'file.pdf',
+		'image/png' => 'file.png',
+		'image/svg+xml' => 'file.svg',
+		// a structured subtype hides no extension in its first word
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'file.bin',
+		'application/octet-stream' => 'file.bin',
+	];
+
+	foreach ($cases as $mime => $expected) {
+		Assert::same($expected, (new Media('x', $mime))->getFileName(), $mime);
+	}
+
+	// a name given by the caller wins over anything derived
+	Assert::same('report.docx', (new Media('x', 'application/pdf', fileName: 'report.docx'))->getFileName());
+});

@@ -199,8 +199,17 @@ final class Chat extends AIAccess\Chat\Chat
 				$blocks[] = $block;
 			} elseif ($part instanceof AIAccess\Chat\TextPart) {
 				$blocks[] = ['type' => 'text', 'text' => $part->text];
+			} elseif ($part instanceof AIAccess\Media) {
+				$blocks[] = [
+					'type' => $part->isImage() ? 'image' : 'document',
+					'source' => [
+						'type' => 'base64',
+						'media_type' => $part->getMimeType(),
+						'data' => $part->getBase64(),
+					],
+				];
 			} else {
-				throw new AIAccess\LogicException('Claude chat supports text content only, ' . get_debug_type($part) . ' given.');
+				throw new AIAccess\LogicException('Claude chat cannot send ' . get_debug_type($part) . ' content.');
 			}
 		}
 		// tool_result blocks are rejected unless they lead the turn

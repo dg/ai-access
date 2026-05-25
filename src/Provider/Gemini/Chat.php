@@ -230,8 +230,11 @@ final class Chat extends AIAccess\Chat\Chat
 				} elseif ($part->text !== '') {
 					$parts[] = ['text' => $part->text];
 				}
+			} elseif ($part instanceof AIAccess\Media) {
+				// images and documents travel the same way here
+				$parts[] = ['inlineData' => ['mimeType' => $part->getMimeType(), 'data' => $part->getBase64()]];
 			} else {
-				throw new AIAccess\LogicException('Gemini chat supports text content only, ' . get_debug_type($part) . ' given.');
+				throw new AIAccess\LogicException('Gemini chat cannot send ' . get_debug_type($part) . ' content.');
 			}
 		}
 		return $parts;

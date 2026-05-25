@@ -72,8 +72,15 @@ Each provider implements core interfaces:
 `AIAccess\Chat\Chat` is an abstract class that defines the conversation contract:
 - Message history management via `addMessage()` and `getMessages()`
 - System instructions via `setSystemInstruction()`
-- Common `sendMessage()` flow with error recovery
+- Common `sendMessage()` flow with error recovery and the automatic tool loop
+- Tool registration via `addTool()`, `setToolChoice()`, `setToolLoop()`
 - Abstract `generateResponse()` for provider-specific implementation
+
+A `Message` is a `Role` plus a list of `Part`s: `TextPart`, `ReasoningPart`,
+`ToolCallPart`, `ToolResultPart` and `Media`. A plain string becomes a single
+`TextPart`, so text-only code is unaffected. `Part`s that carry a provider tag
+and a raw payload (reasoning, tool calls) are replayed **only** to the provider
+that issued them.
 
 Each provider extends this: `OpenAI\Chat`, `Claude\Chat`, `Gemini\Chat`, etc.
 
@@ -203,14 +210,19 @@ What AIAccess implements today:
 |---------|--------|--------|--------|----------|------|
 | Chat | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Reasoning effort | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Tool calling | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Image input | ✓ | ✓ | ✓ | - | ✓ |
+| Document input | ✓ | ✓ | ✓ | - | - |
+| Structured output | ✓ | ✓ | ✓ | - | ✓ |
+| Image generation | ✓ | - | - | - | ✓ |
 | Batch | ✓ | ✓ | - | - | - |
 | Embeddings | ✓ | - | ✓ | - | - |
 | List of models | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 Do not read a dash as "the provider cannot do this". Gemini and xAI both have
-batch APIs, xAI has a Files API, and three providers generate images; none of
-that is wrapped yet. Anthropic genuinely has no embedding endpoint and DeepSeek
-has neither batch nor embeddings.
+batch APIs and xAI has a Files API; none of that is wrapped yet. Anthropic
+genuinely has no embedding endpoint, DeepSeek has neither batch nor embeddings
+and no vision model, and Grok takes images but not documents.
 
 `OpenAICompatible` has no column because it has no fixed answer: it is a chat client for
 any endpoint speaking `chat/completions`, so what works is decided by that endpoint, not
