@@ -4,8 +4,8 @@
  * Reads the answers of a finished batch, keyed by the custom id you chose.
  *
  * Demonstrates: Batch\Response::getMessages(), Batch\Response::getErrors()
- * Providers:    openai, claude
- * Usage:        php examples/batch/results.php [openai|claude] <batch-id>
+ * Providers:    openai, claude, gemini
+ * Usage:        php examples/batch/results.php [openai|claude|gemini] <batch-id>
  */
 
 require __DIR__ . '/../bootstrap.php';

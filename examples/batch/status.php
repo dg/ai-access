@@ -4,8 +4,8 @@
  * Checks whether a submitted batch has finished.
  *
  * Demonstrates: Batch\Service::retrieveBatch(), Batch\Response::getStatus()
- * Providers:    openai, claude
- * Usage:        php examples/batch/status.php [openai|claude] <batch-id>
+ * Providers:    openai, claude, gemini
+ * Usage:        php examples/batch/status.php [openai|claude|gemini] <batch-id>
  */
 
 require __DIR__ . '/../bootstrap.php';

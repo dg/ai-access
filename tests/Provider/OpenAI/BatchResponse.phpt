@@ -211,7 +211,8 @@ test('getMessages handles complex output structure', function () {
 	$messages = $response->getMessages();
 
 	Assert::count(1, $messages);
-	Assert::same('First part and second part', $messages['task1']->getText());
+	// joined exactly as live chat joins them, because it is the same parser
+	Assert::same("First part\n and second part", $messages['task1']->getText());
 });
 
 

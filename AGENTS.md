@@ -215,14 +215,17 @@ What AIAccess implements today:
 | Document input | ✓ | ✓ | ✓ | - | - |
 | Structured output | ✓ | ✓ | ✓ | - | ✓ |
 | Image generation | ✓ | - | - | - | ✓ |
-| Batch | ✓ | ✓ | - | - | - |
+| Batch | ✓ | ✓ | ✓ | - | - |
 | Embeddings | ✓ | - | ✓ | - | - |
 | List of models | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-Do not read a dash as "the provider cannot do this". Gemini and xAI both have
-batch APIs and xAI has a Files API; none of that is wrapped yet. Anthropic
-genuinely has no embedding endpoint, DeepSeek has neither batch nor embeddings
-and no vision model, and Grok takes images but not documents.
+Gemini batch needs a **billing-enabled Google project**: on the free tier the
+endpoint answers `FAILED_PRECONDITION`. Verified against a paid account.
+
+Do not read a dash as "the provider cannot do this". xAI has batch and Files
+APIs that are not wrapped yet. Anthropic genuinely has no embedding endpoint,
+DeepSeek has neither batch nor embeddings and no vision model, and Grok takes
+images but not documents.
 
 `OpenAICompatible` has no column because it has no fixed answer: it is a chat client for
 any endpoint speaking `chat/completions`, so what works is decided by that endpoint, not

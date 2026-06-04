@@ -94,18 +94,9 @@ final class BatchResponse implements AIAccess\Batch\Response
 				continue;
 			}
 
-			if (($lineData['response']['status_code'] ?? null) === 200) {
-				$content = '';
-				foreach ($lineData['response']['body']['output'] ?? [] as $item) {
-					if (($item['type'] ?? null) === 'message' && is_array($item['content'] ?? null)) {
-						foreach ($item['content'] as $contentBlock) {
-							if (($contentBlock['type'] ?? null) === 'output_text') {
-								$content .= $contentBlock['text'] ?? '';
-							}
-						}
-					}
-				}
-				$this->messages[$customId] = new Message(trim($content), AIAccess\Chat\Role::Model);
+			if (($lineData['response']['status_code'] ?? null) === 200 && is_array($lineData['response']['body'] ?? null)) {
+				// the very same parser as live chat, so a batch turn carries whatever a live one would
+				$this->messages[$customId] = (new ChatResponse($lineData['response']['body']))->getMessage();
 
 			} else {
 				$this->errors[$customId] = $lineData['error']['message']

@@ -16,7 +16,7 @@ use function count, is_array, rtrim;
 /**
  * Client implementation for accessing Google Gemini API models.
  */
-final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
+final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service, AIAccess\Batch\Service
 {
 	private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/';
 
@@ -31,6 +31,56 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service
 	public function createChat(string $model): Chat
 	{
 		return new Chat($this, $model);
+	}
+
+
+	public function createBatch(): Batch
+	{
+		return new Batch($this);
+	}
+
+
+	/**
+	 * Lists existing batch jobs.
+	 * @param  ?int  $limit  Maximum number of jobs to return
+	 * @param  ?string  $pageToken  Cursor for pagination
+	 * @return list<BatchResponse>
+	 */
+	public function listBatches(?int $limit = null, ?string $pageToken = null): array
+	{
+		$params = array_filter(['pageSize' => $limit, 'pageToken' => $pageToken], fn($v) => $v !== null);
+		$response = $this->callApi('batches' . ($params ? '?' . http_build_query($params) : ''));
+
+		$res = [];
+		// a batch is a long-running operation, hence the key
+		foreach ($response['operations'] ?? $response['batches'] ?? [] as $batchData) {
+			$res[] = new BatchResponse($this, $batchData);
+		}
+		return $res;
+	}
+
+
+	public function retrieveBatch(string $id): BatchResponse
+	{
+		return new BatchResponse($this, $this->callApi($this->batchPath($id)));
+	}
+
+
+	public function cancelBatch(string $id): bool
+	{
+		// the endpoint answers with an empty body, so anything but an exception is a success;
+		// an empty array still makes this a POST
+		$this->callApi($this->batchPath($id) . ':cancel', []);
+		return true;
+	}
+
+
+	/**
+	 * Ids come back as "batches/xyz" and are used as such; a bare id is accepted too.
+	 */
+	private function batchPath(string $id): string
+	{
+		return str_starts_with($id, 'batches/') ? $id : "batches/$id";
 	}
 
 

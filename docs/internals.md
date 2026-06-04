@@ -144,11 +144,15 @@ did** — the parts are internal until something non-text appears. Consequences:
   warns on two same-role messages in a row (strict alternation). A history valid on
   another provider can throw/warn on Gemini.
 
-## Batch has two mechanisms and a shared payload
+## Batch has three mechanisms and a shared payload
 
-One `Batch\Batch` interface, two submit mechanisms: **Claude** posts inline
+One `Batch\Batch` interface, three submit mechanisms: **Claude** posts inline
 `requests[{custom_id, params}]`; **OpenAI** serializes each chat to a JSONL line,
-uploads it as a file, and submits `input_file_id`. Both call `Chat::buildPayload()`,
+uploads it as a file, and submits `input_file_id`; **Gemini** posts to
+`:batchGenerateContent` with the requests nested twice under
+`batch.inputConfig.requests.requests`, keyed by `metadata.key`, and because the model
+sits in the endpoint rather than in each request, one batch is one model or a
+`LogicException`. All three call `Chat::buildPayload()`,
 so request-shaping is **shared with live chat** — which is why `buildPayload()` is
 **`public` (@internal) only for Batch's sake**; changing its signature breaks batch
 across layers. `BatchResponse::getMessages()` is **lazy + memoized + status-gated** —

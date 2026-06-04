@@ -47,7 +47,7 @@ Why AI Access
 | Document input    | ✓      | ✓      | ✓      | –        | –    |
 | Structured output | ✓      | ✓      | ✓      | –        | ✓    |
 | Image generation  | ✓      | –      | –      | –        | ✓    |
-| Batch (50% off)   | ✓      | ✓      | –      | –        | –    |
+| Batch (50% off)   | ✓      | ✓      | ✓      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
 | List models       | ✓      | ✓      | ✓      | ✓        | ✓    |
 
@@ -55,7 +55,9 @@ Plus a generic client for anything speaking the OpenAI dialect: Ollama,
 Mistral, OpenRouter, Together, vLLM, Azure.
 
 Where a dash appears, either the provider has no such API or AI Access does not
-wrap it yet; Gemini and xAI batch endpoints exist but are not wrapped.
+wrap it yet; xAI has batch and file endpoints that are not wrapped at all.
+Gemini counts batches among its paid features, so they need a billing-enabled
+Google project rather than a free-tier key.
 
  <!---->
 
@@ -335,7 +337,7 @@ Batch Processing
 ▶ Full runnable examples: [examples/batch/](examples/batch)
 
 
-When you do not need answers immediately, batch processing gets you the same models at **half the price**. Supported by OpenAI and Claude; the two providers use completely different mechanics under the hood (file upload + JSONL vs. inline requests), and AIAccess hides that difference entirely:
+When you do not need answers immediately, batch processing gets you the same models at **half the price**. Supported by OpenAI, Claude and Gemini; all three use completely different mechanics under the hood (a JSONL file upload, inline requests, and a long-running operation), and AIAccess hides that difference entirely:
 
 ```php
 use AIAccess\Chat\Role;

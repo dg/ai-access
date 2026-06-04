@@ -4,9 +4,10 @@ When you do not need the answer now, you can hand the provider a pile of
 requests and collect them later for roughly half the price. Typical uses:
 classifying a backlog, translating a catalogue, generating summaries overnight.
 
-Supported by OpenAI and Claude. Under the hood the two work very differently:
-OpenAI wants a JSONL file uploaded first and then a job pointing at it, Claude
-takes the requests inline. You write the same code either way.
+Supported by OpenAI, Claude and Gemini. Under the hood all three work very
+differently: OpenAI wants a JSONL file uploaded first and then a job pointing at
+it, Claude takes the requests inline, and Gemini runs the whole thing as a
+long-running operation on a single model. You write the same code either way.
 
 ```shell
 php examples/batch/submit.php openai

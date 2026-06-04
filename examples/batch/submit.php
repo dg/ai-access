@@ -4,8 +4,8 @@
  * Queues several independent requests at roughly half the price.
  *
  * Demonstrates: Batch\Service::createBatch(), Batch::addChat(), Batch::submit()
- * Providers:    openai, claude
- * Usage:        php examples/batch/submit.php [openai|claude]
+ * Providers:    openai, claude, gemini
+ * Usage:        php examples/batch/submit.php [openai|claude|gemini]
  */
 
 require __DIR__ . '/../bootstrap.php';
