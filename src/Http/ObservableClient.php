@@ -9,7 +9,7 @@ namespace AIAccess\Http;
 
 
 /**
- * Reports every request and response, for logging or a debug bar.
+ * Reports every request and how it ended, for logging or a debug bar.
  */
 final class ObservableClient implements Client
 {
@@ -19,6 +19,8 @@ final class ObservableClient implements Client
 		private readonly ?\Closure $onRequest = null,
 		/** @var ?\Closure(Response, float): void */
 		private readonly ?\Closure $onResponse = null,
+		/** @var ?\Closure(\Throwable, float): void */
+		private readonly ?\Closure $onError = null,
 	) {
 	}
 
@@ -28,6 +30,7 @@ final class ObservableClient implements Client
 		string|array|FormData|null $payload = null,
 		array $headers = [],
 		?string $method = null,
+		?\Closure $onChunk = null,
 	): Response
 	{
 		// headers are not passed on: they carry the API key
@@ -35,9 +38,19 @@ final class ObservableClient implements Client
 			($this->onRequest)($url, $payload);
 		}
 
-		// a failed request reports nothing: there is no response to describe
+		// for a stream the elapsed time covers the whole transfer, so it says how long the
+		// answer took to finish rather than how long it took to start
 		$start = microtime(true);
-		$response = $this->inner->fetch($url, $payload, $headers, $method);
+		try {
+			$response = $this->inner->fetch($url, $payload, $headers, $method, $onChunk);
+		} catch (\Throwable $e) {
+			// anything that went wrong during the transfer, which for a stream includes the
+			// consumer's own callback
+			if ($this->onError !== null) {
+				($this->onError)($e, microtime(true) - $start);
+			}
+			throw $e;
+		}
 
 		if ($this->onResponse !== null) {
 			($this->onResponse)($response, microtime(true) - $start);

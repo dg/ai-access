@@ -9,7 +9,7 @@ namespace AIAccess\Http;
 
 use AIAccess\CommunicationException;
 use AIAccess\Helpers;
-use function defined, is_array, is_string;
+use function defined, is_array, is_string, strlen;
 
 
 /**
@@ -49,10 +49,57 @@ final class CurlClient implements Client
 		string|array|FormData|null $payload = null,
 		array $headers = [],
 		?string $method = null,
+		?\Closure $onChunk = null,
 	): Response
 	{
 		$ch = $this->create($payload, $headers, $url, $method);
-		return $this->execute($ch);
+		return $onChunk === null
+			? $this->execute($ch)
+			: $this->executeStream($ch, $onChunk);
+	}
+
+
+	/** @param \Closure(string): (bool|null) $onChunk */
+	private function executeStream(\CurlHandle $ch, \Closure $onChunk): Response
+	{
+		$rawHeaders = $errorBody = '';
+		$stopped = false;
+
+		// a long answer legitimately streams for minutes, so the question is not how long
+		// the whole thing takes but whether it has stalled
+		curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+		curl_setopt($ch, CURLOPT_LOW_SPEED_LIMIT, 1);
+		curl_setopt($ch, CURLOPT_LOW_SPEED_TIME, max($this->connectTimeout, $this->requestTimeout));
+
+		curl_setopt($ch, CURLOPT_HEADER, false);
+		curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, string $line) use (&$rawHeaders): int {
+			$rawHeaders .= $line;
+			return strlen($line);
+		});
+		curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, string $chunk) use ($onChunk, &$errorBody, &$stopped): int {
+			// anything but success is not a stream: an error is a JSON body the caller needs
+			// whole, and a redirect body (redirects are not followed) is no answer at all
+			if (curl_getinfo($ch, CURLINFO_RESPONSE_CODE) >= 300) {
+				$errorBody .= $chunk;
+			} elseif ($onChunk($chunk) === false) {
+				$stopped = true;
+				return 0; // aborts the transfer
+			}
+			return strlen($chunk);
+		});
+
+		if (curl_exec($ch) === false && !$stopped) {
+			$errorNo = curl_errno($ch);
+			throw new CommunicationException('cURL request failed: [' . $errorNo . '] ' . curl_error($ch), $errorNo);
+		}
+
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?: '';
+		if ($errorBody !== '' && preg_match('~^application/json|\+json~', $contentType)) {
+			$errorBody = Helpers::decodeJson($errorBody);
+		}
+
+		return new Response($httpCode, $this->parseHeaders($rawHeaders), $errorBody === '' ? null : $errorBody);
 	}
 
 

@@ -30,7 +30,9 @@ because trying again would fail the same way.
 
 `ObservableClient` reports each request and each response with the time it
 took. Useful for a debug bar, for cost accounting, or for finding out which
-call is the slow one.
+call is the slow one. A request that produced no response at all goes to
+`onError` instead: a timeout or a reset, but also anything your own streaming
+callback throws, because from here the two are indistinguishable.
 
 Note what the callback does not get: the headers. They carry the API key, and
 a logger is exactly the place where a key should never end up.

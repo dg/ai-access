@@ -33,8 +33,18 @@ final class CachingClient implements Client
 		string|array|FormData|null $payload = null,
 		array $headers = [],
 		?string $method = null,
+		?\Closure $onChunk = null,
 	): Response
 	{
+		// streams pass straight through: replaying one from disk would have to fake the timing
+		// as well as the content, and a cache that changes how the code behaves is worse than
+		// no cache
+		if ($onChunk !== null) {
+			return $this->inner->fetch($url, $payload, $headers, $method, $onChunk);
+		}
+
+		// an upload is not a question with an answer to remember, and its files are not part
+		// of a serializable key anyway
 		if ($payload instanceof FormData) {
 			return $this->inner->fetch($url, $payload, $headers, $method);
 		}

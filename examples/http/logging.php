@@ -21,6 +21,10 @@ $client = createClient(http: new Http\ObservableClient(
 	onResponse: function (Http\Response $response, float $elapsed): void {
 		printf("<- HTTP %d in %.2f s\n", $response->getStatusCode(), $elapsed);
 	},
+	// a transfer that produced no response has nothing for onResponse to describe
+	onError: function (Throwable $e, float $elapsed): void {
+		printf("!! %s after %.2f s\n", $e->getMessage(), $elapsed);
+	},
 ));
 
 echo "\n", $client->createChat(chatModel($client))->sendMessage('Say hello.')->getText(), "\n";

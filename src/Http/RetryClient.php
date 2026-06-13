@@ -41,19 +41,28 @@ final class RetryClient implements Client
 		string|array|FormData|null $payload = null,
 		array $headers = [],
 		?string $method = null,
+		?\Closure $onChunk = null,
 	): Response
 	{
 		$attempt = 1;
 		while (true) {
+			$started = false;
+			$watch = $onChunk === null ? null : function (string $chunk) use ($onChunk, &$started) {
+				$started = true;
+				return $onChunk($chunk);
+			};
+
 			try {
-				$response = $this->inner->fetch($url, $payload, $headers, $method);
-				if ($attempt >= $this->maxAttempts || !$this->isRetriable($response->getStatusCode())) {
+				$response = $this->inner->fetch($url, $payload, $headers, $method, $watch);
+				// once the model has started talking, replaying the request would duplicate
+				// the answer and pay for it twice
+				if ($started || $attempt >= $this->maxAttempts || !$this->isRetriable($response->getStatusCode())) {
 					return $response;
 				}
 				$delay = $this->parseRetryAfter($response->getHeader('retry-after')) ?? $this->backoff($attempt);
 
 			} catch (CommunicationException $e) {
-				if ($attempt >= $this->maxAttempts) {
+				if ($started || $attempt >= $this->maxAttempts) {
 					throw $e;
 				}
 				$delay = $this->backoff($attempt);

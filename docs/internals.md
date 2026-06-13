@@ -47,7 +47,8 @@ that surprise:
   `: keep-alive` SSE comment lines that a naive parser will choke on.
 - **Retrying, logging and caching are decorators, not behaviour of the client.**
   `RetryClient` backs off on 408/429/5xx and network failures, `ObservableClient` times
-  requests and redacts the auth headers, `CachingClient` replays identical requests from
+  requests, redacts the auth headers and reports a request that never answered through
+  `onError` rather than `onResponse`, `CachingClient` replays identical requests from
   disk for development. They compose, and the order changes what you see: observing a
   retrying client logs every attempt, the other way round logs only the outcome.
 - **JSON decoding is content-type-driven** — the body is decoded only for

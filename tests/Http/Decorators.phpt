@@ -94,10 +94,11 @@ test('retries a network failure', function () {
 
 
 		public function fetch(
-		    string $url,
-		    string|array|AIAccess\Http\FormData|null $payload = null,
-		    array $headers = [],
-		    ?string $method = null,
+			string $url,
+			string|array|AIAccess\Http\FormData|null $payload = null,
+			array $headers = [],
+			?string $method = null,
+			?Closure $onChunk = null,
 		): Response
 		{
 			$this->calls++;
@@ -136,6 +137,80 @@ test('observes requests without leaking headers', function () {
 	Assert::same(['a' => 1], $seen['payload']);
 	Assert::same(200, $seen['status']);
 	Assert::true($seen['elapsed'] >= 0);
+});
+
+
+test('a request that never answered is reported as well', function () {
+	$seen = [];
+	$http = new class extends FakeHttpClient {
+		public function fetch(
+			string $url,
+			string|array|AIAccess\Http\FormData|null $payload = null,
+			array $headers = [],
+			?string $method = null,
+			?Closure $onChunk = null,
+		): Response
+		{
+			throw new CommunicationException('Connection timed out');
+		}
+	};
+
+	$client = new ObservableClient(
+		$http,
+		onRequest: function () use (&$seen) {
+			$seen['request'] = true;
+		},
+		onResponse: function () use (&$seen) {
+			$seen['response'] = true;
+		},
+		onError: function (Throwable $e, float $elapsed) use (&$seen) {
+			$seen['error'] = $e->getMessage();
+			$seen['elapsed'] = $elapsed;
+		},
+	);
+
+	// the timeout is what a log is wanted for most, and it still travels on to the caller
+	Assert::exception(
+		fn() => $client->fetch('https://api.example.com/x'),
+		CommunicationException::class,
+		'Connection timed out',
+	);
+	Assert::same('Connection timed out', $seen['error']);
+	Assert::true($seen['elapsed'] >= 0);
+	Assert::true($seen['request']);
+	Assert::false(isset($seen['response']));
+});
+
+
+test('a stream that dies halfway is reported the same way', function () {
+	$delivered = $seen = [];
+	$http = new class extends FakeHttpClient {
+		public function fetch(
+			string $url,
+			string|array|AIAccess\Http\FormData|null $payload = null,
+			array $headers = [],
+			?string $method = null,
+			?Closure $onChunk = null,
+		): Response
+		{
+			$onChunk('half an answer');
+			throw new CommunicationException('Connection reset by peer');
+		}
+	};
+
+	$client = new ObservableClient($http, onError: function (Throwable $e) use (&$seen) {
+		$seen[] = $e->getMessage();
+	});
+
+	$onChunk = function ($chunk) use (&$delivered) {
+		$delivered[] = $chunk;
+	};
+	Assert::exception(
+		fn() => $client->fetch('https://api.example.com/x', null, [], null, $onChunk),
+		CommunicationException::class,
+	);
+	Assert::same(['half an answer'], $delivered);
+	Assert::same(['Connection reset by peer'], $seen);
 });
 
 

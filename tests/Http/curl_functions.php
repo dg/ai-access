@@ -13,6 +13,10 @@ class CurlMocker
 	public static $contentType;
 	public static array $options = [];
 
+	/** streaming: raw header lines and body chunks fed into the curl callbacks */
+	public static array $headerLines = [];
+	public static array $streamChunks = [];
+
 
 	public static function reset(): void
 	{
@@ -23,6 +27,8 @@ class CurlMocker
 		self::$httpCode = 200;
 		self::$contentType = null;
 		self::$options = [];
+		self::$headerLines = [];
+		self::$streamChunks = [];
 	}
 }
 
@@ -42,7 +48,27 @@ function curl_setopt($ch, $option, $value)
 
 function curl_exec($ch)
 {
-	return CurlMocker::$response;
+	// with a write callback set, behave like a real transfer: headers first, then the body
+	// in pieces, aborting when the callback does not consume the whole chunk
+	$write = CurlMocker::$options[CURLOPT_WRITEFUNCTION] ?? null;
+	if ($write === null) {
+		return CurlMocker::$response;
+	}
+
+	if ($header = CurlMocker::$options[CURLOPT_HEADERFUNCTION] ?? null) {
+		foreach (CurlMocker::$headerLines as $line) {
+			$header($ch, $line);
+		}
+	}
+	foreach (CurlMocker::$streamChunks as $chunk) {
+		if ($write($ch, $chunk) !== strlen($chunk)) {
+			CurlMocker::$errno = CURLE_WRITE_ERROR;
+			CurlMocker::$error = 'Failure writing output to destination';
+			return false;
+		}
+	}
+	// $response === false simulates a transport failure after the delivered chunks
+	return CurlMocker::$response ?? true;
 }
 
 

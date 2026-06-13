@@ -16,6 +16,9 @@ class FakeHttpClient implements Http\Client, \Countable
 	/** @var list<Http\Response> */
 	private array $queue = [];
 
+	/** @var list<array{chunks: list<string>, status: int, headers: array<string, string[]>, error: mixed[]|string|null}> */
+	private array $streams = [];
+
 
 	/** @param mixed[]|string $data */
 	public function queue(array|string $data, int $statusCode = 200, array $headers = []): static
@@ -30,10 +33,44 @@ class FakeHttpClient implements Http\Client, \Countable
 		string|array|Http\FormData|null $payload = null,
 		array $headers = [],
 		?string $method = null,
+		?\Closure $onChunk = null,
 	): Http\Response
 	{
 		$this->requests[] = ['url' => $url, 'payload' => $payload, 'headers' => $headers, 'method' => $method];
-		return array_shift($this->queue) ?? throw new \LogicException('No response queued in FakeHttpClient.');
+		if ($onChunk === null) {
+			return array_shift($this->queue) ?? throw new \LogicException('No response queued in FakeHttpClient.');
+		}
+
+		$stream = array_shift($this->streams) ?? throw new \LogicException('No stream queued in FakeHttpClient.');
+		foreach ($stream['chunks'] as $chunk) {
+			if ($onChunk($chunk) === false) {
+				break;
+			}
+		}
+		return new Http\Response($stream['status'], $stream['headers'], $stream['error']);
+	}
+
+
+	/**
+	 * Queues a stream: the pieces are handed to the callback one by one, exactly as split.
+	 * @param  list<string>  $chunks
+	 */
+	public function queueStream(array $chunks, int $statusCode = 200, array $headers = []): static
+	{
+		$this->streams[] = ['chunks' => $chunks, 'status' => $statusCode, 'headers' => $headers, 'error' => null];
+		return $this;
+	}
+
+
+	/**
+	 * Queues a failed stream. As with a real one, the callback is never called and the body
+	 * arrives whole in the response instead.
+	 * @param  mixed[]|string  $body
+	 */
+	public function queueStreamError(array|string $body, int $statusCode = 400): static
+	{
+		$this->streams[] = ['chunks' => [], 'status' => $statusCode, 'headers' => [], 'error' => $body];
+		return $this;
 	}
 
 

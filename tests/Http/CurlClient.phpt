@@ -171,3 +171,86 @@ test('string payload is sent as the request body', function () {
 	Assert::same('raw body', CurlMocker::$options[CURLOPT_POSTFIELDS]);
 	Assert::same('POST', CurlMocker::$options[CURLOPT_CUSTOMREQUEST]);
 });
+
+
+test('streaming delivers body chunks and parses headers', function () {
+	CurlMocker::$headerLines = ["HTTP/1.1 200 OK\r\n", "content-type: text/event-stream\r\n", "\r\n"];
+	CurlMocker::$streamChunks = ["data: a\n", "\ndata: b\n\n"];
+
+	$received = [];
+	$response = (new CurlClient)->fetch(
+		'https://api.example.com/stream',
+		['q' => 1],
+		onChunk: function (string $chunk) use (&$received) { $received[] = $chunk; },
+	);
+
+	Assert::same(["data: a\n", "\ndata: b\n\n"], $received);
+	Assert::same(200, $response->getStatusCode());
+	Assert::same('text/event-stream', $response->getHeader('content-type'));
+	Assert::null($response->getData());
+});
+
+
+test('an error status is not a stream: the body is buffered whole', function () {
+	CurlMocker::$httpCode = 429;
+	CurlMocker::$headerLines = ["HTTP/1.1 429 Too Many Requests\r\n", "\r\n"];
+	CurlMocker::$streamChunks = ['{"error":{"mess', 'age":"slow down"}}'];
+
+	$called = 0;
+	$response = (new CurlClient)->fetch(
+		'https://api.example.com/stream',
+		['q' => 1],
+		onChunk: function () use (&$called) { $called++; },
+	);
+
+	Assert::same(0, $called);
+	Assert::same(429, $response->getStatusCode());
+	Assert::same('{"error":{"message":"slow down"}}', $response->getData());
+});
+
+
+test('a redirect body is not streamed either', function () {
+	CurlMocker::$httpCode = 302;
+	CurlMocker::$streamChunks = ['<html>moved</html>'];
+
+	$called = 0;
+	$response = (new CurlClient)->fetch(
+		'https://api.example.com/stream',
+		['q' => 1],
+		onChunk: function () use (&$called) { $called++; },
+	);
+
+	Assert::same(0, $called);
+	Assert::same(302, $response->getStatusCode());
+});
+
+
+test('the consumer stopping the stream is not a transport failure', function () {
+	CurlMocker::$streamChunks = ['one', 'two', 'three'];
+
+	$received = [];
+	$response = (new CurlClient)->fetch(
+		'https://api.example.com/stream',
+		['q' => 1],
+		onChunk: function (string $chunk) use (&$received) {
+			$received[] = $chunk;
+			return false;
+		},
+	);
+
+	Assert::same(['one'], $received);
+	Assert::same(200, $response->getStatusCode());
+});
+
+
+test('a mid-stream transport failure still throws', function () {
+	CurlMocker::$response = false;
+	CurlMocker::$errno = 18; // CURLE_PARTIAL_FILE
+	CurlMocker::$error = 'transfer closed with outstanding read data remaining';
+
+	Assert::exception(
+		fn() => (new CurlClient)->fetch('https://api.example.com/stream', ['q' => 1], onChunk: fn() => null),
+		CommunicationException::class,
+		'%a%transfer closed%a%',
+	);
+});
