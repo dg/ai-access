@@ -31,26 +31,36 @@ because the providers genuinely diverge on every axis:
 | reasoning tokens | `output_tokens_details.thinking_tokens` | `output_tokens_details.reasoning_tokens` | `thoughtsTokenCount` | `completion_tokens_details.reasoning_tokens` |
 | finish reason source | `stop_reason` | **`status`, then `incomplete_details`** | `finishReason` (never signals tool use) | `finish_reason` |
 
-## HTTP: buffered curl, no streaming, no retry
+## HTTP: one seam, three decorators
 
-`Http\Client::fetch` has one impl, `CurlClient` (`@internal`), injected into each
-provider `Client` (default `new CurlClient`) — the seam for mocking in tests. Facts
-that surprise:
+`Http\Client` has a **single** method and one implementation, `CurlClient`,
+injected into each provider `Client` (default `new CurlClient`) — the seam for mocking
+in tests. `fetch()` returns a finished `Response`; given an `$onChunk` callback it streams
+the body into it instead, so an implementation is one method rather than two near-copies.
+Facts that surprise:
 
-- **There is no streaming / SSE anywhere.** `curl_exec` is fully buffered, and the
-  `stream` option was removed from every provider because it produced a response the
-  JSON decoder could not read. Adding streaming needs a new seam (`fetch` returns a
-  finished `Response`, not a generator). When it lands, four different stream endings
-  have to be handled: OpenAI's terminal event carries the whole response, Claude's
-  `message_delta` usage is cumulative rather than incremental, Gemini sends no `[DONE]`
-  at all, and xAI puts usage in a chunk whose `choices` is empty. DeepSeek also injects
-  `: keep-alive` SSE comment lines that a naive parser will choke on.
 - **Retrying, logging and caching are decorators, not behaviour of the client.**
   `RetryClient` backs off on 408/429/5xx and network failures, `ObservableClient` times
   requests, redacts the auth headers and reports a request that never answered through
   `onError` rather than `onResponse`, `CachingClient` replays identical requests from
   disk for development. They compose, and the order changes what you see: observing a
   retrying client logs every attempt, the other way round logs only the outcome.
+- **A streamed error is not a stream.** The status is known once the headers are in, so
+  a 4xx body is collected whole into the `Response` and the callback never sees it —
+  otherwise every provider would have to detect "this SSE is actually JSON".
+- **Returning false from the callback aborts the transfer**, which curl reports as a
+  write error. That is indistinguishable from a real one at the errno level, so the
+  intent has to be tracked separately or an intentional stop becomes an exception.
+- **A stream is bounded by silence, not by total time.** A plain request is capped as a
+  whole; a streaming one sets no total cap and gives up only when nothing arrives for the
+  request timeout. A long answer legitimately streams for minutes, and killing it at a
+  fixed limit would throw away an answer the user is already reading. The two branches of
+  `fetch()` therefore differ in their curl timeouts, which is a measured property, not a
+  detail to tidy away.
+- **The decorators each answer streaming their own way.** Retry replays only while
+  nothing has been delivered — after the first chunk a replay would duplicate the answer
+  and bill it twice. Caching passes streams through untouched, because replaying one
+  from disk would have to fake the timing too. Observation times the whole stream.
 - **JSON decoding is content-type-driven** — the body is decoded only for
   `application/json`/`+json`, so `callApi(..., isJson: false)` returns a raw string
   (used for JSONL batch-result downloads). "Always decode JSON" breaks batch parsing.
@@ -63,6 +73,22 @@ that surprise:
   through `Batch\Response::getErrors()` (keyed by custom_id), and embedding count
   mismatches raise `UnexpectedResponseException`. The single remaining warning is
   Gemini's alternating-roles check, which predicts an API error we cannot prevent.
+
+`Http\SseStream` (`@internal`) cuts the bytes into events. Chunks arrive as the network
+splits them, so an event routinely arrives in halves; comment lines are dropped, which
+is what DeepSeek's keep-alive amounts to. **How a stream ends is provider-specific and
+was measured, not assumed** (captured transcripts live in `tests/fixtures/*/stream.sse.txt`):
+
+| | names its events | sends `[DONE]` |
+|---|---|---|
+| Claude | ✓ | – |
+| OpenAI | ✓ | – |
+| Gemini | – | – |
+| DeepSeek / Grok | – | ✓ |
+
+So there is no generic "the stream is over" signal: Claude ends with `message_stop`,
+OpenAI with a terminal event that carries the entire response, Gemini simply stops
+sending, and the chat/completions pair use the sentinel. Each accumulator knows its own.
 
 ## The conversation model is part-based, and transactional
 

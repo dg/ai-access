@@ -1,0 +1,30 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-sonnet-5","id":"msg_011CdhdvHNjyVQvd2SZVwoCA","type":"message","role":"assistant","content":[],"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":7,"service_tier":"standard","inference_geo":"global"}}          }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}               }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"EsgCCokBCBAYAipADJlguvIbWNHd30c1HMf6HIAv/+eqNDj//AgQtr0uLDz1ISPwR2kJYqv9X6/Uivl6tEaIC3ohUOhqZwhEg7BNbTIPY2xhdWRlLXNvbm5ldC01OABCCHRoaW5raW5nWiRkMDU3YzhiNy03ZjgyLTRkNzEtODI2NC05ZDllMDNjOTdlNWUSDILon3uWXfcCHUEH8hoMuQWh9aYcOCA/p06CIjChc6Rw7vDzUwu7juJTiAD5Ul52KPAgy9zkpWbvdNmFlYlOJ8LRYlSYnNfo9zO63KEqbLnUfUMW4GJxgT0orKQxNPrxybjPjvla1ALHil99GVAswUVGAHGUqJisDEHfKWSFrEQZXpFvUucRIUuFL1z1aZLTJKBugq25TLmsfizfB2YaUv9j6QrMuyHGVlZS6stKiH1hNpsC59tWPn2Q8RgB"}       }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0            }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"One two three"}            }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1  }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null,"stop_details":null},"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":35,"output_tokens_details":{"thinking_tokens":29}}               }
+
+event: message_stop
+data: {"type":"message_stop"   }
+

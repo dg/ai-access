@@ -1,0 +1,34 @@
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":"The","role":"assistant"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":" user"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":" said"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":":"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":" \""}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":"Say"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":":"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":" one"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":" two"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":" three"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843271,"model":"grok-4.3","choices":[{"index":0,"delta":{"reasoning_content":"\"\n"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843272,"model":"grok-4.3","choices":[{"index":0,"delta":{"content":"one"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843272,"model":"grok-4.3","choices":[{"index":0,"delta":{"content":" two"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843272,"model":"grok-4.3","choices":[{"index":0,"delta":{"content":" three"}}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843272,"model":"grok-4.3","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: {"id":"85265aea-f9e8-99db-987c-26011f3ca3ad","object":"chat.completion.chunk","created":1785843272,"model":"grok-4.3","choices":[],"usage":{"prompt_tokens":197,"completion_tokens":3,"total_tokens":314,"prompt_tokens_details":{"text_tokens":197,"audio_tokens":0,"image_tokens":0,"cached_tokens":128},"completion_tokens_details":{"reasoning_tokens":114,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0},"num_sources_used":0,"cost_in_usd_ticks":4043500},"system_fingerprint":"fp_eb3c003fc66c14ed","service_tier":"default"}
+
+data: [DONE]
+
