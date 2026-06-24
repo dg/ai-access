@@ -4,7 +4,7 @@
  * Generating from reference images instead of from words alone.
  *
  * Demonstrates: Image\Service::generateImage() with references
- * Providers:    openai
+ * Providers:    openai, gemini
  * Usage:        php examples/images/edit.php openai <reference.png> [more.png ...]
  */
 
@@ -20,7 +20,7 @@ if (!$paths) {
 
 $references = array_map(AIAccess\Media::fromFile(...), $paths);
 
-// the shared signature is all the providers have in common; OpenAI adds size,
+// the shared signature is all three providers have in common; OpenAI adds size,
 // quality and background as named arguments of its own
 $image = $client->generateImage(
 	imageModel($client),

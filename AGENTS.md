@@ -61,11 +61,14 @@ AIAccess\Chat\Service (interface)
   └── OpenAICompatible\Client   # generic, for any endpoint speaking that dialect
 ```
 
-Each provider implements core interfaces:
-- `Chat\Service` - Creates chat sessions
-- `Batch\Service` - Optional batch processing (OpenAI, Claude only)
-- `Embedding\Service` - Optional embeddings (OpenAI, Gemini only)
-- `Http\Client` - HTTP transport abstraction (default: CurlClient)
+Each provider `Client` implements the subset of the service interfaces it supports:
+- `Chat\Service` - Creates chat sessions (all providers)
+- `Batch\Service` - Optional batch processing (OpenAI, Claude, Gemini)
+- `Embedding\Service` - Optional embeddings (OpenAI, Gemini)
+- `Image\Service` - Optional image generation (OpenAI, Gemini, Grok)
+
+Transport is composition, not one of those interfaces: every `Client` takes an
+`Http\Client` (default `CurlClient`) and calls it.
 
 ### Abstract Base Class Pattern
 
@@ -91,7 +94,8 @@ src/
 ├── Batch/              # Batch processing abstractions
 ├── Chat/               # Core chat abstractions (Chat, Response, Message, Role, etc.)
 ├── Embedding/          # Text embeddings support
-├── Http/               # HTTP transport layer (Client, CurlClient, Response)
+├── Http/               # HTTP transport layer (Client, CurlClient, Response, SseStream)
+├── Image/              # Image generation abstraction
 ├── Provider/           # Provider-specific implementations
 │   ├── OpenAI/
 │   ├── Claude/
@@ -99,6 +103,9 @@ src/
 │   ├── DeepSeek/
 │   └── Grok/
 ├── Helpers.php         # Internal utilities (JSON encoding/decoding)
+├── Media.php           # Binary content (image, PDF) plus its mime type; also a chat Part
+├── Model.php           # Model id and its raw metadata, returned by listModels()
+├── enums.php           # Role, Effort, FinishReason, Batch\Status, DeltaType
 └── exceptions.php      # Exception hierarchy
 ```
 
@@ -171,7 +178,7 @@ test('Description of what is being tested', function () {
 - Use `test()` function for each test case
 - First parameter is a clear description (no need for separate comments)
 - Group related tests in same file
-- Use `testException()` when entire test expects an exception
+- Expect exceptions with `Assert::exception()`, the pattern the whole suite uses
 - Tests mirror `src/` structure in `tests/` directory
 
 **Testing Exceptions:**
@@ -214,13 +221,14 @@ What AIAccess implements today:
 | Image input | ✓ | ✓ | ✓ | - | ✓ |
 | Document input | ✓ | ✓ | ✓ | - | - |
 | Structured output | ✓ | ✓ | ✓ | - | ✓ |
-| Image generation | ✓ | - | - | - | ✓ |
+| Image generation | ✓ | - | ✓ | - | ✓ |
 | Batch | ✓ | ✓ | ✓ | - | - |
 | Embeddings | ✓ | - | ✓ | - | - |
 | List of models | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-Gemini batch needs a **billing-enabled Google project**: on the free tier the
-endpoint answers `FAILED_PRECONDITION`. Verified against a paid account.
+Gemini batch and image generation both need a **billing-enabled Google project**:
+on the free tier the batch endpoint answers `FAILED_PRECONDITION` and image models
+have a daily quota of literally zero. Both are verified against a paid account.
 
 Do not read a dash as "the provider cannot do this". xAI has batch and Files
 APIs that are not wrapped yet. Anthropic genuinely has no embedding endpoint,

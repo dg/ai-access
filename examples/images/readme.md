@@ -16,16 +16,20 @@ type and, as everywhere in this library, the untouched provider response if you
 need something the abstraction skipped. The same object goes back in as a
 reference below, so a generated image never has to touch the disk.
 
-Both providers here return a single image because that is what the interface
+Every provider here returns a single image because that is what the interface
 promises. If you want four variations, ask four times; batching images is a
 provider-specific optimisation, not something worth pretending is portable.
 
+The three of them work in entirely different ways underneath: OpenAI and xAI
+have dedicated image endpoints, while Gemini has none — you ask an image model
+through the ordinary chat endpoint and the picture comes back as a content part.
+
 ## edit.php
 
-The interesting one, and OpenAI only. Pass reference images along with the
-prompt and the model works from them instead of from words alone: same
-composition in a different season, same style applied to new content, a series
-that has to look like it belongs together.
+Pass reference images along with the prompt and the model works from them
+instead of from words alone: same composition in a different season, same style
+applied to new content, a series that has to look like it belongs together.
+OpenAI and Gemini can do this; xAI takes a prompt only and says so.
 
 ```php
 $image = $client->generateImage(

@@ -4,8 +4,8 @@
  * Turning a prompt into a picture.
  *
  * Demonstrates: Image\Service::generateImage(), Media::save()
- * Providers:    openai, grok
- * Usage:        php examples/images/generate.php [openai|grok]
+ * Providers:    openai, gemini, grok
+ * Usage:        php examples/images/generate.php [openai|gemini|grok]
  */
 
 require __DIR__ . '/../bootstrap.php';

@@ -8,10 +8,10 @@ deliberately narrow. One file.
 
 ## Provider model: interface convergence, implementation divergence
 
-There are exactly three service interfaces — `Chat\Service::createChat`,
-`Batch\Service`, `Embedding\Service` — and each provider `Client` implements the
-**subset** it supports (Claude: Chat+Batch; OpenAI: Chat+Embedding+Batch; Gemini:
-Chat+Embedding; Grok/DeepSeek: Chat only).
+There are four service interfaces — `Chat\Service::createChat`, `Batch\Service`,
+`Embedding\Service`, `Image\Service` — and each provider `Client` implements the
+**subset** it supports (Claude: Chat+Batch; OpenAI and Gemini: all four; Grok:
+Chat+Image; DeepSeek and `OpenAICompatible`: Chat only).
 
 **The whole library has exactly one abstract base class — `Chat\Chat`.** Everything
 else (`Client`, `ChatResponse`, `Batch`, `BatchResponse`) is an interface with a

@@ -16,7 +16,7 @@ use function count, is_array, rtrim;
 /**
  * Client implementation for accessing Google Gemini API models.
  */
-final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service, AIAccess\Batch\Service
+final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service, AIAccess\Batch\Service, AIAccess\Image\Service
 {
 	private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/';
 
@@ -31,6 +31,27 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	public function createChat(string $model): Chat
 	{
 		return new Chat($this, $model);
+	}
+
+
+	/**
+	 * Lists models offered by the provider, following pagination.
+	 * @return list<AIAccess\Model>
+	 */
+	public function listModels(): array
+	{
+		$res = [];
+		$token = null;
+		do {
+			$response = $this->callApi('models?pageSize=200' . ($token === null ? '' : '&pageToken=' . urlencode($token)));
+			foreach ($response['models'] ?? [] as $model) {
+				if (isset($model['name'])) {
+					$res[] = new AIAccess\Model(preg_replace('~^models/~', '', $model['name']), $model);
+				}
+			}
+			$token = $response['nextPageToken'] ?? null;
+		} while ($token !== null);
+		return $res;
 	}
 
 
@@ -85,23 +106,35 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 
 	/**
-	 * Lists models offered by the provider, following pagination.
-	 * @return list<AIAccess\Model>
+	 * Generates an image. Gemini has no separate image endpoint: an image model is asked
+	 * through the ordinary chat one, and references are simply part of the prompt.
+	 * @param  list<AIAccess\Media>  $references  images to work from
 	 */
-	public function listModels(): array
+	public function generateImage(string $model, string $prompt, array $references = []): AIAccess\Media
 	{
-		$res = [];
-		$token = null;
-		do {
-			$response = $this->callApi('models?pageSize=200' . ($token === null ? '' : '&pageToken=' . urlencode($token)));
-			foreach ($response['models'] ?? [] as $model) {
-				if (isset($model['name'])) {
-					$res[] = new AIAccess\Model(preg_replace('~^models/~', '', $model['name']), $model);
+		$parts = [['text' => $prompt]];
+		foreach ($references as $reference) {
+			$parts[] = ['inlineData' => ['mimeType' => $reference->getMimeType(), 'data' => $reference->getBase64()]];
+		}
+
+		$response = $this->callApi("models/$model:generateContent", [
+			'contents' => [['role' => 'user', 'parts' => $parts]],
+			'generationConfig' => ['responseModalities' => ['IMAGE']],
+		]);
+
+		foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
+			if (isset($part['inlineData']['data'])) {
+				$data = base64_decode((string) $part['inlineData']['data'], strict: true);
+				if ($data === false) {
+					throw new AIAccess\UnexpectedResponseException('Image data is not valid base64.');
 				}
+				return new AIAccess\Media($data, (string) ($part['inlineData']['mimeType'] ?? 'image/png'), $response);
 			}
-			$token = $response['nextPageToken'] ?? null;
-		} while ($token !== null);
-		return $res;
+		}
+
+		// a model that refuses answers with text instead of a picture
+		throw new AIAccess\UnexpectedResponseException('No image in the response'
+			. (isset($response['candidates'][0]['finishReason']) ? ', finish reason ' . $response['candidates'][0]['finishReason'] : '') . '.');
 	}
 
 

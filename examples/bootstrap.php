@@ -85,6 +85,7 @@ function imageModel(object $client): string
 {
 	$models = [
 		AIAccess\Provider\OpenAI\Client::class => 'gpt-image-2',
+		AIAccess\Provider\Gemini\Client::class => 'gemini-3.1-flash-image',
 		AIAccess\Provider\Grok\Client::class => 'grok-imagine-image',
 	];
 	return $models[$client::class] ?? fail('No image model configured for ' . $client::class);

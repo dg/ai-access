@@ -46,7 +46,7 @@ Why AI Access
 | Image input       | ✓      | ✓      | ✓      | –        | ✓    |
 | Document input    | ✓      | ✓      | ✓      | –        | –    |
 | Structured output | ✓      | ✓      | ✓      | –        | ✓    |
-| Image generation  | ✓      | –      | –      | –        | ✓    |
+| Image generation  | ✓      | –      | ✓      | –        | ✓    |
 | Batch (50% off)   | ✓      | ✓      | ✓      | –        | –    |
 | Embeddings        | ✓      | –      | ✓      | –        | –    |
 | List models       | ✓      | ✓      | ✓      | ✓        | ✓    |
