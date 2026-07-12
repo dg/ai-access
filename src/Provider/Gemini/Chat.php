@@ -90,6 +90,17 @@ final class Chat extends AIAccess\Chat\Chat
 	}
 
 
+	protected function generateStreamResponse(\Closure $onDelta): ChatResponse
+	{
+		$accumulator = new StreamAccumulator;
+		$stopped = AIAccess\Http\SseStream::consume(
+			fn(\Closure $onChunk) => $this->client->callApiStream('models/' . $this->model . ':streamGenerateContent?alt=sse', $this->buildPayload(), $onChunk),
+			fn(?string $name, string $json) => $accumulator->event($name, $json, $onDelta),
+		);
+		return new ChatResponse($accumulator->getResponse(), cancelled: $stopped);
+	}
+
+
 	/**
 	 * Builds the payload for the Gemini API generateContent request.
 	 * @return mixed[]

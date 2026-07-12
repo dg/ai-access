@@ -103,4 +103,36 @@ final class Client implements AIAccess\Chat\Service
 			? $data
 			: throw new AIAccess\CommunicationException('Invalid JSON response from API');
 	}
+
+
+	/**
+	 * Streams a request, handing raw SSE bytes to $onChunk.
+	 * @param  mixed[]  $payload
+	 * @param  \Closure(string): (bool|null)  $onChunk
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function callApiStream(string $endpoint, array $payload, \Closure $onChunk): void
+	{
+		$headers = $this->extraHeaders;
+		if ($this->apiKey !== '') {
+			$headers[$this->authHeader] = $this->authPrefix . $this->apiKey;
+		}
+
+		$response = $this->httpClient->fetch(
+			$this->baseUrl . $endpoint,
+			// stream_options is an OpenAI invention and an unknown dialect may refuse the whole
+			// request over it; ask for it with setOptions(custom: [...]) where it is supported
+			$payload + ['stream' => true],
+			$headers,
+			onChunk: $onChunk,
+		);
+		if ($response->getStatusCode() >= 400) {
+			$data = $response->getData();
+			throw new AIAccess\ApiException(
+				$data['error']['message'] ?? 'Endpoint API error (HTTP ' . $response->getStatusCode() . ')',
+				$response->getStatusCode(),
+			);
+		}
+	}
 }

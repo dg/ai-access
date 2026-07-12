@@ -37,9 +37,15 @@ abstract class Chat
 	 * @param  ?\Closure(Response): ?string  $validate  returning a string sends it back as
 	 *         another user message, so the model can correct itself; null accepts the answer.
 	 *         Not consulted while the answer still waits for tool results the caller handles itself.
+	 * @param  ?\Closure(string): (bool|null)  $onStream  receives the answer in pieces as it is
+	 *         written; returning false stops the generation
 	 * @throws ServiceException
 	 */
-	public function sendMessage(string|Part|array|null $message = null, ?\Closure $validate = null): Response
+	public function sendMessage(
+		string|Part|array|null $message = null,
+		?\Closure $validate = null,
+		?\Closure $onStream = null,
+	): Response
 	{
 		$save = $this->messages;
 		if ($message !== null) {
@@ -56,7 +62,12 @@ abstract class Chat
 				}
 
 				try {
-					$response = $this->generateResponse();
+					// tool rounds stream too; the loop simply runs one stream per round
+					$response = $onStream === null
+						? $this->generateResponse()
+						: $this->generateStreamResponse(fn(Delta $delta) => $delta->type === DeltaType::Text
+							? $onStream($delta->text)
+							: null);
 				} catch (\Throwable $e) {
 					// rolling back rounds that already happened would throw away paid-for work
 					// and tool side effects, so only an unanswered first round is undone
@@ -73,6 +84,20 @@ abstract class Chat
 				}
 				if ($usage = $response->getUsage()) {
 					$this->totalUsage = $this->totalUsage?->add($usage) ?? $usage;
+				}
+
+				// the caller stopped the stream, so running tools from a half-read answer and
+				// asking again is the opposite of what they asked for; when the loop owns the
+				// exchange, every call still needs an answer, or the history could never be
+				// continued - a caller running tools by hand keeps that responsibility
+				if ($response->getFinishReason() === FinishReason::Cancelled) {
+					$calls = $response->getToolCalls();
+					if ($calls && $this->canRunTools($calls)) {
+						foreach ($calls as $call) {
+							$this->addToolResult($call, 'The tool was not run because the generation was cancelled.', isError: true);
+						}
+					}
+					return $response;
 				}
 
 				if ($calls = $response->getToolCalls()) {
@@ -98,6 +123,18 @@ abstract class Chat
 		} finally {
 			$this->toolChoice = $toolChoice;
 		}
+	}
+
+
+	/**
+	 * Sends a message and returns the answer as a stream you can read while it is written.
+	 * Nothing is sent until you start reading it.
+	 * @param  string|Part|list<string|Part>|null  $message
+	 * @param  ?\Closure(Response): ?string  $validate
+	 */
+	public function sendMessageStream(string|Part|array|null $message = null, ?\Closure $validate = null): TextStream
+	{
+		return new TextStream(fn(\Closure $emit) => $this->sendMessage($message, $validate, $emit));
 	}
 
 
@@ -359,4 +396,12 @@ abstract class Chat
 	 * Generates the next response based on the current chat history and settings.
 	 */
 	abstract protected function generateResponse(): Response;
+
+
+	/**
+	 * The same, but reporting pieces of the answer through $onDelta as they arrive.
+	 * The callback returning false stops the generation.
+	 * @param  \Closure(Delta): (bool|null)  $onDelta
+	 */
+	abstract protected function generateStreamResponse(\Closure $onDelta): Response;
 }

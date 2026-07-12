@@ -234,4 +234,30 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			? $data
 			: throw new AIAccess\CommunicationException('Invalid JSON response from Gemini API');
 	}
+
+
+	/**
+	 * Streams a request, handing raw SSE bytes to $onChunk. Streaming is a separate endpoint
+	 * here, not a flag in the payload.
+	 * @param  mixed[]  $payload
+	 * @param  \Closure(string): (bool|null)  $onChunk
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function callApiStream(string $endpoint, array $payload, \Closure $onChunk): void
+	{
+		$response = $this->httpClient->fetch(
+			$this->baseUrl . $endpoint,
+			$payload,
+			['x-goog-api-key' => $this->apiKey],
+			onChunk: $onChunk,
+		);
+		if ($response->getStatusCode() >= 400) {
+			$data = $response->getData();
+			throw new AIAccess\ApiException(
+				$data['error']['message'] ?? "Gemini API error (HTTP {$response->getStatusCode()})",
+				$response->getStatusCode(),
+			);
+		}
+	}
 }

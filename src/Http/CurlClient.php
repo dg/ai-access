@@ -94,9 +94,11 @@ final class CurlClient implements Client
 		}
 
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?: '';
-		if ($errorBody !== '' && preg_match('~^application/json|\+json~', $contentType)) {
-			$errorBody = Helpers::decodeJson($errorBody);
+		if ($errorBody !== '') {
+			// a streaming endpoint keeps announcing text/event-stream even when it answers with
+			// a JSON error, so the content type says nothing here and the body is tried as JSON
+			$decoded = json_decode($errorBody, true);
+			$errorBody = is_array($decoded) ? $decoded : $errorBody;
 		}
 
 		return new Response($httpCode, $this->parseHeaders($rawHeaders), $errorBody === '' ? null : $errorBody);

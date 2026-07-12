@@ -31,6 +31,8 @@ final class ChatResponse implements Chat\Response
 	public function __construct(
 		/** @var mixed[] */
 		private readonly array $rawResponse,
+		/** the caller stopped a stream, so the answer is whatever had arrived */
+		private readonly bool $cancelled = false,
 	) {
 		$this->parseRawResponse($this->rawResponse);
 	}
@@ -44,6 +46,10 @@ final class ChatResponse implements Chat\Response
 
 	public function getFinishReason(): FinishReason
 	{
+		if ($this->cancelled) {
+			return FinishReason::Cancelled;
+		}
+
 		if ($this->refusal !== null) {
 			return FinishReason::ContentFiltered;
 		}

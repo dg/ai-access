@@ -205,7 +205,7 @@ test('an error status is not a stream: the body is buffered whole', function () 
 
 	Assert::same(0, $called);
 	Assert::same(429, $response->getStatusCode());
-	Assert::same('{"error":{"message":"slow down"}}', $response->getData());
+	Assert::same(['error' => ['message' => 'slow down']], $response->getData());
 });
 
 

@@ -32,6 +32,9 @@ final class Chat extends BaseChat
 	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating.
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
 	 * @param  ?mixed[]  $custom  Anything else the endpoint accepts, merged into the payload as is.
+	 *                            Streaming sends no stream_options, so pass
+	 *                            ['stream_options' => ['include_usage' => true]] where the
+	 *                            endpoint understands it and you want usage from a stream.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
@@ -79,9 +82,15 @@ final class Chat extends BaseChat
 	}
 
 
-	protected function createResponse(array $raw): ChatResponse
+	protected function callApiStream(array $payload, \Closure $onChunk): void
 	{
-		return new ChatResponse($raw);
+		$this->client->callApiStream('chat/completions', $payload, $onChunk);
+	}
+
+
+	protected function createResponse(array $raw, bool $cancelled): ChatResponse
+	{
+		return new ChatResponse($raw, $cancelled);
 	}
 
 

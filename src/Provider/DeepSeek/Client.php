@@ -85,4 +85,31 @@ final class Client implements AIAccess\Chat\Service
 			? $data
 			: throw new AIAccess\CommunicationException('Invalid JSON response from DeepSeek API');
 	}
+
+
+	/**
+	 * Streams a request, handing raw SSE bytes to $onChunk.
+	 * @param  mixed[]  $payload
+	 * @param  \Closure(string): (bool|null)  $onChunk
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function callApiStream(string $endpoint, array $payload, \Closure $onChunk): void
+	{
+		$headers = ['Authorization' => 'Bearer ' . $this->apiKey];
+
+		$response = $this->httpClient->fetch(
+			$this->baseUrl . $endpoint,
+			$payload + ['stream' => true, 'stream_options' => ['include_usage' => true]],
+			$headers,
+			onChunk: $onChunk,
+		);
+		if ($response->getStatusCode() >= 400) {
+			$data = $response->getData();
+			throw new AIAccess\ApiException(
+				$data['error']['message'] ?? 'DeepSeek API error (HTTP ' . $response->getStatusCode() . ')',
+				$response->getStatusCode(),
+			);
+		}
+	}
 }

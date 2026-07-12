@@ -63,6 +63,7 @@ class TestChat extends Chat
 
 		if ($this->mockedResponse === null) {
 			$response = Mockery::mock(Response::class);
+			$response->allows()->getFinishReason()->andReturn(AIAccess\Chat\FinishReason::Complete);
 			$response->allows()->getToolCalls()->andReturn([]);
 			$response->allows()->getUsage()->andReturn(null);
 			$response->allows()->getMessage()->andReturn(new Message('Default response', Role::Model));
@@ -70,6 +71,19 @@ class TestChat extends Chat
 		}
 
 		return $this->mockedResponse;
+	}
+
+
+	protected function generateStreamResponse(Closure $onDelta): Response
+	{
+		// the words of the mocked answer, handed over one by one
+		$response = $this->generateResponse();
+		foreach (explode(' ', $response->getMessage()->getText()) as $i => $word) {
+			if ($onDelta(new AIAccess\Chat\Delta(AIAccess\Chat\DeltaType::Text, ($i ? ' ' : '') . $word)) === false) {
+				break;
+			}
+		}
+		return $response;
 	}
 }
 
@@ -114,6 +128,7 @@ test('Chat sendMessage basic flow', function () {
 
 	// Mock a response
 	$mockResponse = Mockery::mock(Response::class);
+	$mockResponse->allows()->getFinishReason()->andReturn(AIAccess\Chat\FinishReason::Complete);
 	$mockResponse->allows()->getToolCalls()->andReturn([]);
 	$mockResponse->allows()->getUsage()->andReturn(null);
 	$mockResponse->allows()->getMessage()->andReturn(new Message('Model reply', Role::Model));
@@ -138,6 +153,7 @@ test('Chat sendMessage with null input continues conversation', function () {
 
 	// Mock a response
 	$mockResponse = Mockery::mock(Response::class);
+	$mockResponse->allows()->getFinishReason()->andReturn(AIAccess\Chat\FinishReason::Complete);
 	$mockResponse->allows()->getToolCalls()->andReturn([]);
 	$mockResponse->allows()->getUsage()->andReturn(null);
 	$mockResponse->allows()->getMessage()->andReturn(new Message('Model continuation', Role::Model));
@@ -177,6 +193,7 @@ test('an empty model turn is not appended to the history', function () {
 
 	// Mock a refusal: no parts at all, so nothing is appended to the history
 	$mockResponse = Mockery::mock(Response::class);
+	$mockResponse->allows()->getFinishReason()->andReturn(AIAccess\Chat\FinishReason::Complete);
 	$mockResponse->allows()->getToolCalls()->andReturn([]);
 	$mockResponse->allows()->getUsage()->andReturn(null);
 	$mockResponse->allows()->getMessage()->andReturn(new Message([], Role::Model));

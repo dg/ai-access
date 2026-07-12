@@ -30,6 +30,8 @@ final class ChatResponse implements Chat\Response
 	public function __construct(
 		/** @var mixed[] */
 		private readonly array $rawResponse,
+		/** the caller stopped a stream, so the answer is whatever had arrived */
+		private readonly bool $cancelled = false,
 	) {
 		$this->parseRawResponse($this->rawResponse);
 	}
@@ -43,6 +45,10 @@ final class ChatResponse implements Chat\Response
 
 	public function getFinishReason(): FinishReason
 	{
+		if ($this->cancelled) {
+			return FinishReason::Cancelled;
+		}
+
 		// a function call is announced in the parts, never in finishReason, which stays STOP
 		if ($this->getToolCalls()) {
 			return FinishReason::ToolCall;
@@ -147,8 +153,11 @@ final class ChatResponse implements Chat\Response
 					$thoughtParts[] = $part['text'];
 					$this->parts[] = new Chat\ReasoningPart($part['text'], self::Provider, $part);
 				} else {
-					$textParts[] = $part['text'];
-					// the raw part may carry a thoughtSignature, which Gemini wants back verbatim
+					// a part may be empty and exist only to carry a thoughtSignature; it has to
+					// survive into the parts for the round trip
+					if ($part['text'] !== '') {
+						$textParts[] = $part['text'];
+					}
 					$this->parts[] = new Chat\TextPart($part['text'], self::Provider, $part);
 				}
 			}

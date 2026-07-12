@@ -98,6 +98,22 @@ test('ChatResponse correctly extracts standard usage information', function () {
 });
 
 
+test('cached input tokens are read from the key DeepSeek uses, not the common one', function () {
+	// DeepSeek sends both keys, so only differing values can tell which one is read
+	$response = new ChatResponse([
+		'choices' => [['message' => ['content' => 'Response'], 'finish_reason' => 'stop']],
+		'usage' => [
+			'prompt_tokens' => 100,
+			'completion_tokens' => 5,
+			'prompt_cache_hit_tokens' => 64,
+			'prompt_tokens_details' => ['cached_tokens' => 7],
+		],
+	]);
+
+	Assert::same(64, $response->getUsage()->cacheReadTokens);
+});
+
+
 test('ChatResponse returns null usage when not provided', function () {
 	$rawResponse = [
 		'choices' => [

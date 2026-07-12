@@ -95,12 +95,41 @@ final class Chat extends AIAccess\Chat\Chat
 	protected function generateResponse(): ChatResponse
 	{
 		$response = $this->client->callApi('responses', $this->buildPayload());
+		$this->checkFailure($response);
+		return new ChatResponse($response);
+	}
+
+
+	protected function generateStreamResponse(\Closure $onDelta): ChatResponse
+	{
+		$accumulator = new StreamAccumulator;
+		$stopped = AIAccess\Http\SseStream::consume(
+			fn(\Closure $onChunk) => $this->client->callApiStream('responses', $this->buildPayload(), $onChunk),
+			fn(?string $name, string $json) => $accumulator->event($name, $json, $onDelta),
+		);
+
+		if (!$stopped && !$accumulator->isTerminated()) {
+			// without the terminal event a quiet death would read as a complete answer
+			throw new AIAccess\CommunicationException('The stream ended without a terminal event; the answer may be incomplete.');
+		}
+		$response = $accumulator->getResponse();
+		$this->checkFailure($response);
+		return new ChatResponse($response, cancelled: $stopped);
+	}
+
+
+	/**
+	 * Generation can fail inside HTTP 200, and it does so in a stream as well: the terminal
+	 * event then carries the error instead of an answer.
+	 * @param  mixed[]  $response
+	 */
+	private function checkFailure(array $response): void
+	{
 		if (($response['status'] ?? null) === 'failed') {
 			$error = $response['error'] ?? [];
 			throw new AIAccess\ApiException(($error['message'] ?? 'Response generation failed')
 				. (isset($error['code']) ? " ({$error['code']})" : ''));
 		}
-		return new ChatResponse($response);
 	}
 
 

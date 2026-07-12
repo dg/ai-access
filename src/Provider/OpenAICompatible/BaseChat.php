@@ -9,13 +9,15 @@ namespace AIAccess\Provider\OpenAICompatible;
 
 use AIAccess;
 use AIAccess\Chat\Role;
+use AIAccess\Http\SseStream;
 use function array_filter, is_array, is_string;
 
 
 /**
  * Shared request side of the chat/completions dialect, which several providers speak
- * verbatim: message serialization and tool definitions live here once. What genuinely
- * differs - option names, effort mapping, the response subclass - stays in the subclasses.
+ * verbatim: message serialization, tool definitions and the stream loop live here once.
+ * What genuinely differs - option names, effort mapping, the response subclass - stays
+ * in the subclasses.
  *
  * @internal
  */
@@ -31,9 +33,20 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 	}
 
 
-	protected function generateResponse(): AIAccess\Chat\Response
+	protected function generateResponse(): BaseChatResponse
 	{
-		return $this->createResponse($this->callApi($this->buildPayload()));
+		return $this->createResponse($this->callApi($this->buildPayload()), cancelled: false);
+	}
+
+
+	protected function generateStreamResponse(\Closure $onDelta): BaseChatResponse
+	{
+		$accumulator = new StreamAccumulator;
+		$stopped = SseStream::consume(
+			fn(\Closure $onChunk) => $this->callApiStream($this->buildPayload(), $onChunk),
+			fn(?string $name, string $json) => $accumulator->event($name, $json, $onDelta),
+		);
+		return $this->createResponse($accumulator->getResponse(), cancelled: $stopped);
 	}
 
 
@@ -44,12 +57,19 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 	abstract protected function callApi(array $payload): array;
 
 
+	/**
+	 * @param  mixed[]  $payload
+	 * @param  \Closure(string): (bool|null)  $onChunk
+	 */
+	abstract protected function callApiStream(array $payload, \Closure $onChunk): void;
+
+
 	/** @param mixed[] $raw */
-	abstract protected function createResponse(array $raw): AIAccess\Chat\Response;
+	abstract protected function createResponse(array $raw, bool $cancelled): BaseChatResponse;
 
 
 	/**
-	 * The ChatResponse::Provider tag whose raw parts this chat replays verbatim.
+	 * The BaseChatResponse::Provider tag whose raw parts this chat replays verbatim.
 	 */
 	abstract protected function provider(): string;
 

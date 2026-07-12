@@ -15,7 +15,7 @@ public manual is distilled.
 
 **Key Features:**
 - Single unified API across multiple providers
-- Support for Chat, Batch processing, and Embeddings
+- Support for Chat (plain and streaming), Batch processing, Embeddings, and Image generation
 - Modern PHP 8.3+ with strict types throughout
 - No vendor SDK dependencies (uses native HTTP client)
 
@@ -101,7 +101,8 @@ src/
 │   ├── Claude/
 │   ├── Gemini/
 │   ├── DeepSeek/
-│   └── Grok/
+│   ├── Grok/
+│   └── OpenAICompatible/  # generic client, plus the @internal chat/completions bases
 ├── Helpers.php         # Internal utilities (JSON encoding/decoding)
 ├── Media.php           # Binary content (image, PDF) plus its mime type; also a chat Part
 ├── Model.php           # Model id and its raw metadata, returned by listModels()
@@ -145,7 +146,16 @@ Each provider directory (`OpenAI/`, `Claude/`, etc.) has identical structure:
 - `Batch.php` - Batch request container (if supported)
 - `BatchResponse.php` - Batch response parsing (if supported)
 
-This makes adding new providers straightforward: copy and adapt.
+This makes adding a provider that speaks a **new** wire format straightforward: copy and
+adapt. It is not licence to copy within a format. DeepSeek, Grok and `OpenAICompatible`
+all speak `chat/completions`, so both sides of the wire live once in the `@internal`
+bases of `Provider/OpenAICompatible/`: response parsing and stream accumulation in
+`BaseChatResponse`/`StreamAccumulator`, message serialization, tool definitions and the
+stream loop in the abstract `BaseChat`. A fix made three times is a fix that will one
+day be made twice; if a new provider speaks a dialect already present here, extend the
+shared implementation rather than duplicating it. The provider `Chat` subclasses keep
+only what genuinely diverges: option names, effort mapping, media support and the
+response schema.
 
 ### Single Responsibility
 - `Client` - API communication, service factory, HTTP handling
@@ -216,6 +226,7 @@ What AIAccess implements today:
 | Feature | OpenAI | Claude | Gemini | DeepSeek | Grok |
 |---------|--------|--------|--------|----------|------|
 | Chat | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Streaming | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Reasoning effort | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Tool calling | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Image input | ✓ | ✓ | ✓ | - | ✓ |
@@ -237,8 +248,8 @@ images but not documents.
 
 `OpenAICompatible` has no column because it has no fixed answer: it is a chat client for
 any endpoint speaking `chat/completions`, so what works is decided by that endpoint, not
-by this library. Chat, streaming and tool calling are what it sends; everything else
-depends on who answers.
+by this library. Chat, streaming, tool calling, image input, structured output and
+model listing are what it sends; everything else depends on who answers.
 
 ## Provider-Specific Options
 

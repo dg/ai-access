@@ -20,6 +20,16 @@ namespace AIAccess\Chat {
 	}
 
 	/**
+	 * What part of the answer a streamed piece belongs to.
+	 */
+	enum DeltaType: string
+	{
+		case Text = 'text';
+		case Reasoning = 'reasoning';
+		case ToolCall = 'tool_call';
+	}
+
+	/**
 	 * How much effort the model should spend on reasoning before answering.
 	 */
 	enum Effort: string

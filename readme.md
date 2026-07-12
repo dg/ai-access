@@ -211,6 +211,57 @@ swallow the names that do not apply to the provider you happen to be using.
 
  <!---->
 
+Streaming
+=========
+
+▶ Full runnable example: [examples/chat/streaming.php](examples/chat/streaming.php)
+
+```php
+foreach ($chat->sendMessageStream('Explain PHP generators') as $delta) {
+	echo $delta;
+	flush();
+}
+```
+
+**Why bother in PHP?** In a browser the answer is obvious, in a PHP script less
+so, and it comes down to four things. A long answer takes tens of seconds, so
+printing it as it arrives is the difference between a page that works and a page
+that looks frozen — and between finishing inside `max_execution_time` and dying
+with nothing to show. If your frontend consumes SSE, you can forward each delta
+as it lands instead of buffering the whole answer and defeating the point. You
+can stop generating the moment you have what you need, and stop paying for the
+rest. And time to first token beats total time for anything a human is watching.
+
+Nothing is sent until you start reading, and once the stream ends it is an
+ordinary response:
+
+```php
+$stream = $chat->sendMessageStream('Write a haiku');
+
+foreach ($stream as $delta) {
+	echo $delta;
+}
+
+$response = $stream->getResponse();
+echo $response->getUsage()->outputTokens, ' tokens';
+```
+
+Prefer a callback? `sendMessage($text, onStream: fn($delta) => print($delta))`
+does the same thing, and returning `false` from it stops the generation — the
+response then reports `FinishReason::Cancelled`. Stopping half way and asking for
+`getResponse()` afterwards finishes reading the same stream rather than asking
+the model a second time.
+
+Tool calls stream as well: the loop simply runs one stream per round, so you see
+the text of each round as it is written.
+
+Under the hood the five providers agree on nothing here. Two of them name their
+events and three do not; two end with a `[DONE]` marker, one ends with an event
+carrying the entire response, and one just stops sending. Deltas arrive split
+wherever the network happened to cut them. You get `foreach`.
+
+ <!---->
+
 Tool Calling
 ============
 

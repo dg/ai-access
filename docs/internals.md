@@ -3,8 +3,8 @@
 A multi-provider AI client (Anthropic Claude, OpenAI, Gemini, Grok, DeepSeek, plus a
 generic client for anything else speaking the `chat/completions` dialect). The
 value is a cross-cutting model you cannot read off the signatures: **the interfaces
-converge, every implementation diverges**, and the shared conversation model is
-deliberately narrow. One file.
+converge, nearly every implementation diverges** (the one measured exception is below),
+and the shared conversation model is deliberately narrow. One file.
 
 ## Provider model: interface convergence, implementation divergence
 
@@ -13,13 +13,10 @@ There are four service interfaces — `Chat\Service::createChat`, `Batch\Service
 **subset** it supports (Claude: Chat+Batch; OpenAI and Gemini: all four; Grok:
 Chat+Image; DeepSeek and `OpenAICompatible`: Chat only).
 
-**The whole library has exactly one abstract base class — `Chat\Chat`.** Everything
-else (`Client`, `ChatResponse`, `Batch`, `BatchResponse`) is an interface with a
-**fully independent `final` implementation per provider**. There is no shared base
-`Client`, no "OpenAI-compatible" base even for the OpenAI/Grok/DeepSeek family — each
-one **re-duplicates** `callApi()`, error mapping, and parsing from scratch. The
-duplication is intentional; a "DRY it into a base class" refactor fights the design,
-because the providers genuinely diverge on every axis:
+`Client`, `Batch` and `BatchResponse` are interfaces with a **fully independent `final`
+implementation per provider**: each re-duplicates `callApi()` and its error mapping from
+scratch. The duplication is intentional and a "DRY it into a base class" refactor fights
+the design, because the providers genuinely diverge on every axis:
 
 | axis | Claude | OpenAI | Gemini | Grok/DeepSeek |
 |---|---|---|---|---|
@@ -30,6 +27,27 @@ because the providers genuinely diverge on every axis:
 | usage keys | `input_tokens`/`output_tokens` | same | `promptTokenCount`/`candidatesTokenCount` | `prompt_tokens`/`completion_tokens` |
 | reasoning tokens | `output_tokens_details.thinking_tokens` | `output_tokens_details.reasoning_tokens` | `thoughtsTokenCount` | `completion_tokens_details.reasoning_tokens` |
 | finish reason source | `stop_reason` | **`status`, then `incomplete_details`** | `finishReason` (never signals tool use) | `finish_reason` |
+
+**The one place that divergence is a lie is the `chat/completions` family.** Grok, DeepSeek
+and `OpenAICompatible` speak the same wire format down to the byte, so their response
+parsing and stream accumulation live once in the `@internal` bases of
+`Provider\OpenAICompatible\` — `StreamAccumulator` verbatim, `BaseChatResponse` as an
+abstract parser the three `final` public classes extend. That namespace names the dialect,
+not the endpoint: Grok and DeepSeek extend the bases without being OpenAI-compatible
+clients themselves. A refusal is read there as well, although only Grok sends one today: it
+arrives as a message field of its own instead of as a finish reason, and that is a property
+of the dialect, so an endpoint reached through `OpenAICompatible` would otherwise report a
+refusal as a blank but complete answer. Note that **OpenAI is not in this family**: it
+speaks the Responses API and reads its finish reason from `status`, as the table says.
+
+What the three subclasses still own is exactly what genuinely differs, and it is worth
+knowing why nothing else was unified: DeepSeek reports cached input tokens at the top level
+(`prompt_cache_hit_tokens`) while the others nest them under `prompt_tokens_details`, and
+the three disagree on which raw finish reasons mean "done" — Grok and `OpenAICompatible`
+count `end_turn` as complete, DeepSeek does not. Folding those maps together would
+silently change what a provider reports. Their `Chat` classes stay separate for a plainer
+reason: they diverge in capability (DeepSeek has neither vision nor structured
+output) and in option names (`max_tokens` vs `max_completion_tokens`).
 
 ## HTTP: one seam, three decorators
 
@@ -89,6 +107,53 @@ was measured, not assumed** (captured transcripts live in `tests/fixtures/*/stre
 So there is no generic "the stream is over" signal: Claude ends with `message_stop`,
 OpenAI with a terminal event that carries the entire response, Gemini simply stops
 sending, and the chat/completions pair use the sentinel. Each accumulator knows its own.
+The loop that drives this — feed chunks, dispatch events, stop on demand, flush a final
+event whose blank line never came — is `SseStream::consume()`, one place for all five
+providers. Two ending rules matter: an OpenAI stream that goes quiet **without** its
+terminal event raises `CommunicationException` instead of posing as a complete answer,
+and an in-band `error` event (both Claude and OpenAI send those inside HTTP 200) raises
+`ApiException` instead of silently truncating the text.
+
+**Every accumulator rebuilds the exact shape the non-streaming endpoint returns** and
+hands it to the same `ChatResponse`, so text, usage, finish reason, tool calls and
+reasoning are parsed once rather than twice. Get this wrong and the two paths drift: the
+streamed OpenAI answer once ignored `status: failed` because only the plain path checked
+it, and Gemini's streamed slices were kept as separate parts, so `getText()` glued them
+with newlines the model never sent. Both are now the same code path with the same guards.
+
+**`Chat\TextStream` inverts push into pull with a Fiber.** The HTTP layer calls a
+callback, `foreach` wants to be called; the request therefore runs inside a Fiber that
+suspends on every piece of text. Consequences worth knowing:
+
+- Nothing is sent until the stream is read, so `sendMessageStream()` is lazy in a way
+  the rest of the library is not.
+- The Fiber is **created once and shared** by iteration and by `getResponse()`. Reading
+  half the stream and then asking for the response finishes the same request; an earlier
+  version started a second one and billed the answer twice.
+- Whatever the request failed with is **remembered and rethrown** on every later call.
+  Without that, the second call reports that a fiber has no return value, which tells the
+  caller nothing about the rate limit that actually happened.
+- Deltas are typed internally (`Delta` + `DeltaType`) even though the public API yields
+  text only, so exposing reasoning or partial tool arguments later means letting them
+  through rather than rewriting the providers.
+- A cancelled stream **returns immediately** from the tool loop. Running tools off a
+  half-read answer is the opposite of what the caller asked for by stopping. When the
+  loop owns the exchange (the calls would have been run automatically), any tool call in
+  the partial turn still gets an **error result recorded**, because a call left dangling
+  would make every following request invalid; a caller running tools by hand keeps that
+  responsibility, so nothing is answered behind their back. Claude's accumulator also
+  drops a thinking block whose `content_block_stop` never arrived, since its truncated
+  signature would poison the replay the same way.
+- **`cancelled` is the only state a `ChatResponse` is told rather than parses, and that
+  is deliberate.** Every other thing it reports is a function of the provider's raw
+  answer; "the caller stopped reading" has no representation on the wire, so it rides in
+  as a second constructor argument that `getFinishReason()` checks before the raw map, in
+  all six providers. It earns the exception because it arises exactly where the response
+  is built, inside `generateStreamResponse()`. Anything else that might one day end a
+  turn without the provider saying so — the round limit, a token budget — arises a floor
+  up, in the `Chat::sendMessage()` loop, once the response object already exists, and
+  could not use this door anyway. So a **second** flag here is not expected; if one ever
+  appears, redesign how the state reaches the response instead of adding a third bool.
 
 ## The conversation model is part-based, and transactional
 
@@ -104,11 +169,24 @@ must be pure w.r.t. `$messages`.
 **One `sendMessage()` can be several requests.** While every requested tool has a
 handler the loop executes them, appends a `Role::Tool` turn and asks again; a
 `validate:` callback that returns a string does the same with a user turn. Both share
-one `maxRounds` budget (8 by default) and overrunning it **throws** — a half-finished
-answer that looks complete is the worse failure. The loop stands down the moment the
-caller might want control: no handlers registered at all, or a call naming a tool whose
-handler was deliberately left out. `Chat::getTotalUsage()` sums every round, because
-`Response::getUsage()` from the last one says little about what the exchange cost.
+one `maxRounds` budget (8 by default) and overrunning it **throws
+`TooManyRoundsException`** — a half-finished answer that looks complete is the worse
+failure; the exception carries the last `Response`, and the history keeps every finished
+round, so the conversation can be continued. The loop stands down the moment the caller
+might want control: no handlers registered at all, or a call naming a tool whose handler
+was deliberately left out — and in that case `validate:` is **not consulted**, because
+feedback appended after an unanswered tool call corrupts the exchange. Three more
+invariants of the loop:
+
+- **A forced `setToolChoice()` is demanded in the first round only.** The wire flag
+  forces the tool per request, so keeping it up would demand the call again in every
+  round and the loop could never settle; the user-facing setting itself survives for the
+  next `sendMessage()`.
+- **Every call of a round gets an answer, even when a handler blows up.** The remaining
+  calls are answered with an error result before the exception continues, for the same
+  no-dangling-call reason as cancellation.
+- `Chat::getTotalUsage()` sums every round, because `Response::getUsage()` from the last
+  one says little about what the exchange cost.
 
 A `Message` holds a **list of `Part`s** (`TextPart`, `ReasoningPart`, and `Media`),
 plus a `Role`. A plain string becomes one `TextPart`, so `addMessage('hi', Role::User)`
@@ -134,8 +212,13 @@ did** — the parts are internal until something non-text appears. Consequences:
   half of that is a hard requirement — a tool turn returned without it is accepted, as a
   live check confirmed — but keeping it there preserves the chain of thought across
   rounds, while replaying it in plain chat is untested territory not worth the risk.
-  OpenAI replays a reasoning item **only when it carries `encrypted_content`** — without
-  it the item is a server-side reference we cannot reconstruct.
+  OpenAI replays a reasoning item raw whenever `store` is on (the default) — the server
+  resolves it by its `rs_` id — and otherwise only when it carries `encrypted_content`;
+  with `store: false` the payload auto-includes `reasoning.encrypted_content` so tool
+  loops on reasoning models keep working. Its `input` is a flat item list, so one turn
+  expands into several items and **they go out in the order the parts came in**: a
+  reasoning item names the item required to follow it, so text gathered before a call
+  has to be flushed ahead of the call rather than at the end of the turn.
 - **A part in the history is not automatically content on the wire**, so every
   `buildPayload()` drops a turn that boils down to nothing: an unreplayable payload,
   or reasoning alone. Sending it as empty content is not the safe fallback — Claude and

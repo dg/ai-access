@@ -87,9 +87,15 @@ final class Chat extends OpenAICompatible\BaseChat
 	}
 
 
-	protected function createResponse(array $raw): ChatResponse
+	protected function callApiStream(array $payload, \Closure $onChunk): void
 	{
-		return new ChatResponse($raw);
+		$this->client->callApiStream('chat/completions', $payload, $onChunk);
+	}
+
+
+	protected function createResponse(array $raw, bool $cancelled): ChatResponse
+	{
+		return new ChatResponse($raw, $cancelled);
 	}
 
 
