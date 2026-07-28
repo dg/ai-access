@@ -156,7 +156,7 @@ test('ChatResponse handles blocked content', function () {
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::null($response->getText());
+	Assert::same('', $response->getText());
 });
 
 
@@ -167,7 +167,7 @@ test('ChatResponse handles empty or missing content', function () {
 			'raw' => [
 				'output' => [],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Missing type field
 		[
@@ -180,7 +180,7 @@ test('ChatResponse handles empty or missing content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Empty content array
 		[
@@ -192,7 +192,7 @@ test('ChatResponse handles empty or missing content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Missing text field
 		[
@@ -206,7 +206,7 @@ test('ChatResponse handles empty or missing content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Wrong content type
 		[
@@ -220,12 +220,12 @@ test('ChatResponse handles empty or missing content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Missing output array
 		[
 			'raw' => ['other' => 'data'],
-			'expected' => null,
+			'expected' => '',
 		],
 	];
 
@@ -243,7 +243,7 @@ test('ChatResponse handles non-array content structure', function () {
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::null($response->getText());
+	Assert::same('', $response->getText());
 });
 
 

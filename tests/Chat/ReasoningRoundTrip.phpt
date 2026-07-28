@@ -16,7 +16,7 @@ test('claude replays thinking blocks with their signature', function () {
 
 	$first = $chat->sendMessage('27 * 453?');
 	Assert::type('string', $first->getReasoning());
-	Assert::notContains((string) $first->getReasoning(), (string) $first->getText());
+	Assert::notContains((string) $first->getReasoning(), $first->getText());
 
 	$chat->sendMessage('And doubled?');
 	$assistant = $http->lastPayload()['messages'][1];
@@ -120,7 +120,7 @@ test('a turn carrying only reasoning still lands in the history', function () {
 
 	$response = $chat->sendMessage('Say OK.');
 
-	Assert::null($response->getText());
+	Assert::same('', $response->getText());
 	Assert::count(2, $chat->getMessages());
 	Assert::same(Role::Model, $chat->getMessages()[1]->getRole());
 	Assert::same('', $chat->getMessages()[1]->getText());

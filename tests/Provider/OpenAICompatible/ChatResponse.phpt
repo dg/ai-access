@@ -68,7 +68,7 @@ test('a refusal is read here too, although only Grok sends one today', function 
 	]);
 
 	Assert::same(FinishReason::ContentFiltered, $response->getFinishReason());
-	Assert::null($response->getText());
+	Assert::same('', $response->getText());
 });
 
 
@@ -128,6 +128,14 @@ test('a stopped stream keeps what arrived and says it was cancelled', function (
 	// cancelled wins over the raw reason, which still says the answer finished
 	Assert::same(FinishReason::Cancelled, $stopped->getFinishReason());
 	Assert::same('half', $stopped->getText());
+});
+
+
+test('no text at all is an empty string, and getJson() still answers null', function () {
+	$empty = new ChatResponse(['choices' => [['message' => ['content' => null], 'finish_reason' => 'stop']]]);
+
+	Assert::same('', $empty->getText());
+	Assert::null($empty->getJson());
 });
 
 

@@ -39,9 +39,9 @@ final class Helpers
 	/**
 	 * Decodes text the model produced under a response schema.
 	 */
-	public static function decodeResponseJson(?string $text): mixed
+	public static function decodeResponseJson(string $text): mixed
 	{
-		if ($text === null) {
+		if ($text === '') { // the model produced no text at all; that is not a malformed answer
 			return null;
 		}
 		try {

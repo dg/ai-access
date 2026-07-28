@@ -104,7 +104,8 @@ test('ChatResponse handles content refusal', function () {
 
 	$response = new ChatResponse($rawResponse);
 
-	Assert::null($response->getText());
+	// no text, and the finish reason is what says why
+	Assert::same('', $response->getText());
 	Assert::same(FinishReason::ContentFiltered, $response->getFinishReason());
 });
 
@@ -175,7 +176,7 @@ test('ChatResponse handles empty or null content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Missing content field
 		[
@@ -188,7 +189,7 @@ test('ChatResponse handles empty or null content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Explicitly null content
 		[
@@ -201,7 +202,7 @@ test('ChatResponse handles empty or null content', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 	];
 

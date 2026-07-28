@@ -129,7 +129,7 @@ test('ChatResponse ignores content that is not a list of blocks', function () {
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::null($response->getText());
+	Assert::same('', $response->getText());
 });
 
 
@@ -156,6 +156,7 @@ test('ChatResponse handles filtered content', function () {
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::null($response->getText());
+	// no text, and the finish reason is what says why
+	Assert::same('', $response->getText());
 	Assert::same(FinishReason::ContentFiltered, $response->getFinishReason());
 });

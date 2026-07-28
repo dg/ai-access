@@ -29,7 +29,8 @@ test('refusal is reported instead of text', function () {
 		'output' => [['type' => 'message', 'content' => [['type' => 'refusal', 'refusal' => 'I cannot help with that.']]]],
 	]);
 
-	Assert::null($response->getText());
+	// the text is empty; getRefusal() and the finish reason carry what happened
+	Assert::same('', $response->getText());
 	Assert::same('I cannot help with that.', $response->getRefusal());
 	Assert::same(FinishReason::ContentFiltered, $response->getFinishReason());
 });

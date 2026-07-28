@@ -79,9 +79,9 @@ abstract class BaseChatResponse implements Chat\Response
 	}
 
 
-	public function getText(): ?string
+	public function getText(): string
 	{
-		return $this->text;
+		return $this->text ?? '';
 	}
 
 
@@ -158,7 +158,7 @@ abstract class BaseChatResponse implements Chat\Response
 	}
 
 
-	public function getRawResponse(): mixed
+	public function getRawResponse(): array
 	{
 		return $this->rawResponse;
 	}

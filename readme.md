@@ -111,7 +111,7 @@ Chat
 $chat = $client->createChat('gpt-5.6-luna');
 $response = $chat->sendMessage('Write a short haiku about PHP.');
 
-echo $response->getText() ?? 'No content generated';
+echo $response->getText();
 ```
 
 `sendMessage()` sends the message, appends both your message and the model's reply to the conversation history, and returns a response object. Which means multi-turn conversation is nothing special, you just keep talking:
@@ -150,7 +150,7 @@ $chat->setSystemInstruction('You are a helpful assistant that speaks like a pira
 Inspecting the Response
 -----------------------
 
-Besides the text, the response tells you *why* generation stopped and *what it cost*:
+Besides the text, the response tells you *why* generation stopped:
 
 ```php
 use AIAccess\Chat\FinishReason;
@@ -159,7 +159,21 @@ if ($response->getFinishReason() !== FinishReason::Complete) {
 	// TokenLimit, ContentFiltered, ToolCall...
 	echo 'Stopped early: ', $response->getRawFinishReason();
 }
+```
 
+`getText()` always returns a string, empty when the model wrote nothing, so there is no
+`null` to handle. Why it is empty is a separate question, and the finish reason answers
+it:
+
+```php
+if ($response->getFinishReason() === FinishReason::ContentFiltered) {
+	echo 'The model declined to answer.';
+}
+```
+
+And what it cost:
+
+```php
 $usage = $response->getUsage();
 echo "Tokens: {$usage->inputTokens} in / {$usage->outputTokens} out";
 echo "Reasoning: {$usage->reasoningTokens}, served from cache: {$usage->cacheReadTokens}";

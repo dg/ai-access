@@ -15,10 +15,11 @@ use AIAccess\UnexpectedResponseException;
 interface Response
 {
 	/**
-	 * Gets the main textual content of the AI's response.
-	 * Returns null if the model refused to generate content (e.g., due to safety filters).
+	 * Gets the main textual content of the AI's response, or '' when the model produced none.
+	 * The return value never says why it is empty; getFinishReason() does, with
+	 * ContentFiltered for a refusal and ToolCall when the model asked for a tool instead.
 	 */
-	function getText(): ?string;
+	function getText(): string;
 
 	/**
 	 * The whole model turn as parts, including reasoning. This is what goes into the chat history.
@@ -56,7 +57,7 @@ interface Response
 	 * Gets the raw, unprocessed response data from the API provider.
 	 * @return mixed[]
 	 */
-	function getRawResponse(): mixed;
+	function getRawResponse(): array;
 
 	function getRawFinishReason(): mixed;
 }

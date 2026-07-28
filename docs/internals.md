@@ -196,6 +196,13 @@ did** — the parts are internal until something non-text appears. Consequences:
 - **`getText()` joins text parts and nothing else.** Reasoning never leaks into it,
   because anything that lands there flows through `sendMessage()` into the history and
   is echoed back to the model next turn.
+- **`getText()` returns `string`, never `null`** — on `Message`, on `Response` and on
+  `TextStream` alike. `Response` used to answer `null` for a refusal, which made the
+  return value a second, easily forgotten channel of information; the reason an answer
+  is empty now lives solely in `getFinishReason()` (plus `getRefusal()` on OpenAI).
+  Providers still keep the distinction **internally** — the parsed `$text` property stays
+  nullable, because "no text part at all" is what decides whether a `TextPart` is
+  created, and Grok reads it to tell a refusal from an empty answer.
 - The model turn is appended **when it has at least one part**, so a turn carrying only
   reasoning (or, later, only a tool call) is no longer silently dropped. `getMessage()`
   on the response is exactly what goes into the history.

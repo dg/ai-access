@@ -85,6 +85,11 @@ A `Message` is a `Role` plus a list of `Part`s: `TextPart`, `ReasoningPart`,
 and a raw payload (reasoning, tool calls) are replayed **only** to the provider
 that issued them.
 
+`getText()` returns a `string` on `Message`, `Response` and `TextStream` alike, empty
+when the model wrote nothing. It is never `null`: why an answer is empty is answered by
+`Response::getFinishReason()` (`ContentFiltered` for a refusal, plus `getRefusal()` on
+OpenAI), never by the return value.
+
 Each provider extends this: `OpenAI\Chat`, `Claude\Chat`, `Gemini\Chat`, etc.
 
 ### Directory Structure

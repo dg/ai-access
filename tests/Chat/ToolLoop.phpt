@@ -33,7 +33,7 @@ test('a tool with a handler is called and the loop finishes on its own', functio
 	$response = $chat->sendMessage('Weather in Brno?');
 
 	Assert::same(['city' => 'Brno'], $seen);
-	Assert::contains('OK', (string) $response->getText());
+	Assert::contains('OK', $response->getText());
 	Assert::same(2, $http->count());
 
 	$roles = array_map(fn($m) => $m->getRole(), $chat->getMessages());

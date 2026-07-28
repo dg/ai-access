@@ -174,7 +174,7 @@ test('ChatResponse handles content filtering', function () {
 	];
 
 	$response = new ChatResponse($rawResponse);
-	Assert::null($response->getText());
+	Assert::same('', $response->getText());
 });
 
 
@@ -192,7 +192,7 @@ test('ChatResponse handles empty content parts', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Parts with no text field
 		[
@@ -208,14 +208,14 @@ test('ChatResponse handles empty content parts', function () {
 					],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Empty candidates array
 		[
 			'raw' => [
 				'candidates' => [],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 	];
 
@@ -231,7 +231,7 @@ test('ChatResponse handles malformed response gracefully', function () {
 		// Missing candidates
 		[
 			'raw' => ['other' => 'data'],
-			'expected' => null,
+			'expected' => '',
 		],
 		// Missing content
 		[
@@ -240,7 +240,7 @@ test('ChatResponse handles malformed response gracefully', function () {
 					['finishReason' => 'STOP'],
 				],
 			],
-			'expected' => null,
+			'expected' => '',
 		],
 	];
 
