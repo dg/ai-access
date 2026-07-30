@@ -24,6 +24,9 @@ final class CurlClient implements Client
 	private int $requestTimeout = 180;
 	private ?string $proxy = null;
 
+	/** kept between requests so the TLS connection survives a tool loop */
+	private ?\CurlHandle $handle = null;
+
 
 	public function setOptions(
 		?int $connectTimeout = null,
@@ -53,9 +56,13 @@ final class CurlClient implements Client
 	): Response
 	{
 		$ch = $this->create($payload, $headers, $url, $method);
-		return $onChunk === null
-			? $this->execute($ch)
-			: $this->executeStream($ch, $onChunk);
+		try {
+			return $onChunk === null
+				? $this->execute($ch)
+				: $this->executeStream($ch, $onChunk);
+		} finally {
+			$this->handle = $ch;
+		}
 	}
 
 
@@ -117,7 +124,16 @@ final class CurlClient implements Client
 		?string $method,
 	): \CurlHandle
 	{
-		$ch = curl_init();
+		// the handle is taken and the property cleared, so two transfers can never share
+		// one handle - even when a fiber suspends a stream mid-flight and other code
+		// fires a request meanwhile, that request simply builds a fresh handle
+		if ($this->handle !== null) {
+			$ch = $this->handle;
+			$this->handle = null;
+			curl_reset($ch);
+		} else {
+			$ch = curl_init();
+		}
 		assert($url !== '');
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method ?? ($payload === null ? 'GET' : 'POST'));
@@ -131,6 +147,10 @@ final class CurlClient implements Client
 		if (defined('CURLOPT_PROTOCOLS_STR')) {
 			curl_setopt($ch, CURLOPT_PROTOCOLS_STR, 'http,https');
 		}
+
+		// header names are case-insensitive on the wire, so the defaults below must not
+		// duplicate a header the caller spelled differently
+		$headers = array_change_key_case($headers);
 
 		if ($payload instanceof FormData) {
 			$tmp = [];
@@ -154,7 +174,7 @@ final class CurlClient implements Client
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 		}
 
-		$headers += ['User-Agent' => $this->userAgent];
+		$headers += ['user-agent' => $this->userAgent];
 		$tmp = array_map(fn($k, $v) => "$k: $v", array_keys($headers), array_values($headers));
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $tmp);
 
