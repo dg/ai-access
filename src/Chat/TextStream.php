@@ -19,8 +19,8 @@ use AIAccess\LogicException;
  *
  * Stopping half way is fine: getResponse() finishes reading the same stream rather than
  * asking the model again, and a second foreach() picks up where the first one stopped.
- * Walking away without doing either leaves the request open until the object is
- * collected, so read the rest or take the response.
+ * Breaking out is therefore a pause, not an end; to stop the generation for good, and stop
+ * paying for it, call cancel().
  *
  * @implements \IteratorAggregate<int, string>
  */
@@ -28,7 +28,7 @@ final class TextStream implements \IteratorAggregate
 {
 	private ?Response $response = null;
 
-	/** @var ?\Fiber<void, string, Response, string> */
+	/** @var ?\Fiber<void, ?bool, Response, string> */
 	private ?\Fiber $fiber = null;
 	private ?string $pending = null;
 	private ?\Throwable $failure = null;
@@ -101,7 +101,29 @@ final class TextStream implements \IteratorAggregate
 
 
 	/**
-	 * @return \Fiber<void, string, Response, string>
+	 * Stops the generation for good. Breaking out of foreach() only pauses reading, because
+	 * the request stays open and can be resumed; this closes it, so the rest of the answer is
+	 * neither produced nor billed. What is already read stays readable through getResponse(),
+	 * which then reports FinishReason::Cancelled.
+	 */
+	public function cancel(): void
+	{
+		if ($this->response !== null || $this->fiber === null) {
+			return; // nothing sent yet, or already finished
+		}
+
+		// false travels back through the emit callback, and that is what aborts the transfer
+		$fiber = $this->fiber;
+		while (!$fiber->isTerminated()) {
+			$this->guard(fn() => $fiber->resume(false));
+		}
+		$this->pending = null;
+		$this->response = $fiber->getReturn();
+	}
+
+
+	/**
+	 * @return \Fiber<void, ?bool, Response, string>
 	 */
 	private function fiber(): \Fiber
 	{

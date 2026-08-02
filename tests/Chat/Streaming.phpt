@@ -103,6 +103,34 @@ test('stopping early is reported as cancelled', function () {
 });
 
 
+test('cancel() stops the generation, unlike breaking out of the loop', function () {
+	$http = new FakeHttpClient;
+	$chat = streamingChat('claude', $http);
+
+	$stream = $chat->sendMessageStream('Say: one two three');
+	$seen = '';
+	foreach ($stream as $delta) {
+		$seen .= $delta;
+		$stream->cancel();
+		break;
+	}
+
+	Assert::notSame('', $seen);
+	Assert::same(FinishReason::Cancelled, $stream->getResponse()->getFinishReason());
+	Assert::same(1, $http->count()); // and no second request to finish it
+});
+
+
+test('cancel() on an untouched stream sends nothing at all', function () {
+	$http = new FakeHttpClient;
+	$chat = streamingChat('claude', $http);
+
+	$chat->sendMessageStream('Say: one two three')->cancel();
+
+	Assert::same(0, $http->count());
+});
+
+
 test('stopping half way and then asking for the response sends no second request', function () {
 	$http = new FakeHttpClient;
 	$chat = streamingChat('openai', $http);

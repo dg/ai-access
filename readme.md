@@ -262,9 +262,11 @@ echo $response->getUsage()->outputTokens, ' tokens';
 
 Prefer a callback? `sendMessage($text, onStream: fn($delta) => print($delta))`
 does the same thing, and returning `false` from it stops the generation — the
-response then reports `FinishReason::Cancelled`. Stopping half way and asking for
-`getResponse()` afterwards finishes reading the same stream rather than asking
-the model a second time.
+response then reports `FinishReason::Cancelled`. From a loop the same is done by
+`$stream->cancel()`, which closes the connection so the rest is neither produced
+nor billed. A bare `break` is only a pause: the request stays open, so a later
+`foreach` picks up where you stopped and `getResponse()` finishes reading the
+same stream rather than asking the model a second time.
 
 Tool calls stream as well: the loop simply runs one stream per round, so you see
 the text of each round as it is written.

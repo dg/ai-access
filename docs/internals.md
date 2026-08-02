@@ -130,6 +130,11 @@ suspends on every piece of text. Consequences worth knowing:
 - The Fiber is **created once and shared** by iteration and by `getResponse()`. Reading
   half the stream and then asking for the response finishes the same request; an earlier
   version started a second one and billed the answer twice.
+- **`break` is a pause, `cancel()` is an end.** Because the Fiber lives on the object
+  rather than in the generator, abandoning the loop leaves the request open, which is what
+  makes resuming possible. `cancel()` resumes the Fiber with `false`, which travels back
+  through the emit callback and aborts the transfer. Anything that made `break` cancel by
+  itself would cost the resume-and-finish behaviour above.
 - Whatever the request failed with is **remembered and rethrown** on every later call.
   Without that, the second call reports that a fiber has no return value, which tells the
   caller nothing about the rate limit that actually happened.
