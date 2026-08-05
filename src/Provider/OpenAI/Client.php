@@ -85,7 +85,9 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 	public function cancelBatch(string $id): bool
 	{
-		$response = $this->callApi("batches/{$id}/cancel", '');
+		// an empty array still makes this a POST, and unlike an empty string it goes out as
+		// JSON; the API rejects the form-urlencoded body curl would default to
+		$response = $this->callApi("batches/{$id}/cancel", []);
 		return AIAccess\Helpers::expectString($response['status'] ?? null, 'batch status') === 'cancelling';
 	}
 

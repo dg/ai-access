@@ -81,7 +81,7 @@ test('Client cancelBatch sends cancellation request', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("batches/{$batchId}/cancel", '')
+		->with("batches/{$batchId}/cancel", [])
 		->andReturn($apiResponse);
 
 	$result = $clientMock->cancelBatch($batchId);
@@ -101,7 +101,7 @@ test('Client cancelBatch returns false when cancellation fails', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("batches/{$batchId}/cancel", '')
+		->with("batches/{$batchId}/cancel", [])
 		->andReturn($apiResponse);
 
 	$result = $clientMock->cancelBatch($batchId);
