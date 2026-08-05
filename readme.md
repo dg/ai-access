@@ -1,7 +1,7 @@
 ![AI Access for PHP](https://github.com/user-attachments/assets/f9b6702d-6d6b-49fd-96ff-a33c53e26c68)
 
 [![Downloads this Month](https://img.shields.io/packagist/dm/ai-access/ai-access.svg)](https://packagist.org/packages/ai-access/ai-access)
-[![Tests](https://github.com/dg/ai-access/workflows/Tests/badge.svg?branch=master)](https://github.com/dg/ai-access/actions)
+[![Tests](https://github.com/dg/ai-access/actions/workflows/tests.yml/badge.svg)](https://github.com/dg/ai-access/actions)
 [![Coverage Status](https://coveralls.io/repos/github/dg/ai-access/badge.svg?branch=master)](https://coveralls.io/github/dg/ai-access?branch=master)
 [![Latest Stable Version](https://poser.pugx.org/ai-access/ai-access/v/stable)](https://github.com/dg/ai-access/releases)
 [![License](https://img.shields.io/badge/license-New%20BSD-blue.svg)](https://github.com/dg/ai-access/blob/master/license.md)
@@ -34,30 +34,33 @@ Why AI Access
 
 **Designed, not accreted.** Strict types everywhere, readonly value objects, named arguments instead of option arrays, and an exception hierarchy organized around the only question that matters in production: *should I retry?* Every design decision follows the philosophy proven in Nette: the library should be so intuitive that you rarely need this documentation.
 
-**Honest abstraction.** The unified interface covers what providers genuinely share. Where they differ, AI Access does not pretend: provider-specific options are explicit, typed, named parameters on the provider's own class, so your IDE tells you exactly what each model supports instead of letting a silently ignored array key bite you in production.
+**Honest abstraction.** The unified interface covers what providers genuinely share. Where they differ, AI Access does not pretend: provider-specific options are explicit, typed, named parameters on the provider's own class, so your IDE tells you exactly what each provider supports instead of letting a silently ignored array key bite you in production.
 
 **The whole workflow, not just chat.** Multi-turn conversations, system instructions, token usage tracking, batch processing at 50% cost, and embeddings with compact binary serialization built in.
 
-| Capability | OpenAI | Claude | Gemini | DeepSeek | Grok |
-|-------------------|:------:|:------:|:------:|:--------:|:----:|
-| Chat              | ✓      | ✓      | ✓      | ✓        | ✓    |
-| Reasoning effort  | ✓      | ✓      | ✓      | ✓        | ✓    |
-| Tool calling      | ✓      | ✓      | ✓      | ✓        | ✓    |
-| Image input       | ✓      | ✓      | ✓      | –        | ✓    |
-| Document input    | ✓      | ✓      | ✓      | –        | –    |
-| Structured output | ✓      | ✓      | ✓      | –        | ✓    |
-| Image generation  | ✓      | –      | ✓      | –        | ✓    |
-| Batch (50% off)   | ✓      | ✓      | ✓      | –        | –    |
-| Embeddings        | ✓      | –      | ✓      | –        | –    |
-| List models       | ✓      | ✓      | ✓      | ✓        | ✓    |
+| Capability                                  | OpenAI | Claude | Gemini | DeepSeek | Grok | Generic client |
+|---------------------------------------------|--------|--------|--------|----------|------|----------------|
+| [Conversation](#chat)                       | ✅     | ✅     | ✅     | ✅       | ✅   | ✅             |
+| [Reasoning effort](#model-options)          | ✅     | ✅     | ✅     | ✅       | ✅   | ✅             |
+| [Tool calling](#tool-calling)               | ✅     | ✅     | ✅     | ✅       | ✅   | ✅             |
+| [Streaming](#streaming)                     | ✅     | ✅     | ✅     | ✅       | ✅   | ✅             |
+| [Images as input](#images-and-documents)    | ✅     | ✅     | ✅     | ➖       | ✅   | ✅             |
+| [Documents as input](#images-and-documents) | ✅     | ✅     | ✅     | ➖       | ➖   | ➖             |
+| [Structured output](#structured-output)     | ✅     | ✅     | ✅     | ➖       | ✅   | ✅             |
+| [Image generation](#image-generation)       | ✅     | ➖     | ✅     | ➖       | ✅   | ➖             |
+| [Batch processing](#batch-processing)       | ✅     | ✅     | ✅     | ➖       | ➖   | ➖             |
+| [Embeddings](#embeddings)                   | ✅     | ➖     | ✅     | ➖       | ➖   | ➖             |
+| [List of models](#list-of-models)           | ✅     | ✅     | ✅     | ✅       | ✅   | ✅             |
 
-Plus a generic client for anything speaking the OpenAI dialect: Ollama,
-Mistral, OpenRouter, Together, vLLM, Azure.
-
-Where a dash appears, either the provider has no such API or AI Access does not
+Where a minus appears, either the provider has no such API or AI Access does not
 wrap it yet; xAI has batch and file endpoints that are not wrapped at all.
 Gemini counts batches among its paid features, so they need a billing-enabled
 Google project rather than a free-tier key.
+
+The last column is the generic client for anything speaking the OpenAI dialect:
+Ollama, Mistral, OpenRouter, Together, vLLM or Azure. The mark means something
+different there, namely what the library is able to send; whether it actually
+works is decided by the endpoint and the model you point it at.
 
  <!---->
 
@@ -92,13 +95,13 @@ In a real application you would register the client in a [DI container](https://
 
 Pick a model. Model names are ordinary strings, so new models work the day the provider releases them, with no library update needed. A few current, cost-effective choices (August 2026):
 
-| Provider | Chat model | Embedding model |
-|----------|--------------------|-----------------|
-| OpenAI   | `gpt-5.6-luna`     | `text-embedding-3-small` |
-| Claude   | `claude-sonnet-5`  | – |
-| Gemini   | `gemini-3.5-flash-lite` | `gemini-embedding-2` |
-| DeepSeek | `deepseek-v4-flash` | – |
-| Grok     | `grok-4.3`         | – |
+| Provider | Chat model              | Embedding model          |
+|----------|-------------------------|--------------------------|
+| OpenAI   | `gpt-5.6-luna`          | `text-embedding-3-small` |
+| Claude   | `claude-sonnet-5`       | –                        |
+| Gemini   | `gemini-3.5-flash-lite` | `gemini-embedding-2`     |
+| DeepSeek | `deepseek-v4-flash`     | –                        |
+| Grok     | `grok-4.3`              | –                        |
 
  <!---->
 
@@ -334,7 +337,7 @@ echo $chat->sendMessage()->getText();
 Because one exchange can span several requests, `$chat->getTotalUsage()` reports
 what the whole thing cost; `$response->getUsage()` is only the last round.
 
- <!---->
+ <!---->
 
 Images and Documents
 ====================
@@ -364,6 +367,51 @@ request leaves, rather than a puzzling 400 afterwards.
 The picture stays in the history, so follow-up questions still see it. It is also
 sent again on every turn, which is what the APIs require and what you pay for, so
 drop it from the history once you are done with it.
+
+ <!---->
+
+Image Generation
+================
+
+▶ Full runnable examples: [examples/images/](examples/images)
+
+
+```php
+$image = $client->generateImage('gpt-image-2', 'A lighthouse on a cliff, flat vector style');
+
+$image->save('lighthouse.png');
+```
+
+The same `Media` object you put into a conversation comes back out of the
+generator, so a freshly generated picture can be handed straight to a model
+without ever touching the disk.
+
+Pass reference images and the model works from them instead of from words alone,
+which covers both editing a picture and continuing its style:
+
+```php
+use AIAccess\Media;
+
+$image = $client->generateImage(
+	'gpt-image-2',
+	'The same lighthouse at night',
+	references: [Media::fromFile('lighthouse.png')],
+);
+```
+
+OpenAI adds `size`, `quality`, `background` and `format` as named arguments. Grok
+takes no references and says so with a `LogicException` before the request leaves.
+Gemini has no image endpoint at all and reaches its image models through the
+ordinary chat one, which the interface hides from you; it answers with JPEG
+rather than PNG, so read `getMimeType()` instead of assuming the extension.
+
+Generating a high-quality picture from references legitimately runs for minutes,
+while the HTTP client gives up after three. Raise its timeout for this kind of work:
+
+```php
+$http = (new AIAccess\Http\CurlClient)->setOptions(requestTimeout: 600);
+$client = new AIAccess\Provider\OpenAI\Client($apiKey, $http);
+```
 
  <!---->
 
@@ -397,7 +445,7 @@ DeepSeek has no schema enforcement, so it simply has no `setResponseSchema()`
 method: your IDE and PHPStan say so before you run the code, instead of the API
 saying so afterwards. That is the honest-abstraction principle in practice.
 
- <!---->
+ <!---->
 
 Batch Processing
 ================
@@ -465,6 +513,38 @@ $vector = AIAccess\Embedding\Vector::deserialize($binary);
 ```
 
 Provider-specific options (OpenAI `dimensions`, Gemini `taskType`, ...) are again typed named arguments on the client's `calculateEmbeddings()` method.
+
+ <!---->
+
+List of Models
+==============
+
+▶ Full runnable example: [examples/models/list.php](examples/models/list.php)
+
+
+Model names are ordinary strings, which is what lets a new model work the day it
+ships. The price is that a retired name fails only when you call it, so ask the
+provider what it currently offers:
+
+```php
+foreach ($client->listModels() as $model) {
+	echo $model->id, "\n";
+}
+```
+
+Every provider implements this. `Model` carries the `id` and the provider's own
+`raw` metadata, because the two agree on nothing beyond the identifier.
+
+There is deliberately no table of model capabilities anywhere in the library. Such
+a table would be stale within weeks, so a model that lacks a feature answers with
+an `ApiException` and that is the honest answer.
+
+Claude and Gemini can also count the tokens of a conversation before you send it,
+which is the cheapest way to catch a prompt that grew out of hand:
+
+```php
+$tokens = $chat->countTokens();
+```
 
  <!---->
 
