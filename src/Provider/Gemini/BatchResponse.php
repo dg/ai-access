@@ -8,8 +8,8 @@
 namespace AIAccess\Provider\Gemini;
 
 use AIAccess;
+use AIAccess\Batch\Result;
 use AIAccess\Batch\Status;
-use AIAccess\Chat\Message;
 use function is_array, is_string;
 
 
@@ -21,13 +21,6 @@ use function is_array, is_string;
  */
 final class BatchResponse implements AIAccess\Batch\Response
 {
-	/** @var ?array<string, Message> */
-	private ?array $messages = null;
-
-	/** @var array<string, string> */
-	private array $errors = [];
-
-
 	public function __construct(
 		private readonly Client $client,
 		/** @var mixed[] */
@@ -53,42 +46,45 @@ final class BatchResponse implements AIAccess\Batch\Response
 	}
 
 
-	public function getMessages(): ?array
+	/**
+	 * The results ride inside the job itself, so unlike the other providers they are in
+	 * memory whether you read them one by one or not; only a file-based job could stream.
+	 * @return \Generator<string, Result>
+	 * @throws AIAccess\ServiceException
+	 */
+	public function getResults(): \Generator
 	{
-		$this->loadResults();
-		return $this->messages;
-	}
-
-
-	public function getErrors(): array
-	{
-		$this->loadResults();
-		return $this->errors;
-	}
-
-
-	private function loadResults(): void
-	{
-		if ($this->messages !== null || $this->getStatus() !== Status::Completed) {
+		// a cancelled or expired job keeps the requests it managed to finish, and they are
+		// paid for, so only a job still running has nothing to hand over
+		if ($this->getStatus() === Status::InProgress) {
 			return;
 		}
 
 		// a batch fetched on its own carries the results, one listed among others does not,
 		// so the listed one has to be fetched again before it can be read
-		if (!isset($this->batchData['response']['inlinedResponses'])) {
+		if (!isset($this->batchData['response'])) {
 			$this->batchData = $this->client->callApi($this->getId());
 		}
 
-		$this->messages = [];
-		$responses = $this->batchData['response']['inlinedResponses']['inlinedResponses'] ?? [];
+		if (!isset($this->batchData['response'])) {
+			// a job that failed outright never produced an output to read
+			return;
 
-		foreach ($responses as $index => $item) {
-			$customId = $item['metadata']['key'] ?? (string) $index;
-			if (isset($item['error'])) {
-				$this->errors[$customId] = $item['error']['message'] ?? 'Request failed';
-			} elseif (is_array($item['response'] ?? null)) {
-				$this->messages[$customId] = (new ChatResponse($item['response']))->getMessage();
-			}
+		} elseif (!isset($this->batchData['response']['inlinedResponses'])) {
+			// a job that wrote its output to a file, which this client does not read yet;
+			// yielding nothing would be indistinguishable from a job that answered nothing
+			throw new AIAccess\UnexpectedResponseException('The batch keeps its results in a file, which is not supported yet.');
+		}
+
+		foreach ($this->batchData['response']['inlinedResponses']['inlinedResponses'] ?? [] as $index => $item) {
+			$key = $item['metadata']['key'] ?? null;
+			$customId = is_string($key) ? $key : (string) $index;
+			yield $customId => match (true) {
+				isset($item['error']) => Result::failed($customId, $item['error']['message'] ?? 'Request failed'),
+				is_array($item['response'] ?? null) => Result::answered($customId, (new ChatResponse($item['response']))->getMessage()),
+				// dropping it would lose the request without a trace
+				default => Result::failed($customId, 'The response carries neither a result nor an error.'),
+			};
 		}
 	}
 

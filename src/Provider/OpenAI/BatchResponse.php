@@ -8,9 +8,9 @@
 namespace AIAccess\Provider\OpenAI;
 
 use AIAccess;
+use AIAccess\Batch\Result;
 use AIAccess\Batch\Status;
-use AIAccess\Chat\Message;
-use function explode, implode, is_array, trim;
+use function implode, is_array, is_string, str_starts_with;
 
 
 /**
@@ -18,13 +18,6 @@ use function explode, implode, is_array, trim;
  */
 final class BatchResponse implements AIAccess\Batch\Response
 {
-	/** @var ?array<string, Message> */
-	private ?array $messages = null;
-
-	/** @var array<string, string> */
-	private array $errors = [];
-
-
 	public function __construct(
 		private readonly Client $client,
 		/** @var mixed[] */
@@ -36,72 +29,37 @@ final class BatchResponse implements AIAccess\Batch\Response
 	public function getStatus(): Status
 	{
 		return match ($this->batchData['status'] ?? null) {
-			'validating', 'in_progress', 'finalizing' => Status::InProgress,
+			// cancelling is still running, and its results are not there yet
+			'validating', 'in_progress', 'finalizing', 'cancelling' => Status::InProgress,
 			'completed' => Status::Completed,
-			'cancelling', 'failed', 'expired', 'cancelled' => Status::Failed,
+			'failed', 'expired', 'cancelled' => Status::Failed,
 			default => Status::Other,
 		};
 	}
 
 
 	/**
+	 * @return \Generator<string, Result>
 	 * @throws AIAccess\ServiceException
 	 */
-	public function getMessages(): ?array
+	public function getResults(): \Generator
 	{
-		$this->loadResults();
-		return $this->messages;
-	}
-
-
-	/**
-	 * @throws AIAccess\ServiceException
-	 */
-	public function getErrors(): array
-	{
-		$this->loadResults();
-		return $this->errors;
-	}
-
-
-	private function loadResults(): void
-	{
-		if ($this->messages !== null || $this->getStatus() !== Status::Completed) {
+		// a cancelled or expired job keeps the requests it managed to finish, and they are
+		// paid for, so only a job still running has nothing to hand over
+		if ($this->getStatus() === Status::InProgress) {
 			return;
 		}
 
-		$this->messages = [];
 		// failed requests live in a separate error file; when everything failed, the output
 		// file does not even exist, so both files are results
 		foreach (['output_file_id', 'error_file_id'] as $field) {
-			if (isset($this->batchData[$field])) {
-				$this->parseFile($this->client->callApi('files/' . $this->batchData[$field] . '/content', isJson: false));
-			}
-		}
-	}
-
-
-	private function parseFile(string $jsonl): void
-	{
-		foreach (explode("\n", trim($jsonl)) as $line) {
-			if (trim($line) === '') {
+			if (!is_string($this->batchData[$field] ?? null)) {
 				continue;
 			}
-
-			$lineData = AIAccess\Helpers::decodeJson($line);
-			$customId = $lineData['custom_id'] ?? null;
-			if ($customId === null) {
-				continue;
-			}
-
-			if (($lineData['response']['status_code'] ?? null) === 200 && is_array($lineData['response']['body'] ?? null)) {
-				// the very same parser as live chat, so a batch turn carries whatever a live one would
-				$this->messages[$customId] = (new ChatResponse($lineData['response']['body']))->getMessage();
-
-			} else {
-				$this->errors[$customId] = $lineData['error']['message']
-					?? $lineData['response']['body']['error']['message']
-					?? 'Request failed with status ' . ($lineData['response']['status_code'] ?? '?');
+			foreach ($this->client->streamLines('files/' . $this->batchData[$field] . '/content') as $line) {
+				if ($result = self::parseLine($line)) {
+					yield $result->customId => $result;
+				}
 			}
 		}
 	}
@@ -175,5 +133,30 @@ final class BatchResponse implements AIAccess\Batch\Response
 	public function getId(): string
 	{
 		return AIAccess\Helpers::expectString($this->batchData['id'] ?? null, 'batch id');
+	}
+
+
+	private static function parseLine(string $line): ?Result
+	{
+		$data = AIAccess\Helpers::decodeJson($line);
+		$customId = $data['custom_id'] ?? null;
+		if (!is_string($customId)) {
+			return null;
+		}
+
+		$body = $data['response']['body'] ?? null;
+		// a 200 is not proof of success: generation fails inside the body here just as it does live
+		$succeeded = ($data['response']['status_code'] ?? null) === 200
+			&& is_array($body)
+			&& ($body['status'] ?? null) !== 'failed';
+
+		if ($succeeded) {
+			// the very same parser as a live call, so a batch turn carries whatever a live one would
+			return Result::answered($customId, (new ChatResponse($body))->getMessage());
+		}
+
+		return Result::failed($customId, $data['error']['message']
+			?? $body['error']['message']
+			?? 'Request failed with status ' . ($data['response']['status_code'] ?? '?'));
 	}
 }

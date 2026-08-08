@@ -122,11 +122,11 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 
 	/**
 	 * @param  mixed[]  $payload
-	 * @return ($isJson is true ? mixed[] : string)
+	 * @return mixed[]
 	 * @throws AIAccess\ServiceException
 	 * @internal
 	 */
-	public function callApi(string $endpoint, ?array $payload = null, bool $isJson = true): array|string
+	public function callApi(string $endpoint, ?array $payload = null): array
 	{
 		$url = str_contains($endpoint, '://') ? $endpoint : $this->baseUrl . $endpoint;
 		$headers = [
@@ -142,7 +142,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 			throw new AIAccess\ApiException($errorMessage, $response->getStatusCode());
 		}
 
-		return !$isJson || is_array($data)
+		return is_array($data)
 			? $data
 			: throw new AIAccess\CommunicationException('Invalid JSON response from Claude API');
 	}
@@ -170,5 +170,33 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 				$response->getStatusCode(),
 			);
 		}
+	}
+
+
+	/**
+	 * Downloads a body and hands it over line by line, so that a result file of any size
+	 * never has to fit in memory.
+	 * @return iterable<int, string>
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function streamLines(string $endpoint): iterable
+	{
+		return Http\JsonlStream::read(function (\Closure $onChunk) use ($endpoint): void {
+			$url = str_contains($endpoint, '://') ? $endpoint : $this->baseUrl . $endpoint;
+			$headers = [
+				'Anthropic-Version' => $this->apiVersion,
+				'x-api-key' => $this->apiKey,
+			];
+
+			$response = $this->httpClient->fetch($url, headers: $headers, onChunk: $onChunk);
+			if ($response->getStatusCode() >= 400) {
+				$data = $response->getData();
+				throw new AIAccess\ApiException(
+					$data['error']['message'] ?? "Claude API error (HTTP {$response->getStatusCode()})",
+					$response->getStatusCode(),
+				);
+			}
+		});
 	}
 }

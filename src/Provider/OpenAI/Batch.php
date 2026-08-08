@@ -19,7 +19,6 @@ final class Batch implements AIAccess\Batch\Batch
 	private array $chats = [];
 
 	private string $endpoint = '/v1/responses';
-	private string $completionWindow = '24h';
 
 	/** @var mixed[]|null */
 	private ?array $metadata = null;
@@ -57,36 +56,20 @@ final class Batch implements AIAccess\Batch\Batch
 			throw new AIAccess\LogicException('Cannot submit batch job: No chat requests added.');
 		}
 
-		$jsonlContent = '';
+		return $this->client->submitBatch($this->endpoint, $this->buildLines(), $this->metadata);
+	}
+
+
+	/** @return \Generator<string> */
+	private function buildLines(): \Generator
+	{
 		foreach ($this->chats as $customId => $chat) {
-			$payload = $chat->buildPayload();
-			$request = [
+			yield AIAccess\Helpers::encodeJson([
 				'custom_id' => $customId,
 				'method' => 'POST',
 				'url' => $this->endpoint,
-				'body' => $payload,
-			];
-			$jsonlContent .= AIAccess\Helpers::encodeJson($request) . "\n";
+				'body' => $chat->buildPayload(),
+			]);
 		}
-
-		$fileId = $this->client->uploadContent(
-			$jsonlContent,
-			'batch_requests.jsonl',
-			'batch',
-			'text/jsonl',
-		);
-
-		$payload = [
-			'input_file_id' => $fileId,
-			'endpoint' => $this->endpoint,
-			'completion_window' => $this->completionWindow,
-		];
-
-		if ($this->metadata !== null) {
-			$payload['metadata'] = $this->metadata;
-		}
-
-		$response = $this->client->callApi('batches', $payload);
-		return new BatchResponse($this->client, $response);
 	}
 }

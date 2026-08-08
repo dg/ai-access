@@ -31,7 +31,8 @@ test('getStatus returns correct Status enum for various status values', function
 		'in_progress' => Status::InProgress,
 		'finalizing' => Status::InProgress,
 		'completed' => Status::Completed,
-		'cancelling' => Status::Failed,
+		// still running: the job is being cancelled, its output file is not there yet
+		'cancelling' => Status::InProgress,
 		'failed' => Status::Failed,
 		'expired' => Status::Failed,
 		'cancelled' => Status::Failed,
@@ -50,20 +51,37 @@ test('getStatus returns correct Status enum for various status values', function
 });
 
 
-test('getMessages returns null for non-completed batch', function () {
-	$batchData = [
-		'id' => 'batch-123',
-		'status' => 'in_progress',
-	];
-
+test('an unfinished batch yields nothing', function () {
 	$clientMock = Mockery::mock(Client::class);
-	$response = new BatchResponse($clientMock, $batchData);
+	$response = new BatchResponse($clientMock, ['id' => 'batch-123', 'status' => 'in_progress']);
 
-	Assert::null($response->getMessages());
+	Assert::same([], iterator_to_array($response->getResults()));
 });
 
 
-test('a completed batch with no files is done and empty, not pending', function () {
+test('a cancelled batch still hands over the requests it finished', function () {
+	$clientMock = Mockery::mock(Client::class);
+	$clientMock->shouldReceive('streamLines')->with('files/out-1/content')->andReturn([
+		json_encode(['custom_id' => 'a', 'response' => ['status_code' => 200, 'body' => [
+			'status' => 'completed',
+			'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => 'done']]]],
+		]]]),
+	]);
+
+	$response = new BatchResponse($clientMock, [
+		'id' => 'batch-123',
+		'status' => 'cancelled',
+		'output_file_id' => 'out-1',
+	]);
+
+	// the work was done and billed before the cancellation landed
+	$results = iterator_to_array($response->getResults());
+	Assert::same(['a'], array_keys($results));
+	Assert::same('done', $results['a']->message->getText());
+});
+
+
+test('a completed batch with no files yields nothing', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'status' => 'completed',
@@ -73,7 +91,7 @@ test('a completed batch with no files is done and empty, not pending', function 
 	$clientMock = Mockery::mock(Client::class);
 	$response = new BatchResponse($clientMock, $batchData);
 
-	Assert::same([], $response->getMessages());
+	Assert::same([], iterator_to_array($response->getResults()));
 });
 
 
@@ -85,21 +103,21 @@ test('failed requests come from the error file, even when everything failed', fu
 		// all requests failed, so there is no output_file_id at all
 	];
 
-	$jsonl = '{"custom_id":"task1","response":{"status_code":400,"body":{"error":{"message":"Invalid model"}}},"error":null}';
 	$clientMock = Mockery::mock(Client::class);
-	$clientMock->expects('callApi')
-		->with('files/file-err/content', null, [], false)
+	$clientMock->expects('streamLines')
+		->with('files/file-err/content')
 		->once()
-		->andReturn($jsonl);
+		->andReturn(['{"custom_id":"task1","response":{"status_code":400,"body":{"error":{"message":"Invalid model"}}},"error":null}']);
 
-	$response = new BatchResponse($clientMock, $batchData);
+	$results = iterator_to_array((new BatchResponse($clientMock, $batchData))->getResults());
 
-	Assert::same([], $response->getMessages());
-	Assert::same(['task1' => 'Invalid model'], $response->getErrors());
+	Assert::count(1, $results);
+	Assert::null($results['task1']->message);
+	Assert::same('Invalid model', $results['task1']->error);
 });
 
 
-test('getMessages fetches and parses JSONL from file content', function () {
+test('results are read line by line, keyed by custom id', function () {
 	$fileId = 'file-output-123';
 	$batchData = [
 		'id' => 'batch-123',
@@ -107,30 +125,26 @@ test('getMessages fetches and parses JSONL from file content', function () {
 		'output_file_id' => $fileId,
 	];
 
-	$jsonlResponse = <<<'JSONL'
-		{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response to task 1"}]}]}}}
-		{"custom_id":"task2","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response to task 2"}]}]}}}
-		JSONL;
-
 	$clientMock = Mockery::mock(Client::class);
-	$clientMock->expects('callApi')
+	$clientMock->expects('streamLines')
 		->once()
-		->with("files/{$fileId}/content", null, [], false)
-		->andReturn($jsonlResponse);
+		->with("files/{$fileId}/content")
+		->andReturn([
+			'{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response to task 1"}]}]}}}',
+			'{"custom_id":"task2","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response to task 2"}]}]}}}',
+		]);
 
-	$response = new BatchResponse($clientMock, $batchData);
-	$messages = $response->getMessages();
+	$results = iterator_to_array((new BatchResponse($clientMock, $batchData))->getResults());
 
-	Assert::count(2, $messages);
-	Assert::type(Message::class, $messages['task1']);
-	Assert::type(Message::class, $messages['task2']);
-	Assert::same('Response to task 1', $messages['task1']->getText());
-	Assert::same('Response to task 2', $messages['task2']->getText());
-	Assert::same(Role::Model, $messages['task1']->getRole());
+	Assert::count(2, $results);
+	Assert::type(Message::class, $results['task1']->message);
+	Assert::same('Response to task 1', $results['task1']->message->getText());
+	Assert::same('Response to task 2', $results['task2']->message->getText());
+	Assert::same(Role::Model, $results['task1']->message->getRole());
 });
 
 
-test('getMessages only calls API once', function () {
+test('nothing is memoized, so reading twice fetches twice', function () {
 	$fileId = 'file-output-123';
 	$batchData = [
 		'id' => 'batch-123',
@@ -138,28 +152,19 @@ test('getMessages only calls API once', function () {
 		'output_file_id' => $fileId,
 	];
 
-	$jsonlResponse = <<<'JSONL'
-		{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response"}]}]}}}
-		JSONL;
-
 	$clientMock = Mockery::mock(Client::class);
-	$clientMock->expects('callApi')
-		->once() // Should only be called once regardless of how many times getMessages is called
-		->with("files/{$fileId}/content", null, [], false)
-		->andReturn($jsonlResponse);
+	$clientMock->expects('streamLines')
+		->twice()
+		->andReturn(['{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response"}]}]}}}']);
 
 	$response = new BatchResponse($clientMock, $batchData);
 
-	// Call multiple times
-	$response->getMessages();
-	$response->getMessages();
-	$messages = $response->getMessages();
-
-	Assert::count(1, $messages);
+	Assert::count(1, iterator_to_array($response->getResults()));
+	Assert::count(1, iterator_to_array($response->getResults()));
 });
 
 
-test('failed requests are reported by getErrors()', function () {
+test('a failed request travels alongside the answers', function () {
 	$fileId = 'file-output-123';
 	$batchData = [
 		'id' => 'batch-123',
@@ -167,29 +172,45 @@ test('failed requests are reported by getErrors()', function () {
 		'output_file_id' => $fileId,
 	];
 
-	$jsonlResponse = <<<'JSONL'
-		{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Success response"}]}]}}}
-		{"custom_id":"task2","error":{"message":"Content policy violation"}}
-		JSONL;
-
 	$clientMock = Mockery::mock(Client::class);
-	$clientMock->expects('callApi')
+	$clientMock->expects('streamLines')
 		->once()
-		->with("files/{$fileId}/content", null, [], false)
-		->andReturn($jsonlResponse);
+		->with("files/{$fileId}/content")
+		->andReturn([
+			'{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Success response"}]}]}}}',
+			'{"custom_id":"task2","error":{"message":"Content policy violation"}}',
+		]);
 
-	$response = new BatchResponse($clientMock, $batchData);
+	$results = iterator_to_array((new BatchResponse($clientMock, $batchData))->getResults());
 
-	$messages = $response->getMessages();
-	Assert::count(1, $messages);
-	Assert::true(isset($messages['task1']));
-	Assert::false(isset($messages['task2']));
-
-	Assert::same(['task2' => 'Content policy violation'], $response->getErrors());
+	Assert::count(2, $results);
+	Assert::null($results['task1']->error);
+	Assert::null($results['task2']->message);
+	Assert::same('Content policy violation', $results['task2']->error);
 });
 
 
-test('getMessages handles complex output structure', function () {
+test('a generation that failed inside HTTP 200 is a failure, not a blank answer', function () {
+	$clientMock = Mockery::mock(Client::class);
+	$clientMock->expects('streamLines')
+		->once()
+		->with('files/out-1/content')
+		->andReturn([
+			'{"custom_id":"task1","response":{"status_code":200,"body":{"status":"failed","error":{"message":"The model ran out of patience"},"output":[]}}}',
+		]);
+
+	$results = iterator_to_array((new BatchResponse($clientMock, [
+		'id' => 'batch-123',
+		'status' => 'completed',
+		'output_file_id' => 'out-1',
+	]))->getResults());
+
+	Assert::null($results['task1']->message);
+	Assert::same('The model ran out of patience', $results['task1']->error);
+});
+
+
+test('a complex output structure is parsed as a live one would be', function () {
 	$fileId = 'file-output-123';
 	$batchData = [
 		'id' => 'batch-123',
@@ -197,26 +218,20 @@ test('getMessages handles complex output structure', function () {
 		'output_file_id' => $fileId,
 	];
 
-	$jsonlResponse = <<<'JSONL'
-		{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"First part"},{"type":"output_text","text":" and second part"}]}]}}}
-		JSONL;
-
 	$clientMock = Mockery::mock(Client::class);
-	$clientMock->expects('callApi')
+	$clientMock->expects('streamLines')
 		->once()
-		->with("files/{$fileId}/content", null, [], false)
-		->andReturn($jsonlResponse);
+		->andReturn(['{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"First part"},{"type":"output_text","text":" and second part"}]}]}}}']);
 
-	$response = new BatchResponse($clientMock, $batchData);
-	$messages = $response->getMessages();
+	$results = iterator_to_array((new BatchResponse($clientMock, $batchData))->getResults());
 
-	Assert::count(1, $messages);
+	Assert::count(1, $results);
 	// joined exactly as live chat joins them, because it is the same parser
-	Assert::same("First part\n and second part", $messages['task1']->getText());
+	Assert::same("First part\n and second part", $results['task1']->message->getText());
 });
 
 
-test('getMessages throws exception on API error', function () {
+test('an API error surfaces while reading', function () {
 	$fileId = 'file-output-123';
 	$batchData = [
 		'id' => 'batch-123',
@@ -225,15 +240,15 @@ test('getMessages throws exception on API error', function () {
 	];
 
 	$clientMock = Mockery::mock(Client::class);
-	$clientMock->expects('callApi')
+	$clientMock->expects('streamLines')
 		->once()
-		->with("files/{$fileId}/content", null, [], false)
+		->with("files/{$fileId}/content")
 		->andThrow(new AIAccess\ApiException('API Error', 500));
 
 	$response = new BatchResponse($clientMock, $batchData);
 
 	Assert::exception(
-		fn() => $response->getMessages(),
+		fn() => iterator_to_array($response->getResults()),
 		AIAccess\ServiceException::class,
 		'API Error',
 	);

@@ -132,10 +132,70 @@ test('results and per-item errors come out of the inline output', function () {
 	$response = (new Client('key', $http))->retrieveBatch('batches/abc');
 
 	Assert::same(Status::Completed, $response->getStatus());
-	Assert::count(1, $response->getMessages());
-	Assert::same('Answer one', $response->getMessages()['first']->getText());
-	Assert::same(['second' => 'Prompt was blocked'], $response->getErrors());
+	$results = iterator_to_array($response->getResults());
+	Assert::count(2, $results);
+	Assert::same('Answer one', $results['first']->message->getText());
+	Assert::null($results['second']->message);
+	Assert::same('Prompt was blocked', $results['second']->error);
 	Assert::same('2026-08-04', $response->getCreatedAt()->format('Y-m-d'));
+});
+
+
+test('an item carrying neither a result nor an error does not vanish', function () {
+	$http = (new FakeHttpClient)->queue([
+		'name' => 'batches/abc',
+		'metadata' => ['state' => 'BATCH_STATE_SUCCEEDED'],
+		'response' => ['inlinedResponses' => ['inlinedResponses' => [
+			['metadata' => ['key' => 'nothing']],
+		]]],
+	]);
+
+	$results = iterator_to_array((new Client('key', $http))->retrieveBatch('batches/abc')->getResults());
+
+	Assert::null($results['nothing']->message);
+	Assert::same('The response carries neither a result nor an error.', $results['nothing']->error);
+});
+
+
+test('a cancelled batch still hands over the requests it finished', function () {
+	$http = (new FakeHttpClient)->queue([
+		'name' => 'batches/abc',
+		'metadata' => ['state' => 'BATCH_STATE_CANCELLED'],
+		'response' => ['inlinedResponses' => ['inlinedResponses' => [
+			['metadata' => ['key' => 'first'], 'response' => ['candidates' => [['content' => ['parts' => [['text' => 'done']]]]]]],
+		]]],
+	]);
+
+	$response = (new Client('key', $http))->retrieveBatch('batches/abc');
+
+	// the work was done and billed before the cancellation landed
+	Assert::same(Status::Failed, $response->getStatus());
+	Assert::same('done', iterator_to_array($response->getResults())['first']->message->getText());
+});
+
+
+test('a job that failed outright has no output to read', function () {
+	$job = ['name' => 'batches/abc', 'metadata' => ['state' => 'BATCH_STATE_FAILED']];
+	$http = (new FakeHttpClient)->queue($job)->queue($job);
+
+	$response = (new Client('key', $http))->retrieveBatch('batches/abc');
+
+	Assert::same([], iterator_to_array($response->getResults()));
+});
+
+
+test('a batch keeping its results in a file says so instead of yielding nothing', function () {
+	// the refetch answers with a file reference this client cannot read
+	$job = ['name' => 'batches/abc', 'metadata' => ['state' => 'BATCH_STATE_SUCCEEDED']];
+	$http = (new FakeHttpClient)->queue($job)->queue($job + ['response' => ['responsesFile' => 'files/out']]);
+
+	$response = (new Client('key', $http))->retrieveBatch('batches/abc');
+
+	Assert::exception(
+		fn() => iterator_to_array($response->getResults()),
+		AIAccess\UnexpectedResponseException::class,
+		'The batch keeps its results in a file, which is not supported yet.',
+	);
 });
 
 
@@ -149,7 +209,7 @@ test('a listed batch fetches its results, because listing leaves them out', func
 	$batches = (new Client('key', $http))->listBatches();
 
 	Assert::same(Status::Completed, $batches[0]->getStatus());
-	Assert::same('Paris', $batches[0]->getMessages()['first']->getText());
+	Assert::same('Paris', iterator_to_array($batches[0]->getResults())['first']->message->getText());
 
 	// the second request is the one that went for the results
 	Assert::same(2, $http->count());
@@ -157,13 +217,11 @@ test('a listed batch fetches its results, because listing leaves them out', func
 });
 
 
-test('an unfinished batch has no messages yet', function () {
+test('an unfinished batch yields nothing', function () {
 	$http = (new FakeHttpClient)->queue(['name' => 'batches/abc', 'metadata' => ['state' => 'BATCH_STATE_RUNNING']]);
 	$response = (new Client('key', $http))->retrieveBatch('abc');
 
-	// null rather than an empty array, exactly as the other providers report it
-	Assert::null($response->getMessages());
-	Assert::same([], $response->getErrors());
+	Assert::same([], iterator_to_array($response->getResults()));
 });
 
 

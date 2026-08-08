@@ -3,7 +3,7 @@
 /**
  * Reads the answers of a finished batch, keyed by the custom id you chose.
  *
- * Demonstrates: Batch\Response::getMessages(), Batch\Response::getErrors()
+ * Demonstrates: Batch\Response::getResults()
  * Providers:    openai, claude, gemini
  * Usage:        php examples/batch/results.php [openai|claude|gemini] <batch-id>
  */
@@ -18,15 +18,18 @@ assert($client instanceof AIAccess\Batch\Service);
 $batchId = arg(1) ?? fail('Pass the batch id: php examples/batch/results.php <provider> <batch-id>');
 $batch = $client->retrieveBatch($batchId);
 
-if ($batch->getStatus() !== Status::Completed) {
+// a cancelled or expired job still hands over what it finished, so only a running one is early
+if ($batch->getStatus() === Status::InProgress) {
 	fail('Batch is not finished yet, it is ' . $batch->getStatus()->name . '.');
 }
 
-foreach ($batch->getMessages() ?? [] as $customId => $message) {
-	echo $customId, ': ', $message->getText(), "\n";
-}
+// results arrive one by one as they are downloaded, so a batch of pictures never has to
+// fit in memory; each carries either the answer or the reason that one request failed
+foreach ($batch->getResults() as $customId => $result) {
+	if ($result->message === null) {
+		echo $customId, ' FAILED: ', $result->error, "\n";
+		continue;
+	}
 
-// requests that failed individually do not throw, they are collected here
-foreach ($batch->getErrors() as $customId => $error) {
-	echo $customId, ' FAILED: ', $error, "\n";
+	echo $customId, ': ', $result->message->getText(), "\n";
 }

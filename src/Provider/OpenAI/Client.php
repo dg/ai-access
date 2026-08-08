@@ -11,7 +11,7 @@ use AIAccess;
 use AIAccess\Embedding\Vector;
 use AIAccess\Http;
 use AIAccess\Http\FormData;
-use function array_filter, count, http_build_query, is_array, rtrim, usort;
+use function array_filter, count, http_build_query, is_array, rtrim, strlen, usort;
 
 
 /**
@@ -52,6 +52,54 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	public function createBatch(): Batch
 	{
 		return new Batch($this);
+	}
+
+
+	/**
+	 * Uploads the requests as a JSONL file and creates a batch job over it. The lines are
+	 * written to disk rather than joined in memory, because a batch of images with inlined
+	 * references runs to hundreds of megabytes.
+	 * @param  iterable<string>  $lines
+	 * @param  ?mixed[]  $metadata
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function submitBatch(string $endpoint, iterable $lines, ?array $metadata = null): BatchResponse
+	{
+		$path = sys_get_temp_dir() . '/aiaccess-batch-' . bin2hex(random_bytes(8)) . '.jsonl';
+		$handle = @fopen($path, 'wb');
+		if ($handle === false) {
+			throw new AIAccess\IOException("Cannot write file '$path'.");
+		}
+
+		try {
+			try {
+				foreach ($lines as $line) {
+					$line .= "\n";
+					// a full disk writes a part of the line and reports no error; the job would
+					// then fail remotely, on a request nobody wrote that way
+					if (@fwrite($handle, $line) !== strlen($line)) {
+						throw new AIAccess\IOException("Cannot write file '$path'.");
+					}
+				}
+			} finally {
+				fclose($handle);
+			}
+			$fileId = $this->uploadFile($path, 'batch', 'text/jsonl', 'batch_requests.jsonl');
+		} finally {
+			@unlink($path);
+		}
+
+		$payload = [
+			'input_file_id' => $fileId,
+			'endpoint' => $endpoint,
+			// the only window the API offers
+			'completion_window' => '24h',
+		];
+		if ($metadata !== null) {
+			$payload['metadata'] = $metadata;
+		}
+		return new BatchResponse($this, $this->callApi('batches', $payload));
 	}
 
 
@@ -199,28 +247,21 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 
 	/**
-	 * Uploads a file to the OpenAI API.
+	 * Uploads a file from a local path to the Files API. Not public API: files are how the
+	 * batch endpoint takes its requests, everything a model reads travels as Media instead.
+	 * @param  ?string  $fileName  name to send instead of the one on disk
 	 * @throws AIAccess\ServiceException
 	 */
-	public function uploadContent(string $content, string $fileName, string $purpose, ?string $mimeType = null): string
+	private function uploadFile(
+		string $filePath,
+		string $purpose,
+		?string $mimeType = null,
+		?string $fileName = null,
+	): string
 	{
 		$formData = (new FormData)
 			->addField('purpose', $purpose)
-			->addFileContent('file', $content, $fileName, $mimeType);
-		$response = $this->callApi('files', $formData);
-		return AIAccess\Helpers::expectString($response['id'] ?? null, 'file id');
-	}
-
-
-	/**
-	 * Uploads a file from a local path to the OpenAI API.
-	 * @throws AIAccess\ServiceException
-	 */
-	public function uploadFile(string $filePath, string $purpose, ?string $mimeType = null): string
-	{
-		$formData = (new FormData)
-			->addField('purpose', $purpose)
-			->addFile('file', $filePath, null, $mimeType);
+			->addFile('file', $filePath, $fileName, $mimeType);
 		$response = $this->callApi('files', $formData);
 		return AIAccess\Helpers::expectString($response['id'] ?? null, 'file id');
 	}
@@ -249,7 +290,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	/**
 	 * @param  mixed[]  $payload
 	 * @param  string[]  $headers
-	 * @return ($isJson is true ? mixed[] : string)
+	 * @return mixed[]
 	 * @throws AIAccess\ServiceException
 	 * @internal
 	 */
@@ -257,8 +298,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 		string $endpoint,
 		array|string|FormData|null $payload = null,
 		array $headers = [],
-		bool $isJson = true,
-	): array|string
+	): array
 	{
 		$headers = array_filter($headers + [
 			'Authorization' => 'Bearer ' . $this->apiKey,
@@ -273,7 +313,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			throw new AIAccess\ApiException($errorMessage, $response->getStatusCode());
 		}
 
-		return !$isJson || is_array($data)
+		return is_array($data)
 			? $data
 			: throw new AIAccess\CommunicationException('Invalid JSON response from OpenAI API');
 	}
@@ -306,5 +346,32 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 				$response->getStatusCode(),
 			);
 		}
+	}
+
+
+	/**
+	 * Downloads a body and hands it over line by line, so that a result file of any size
+	 * never has to fit in memory.
+	 * @return iterable<int, string>
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function streamLines(string $endpoint): iterable
+	{
+		return Http\JsonlStream::read(function (\Closure $onChunk) use ($endpoint): void {
+			$headers = array_filter([
+				'Authorization' => 'Bearer ' . $this->apiKey,
+				'OpenAI-Organization' => $this->organizationId,
+			]);
+
+			$response = $this->httpClient->fetch($this->baseUrl . $endpoint, headers: $headers, onChunk: $onChunk);
+			if ($response->getStatusCode() >= 400) {
+				$data = $response->getData();
+				throw new AIAccess\ApiException(
+					$data['error']['message'] ?? 'OpenAI API error (HTTP ' . $response->getStatusCode() . ')',
+					$response->getStatusCode(),
+				);
+			}
+		});
 	}
 }

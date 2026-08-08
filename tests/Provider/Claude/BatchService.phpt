@@ -4,6 +4,7 @@ use AIAccess\Provider\Claude\Batch;
 use AIAccess\Provider\Claude\BatchResponse;
 use AIAccess\Provider\Claude\Client;
 use Tester\Assert;
+use Tests\Support\FakeHttpClient;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -107,4 +108,28 @@ test('Client cancelBatch returns false when cancellation fails', function () {
 	$result = $clientMock->cancelBatch($batchId);
 
 	Assert::false($result);
+});
+
+
+test('the results url is absolute, so it is fetched exactly as given', function () {
+	$http = (new FakeHttpClient)->queueStream(['{"a":1}' . "\n"]);
+	$client = new Client('key', $http);
+
+	$lines = iterator_to_array($client->streamLines('https://api.anthropic.com/v1/messages/batches/abc/results'));
+
+	Assert::same(['{"a":1}'], $lines);
+	Assert::same('https://api.anthropic.com/v1/messages/batches/abc/results', $http->lastRequest()['url']);
+	Assert::same('key', $http->lastRequest()['headers']['x-api-key']);
+});
+
+
+test('a failed download is reported, not parsed', function () {
+	$http = (new FakeHttpClient)->queueStreamError(['error' => ['message' => 'Not found']], 404);
+	$client = new Client('key', $http);
+
+	Assert::exception(
+		fn() => iterator_to_array($client->streamLines('https://api.anthropic.com/v1/messages/batches/nope/results')),
+		AIAccess\ApiException::class,
+		'Not found',
+	);
 });

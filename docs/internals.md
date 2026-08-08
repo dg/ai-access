@@ -80,15 +80,16 @@ Facts that surprise:
   and bill it twice. Caching passes streams through untouched, because replaying one
   from disk would have to fake the timing too. Observation times the whole stream.
 - **JSON decoding is content-type-driven** — the body is decoded only for
-  `application/json`/`+json`, so `callApi(..., isJson: false)` returns a raw string
-  (used for JSONL batch-result downloads). "Always decode JSON" breaks batch parsing.
+  `application/json`/`+json`, so a non-JSON body arrives as a raw string and `callApi()`
+  turns that into `CommunicationException`. Bodies that are legitimately not JSON, i.e.
+  batch result files, do not go through `callApi()` at all but through `streamLines()`.
 - Errors: HTTP ≥400 → `ApiException` (message from `data.error.message`), duplicated in
   every `callApi`; transport and JSON-decoding failures → `CommunicationException`.
   Both under `ServiceException`; `LogicException` is client misuse. **OpenAI can fail
   inside HTTP 200**: `status: failed` carries a top-level `error`, which
   `Chat::generateResponse()` turns into an `ApiException`.
 - **`trigger_error()` is gone from the library.** Per-item batch failures are readable
-  through `Batch\Response::getErrors()` (keyed by custom_id), and embedding count
+  on the `Batch\Result` that carries them, and embedding count
   mismatches raise `UnexpectedResponseException`. The single remaining warning is
   Gemini's alternating-roles check, which predicts an API error we cannot prevent.
 
@@ -120,6 +121,13 @@ reasoning are parsed once rather than twice. Get this wrong and the two paths dr
 streamed OpenAI answer once ignored `status: failed` because only the plain path checked
 it, and Gemini's streamed slices were kept as separate parts, so `getText()` glued them
 with newlines the model never sent. Both are now the same code path with the same guards.
+
+`Http\JsonlStream` (`@internal`) is its sibling for batch results: same problem of a
+record torn between chunks, same push-to-pull inversion, and it is where the second
+Fiber in the library lives. **The two differ on purpose in what abandoning them means.**
+A chat stream can be resumed, so `break` is a pause; a result file cannot, so an
+abandoned `JsonlStream` aborts the transfer from the generator's `finally`. Copying
+either one's semantics onto the other would be a bug, not a tidy-up.
 
 **`Chat\TextStream` inverts push into pull with a Fiber.** The HTTP layer calls a
 callback, `foreach` wants to be called; the request therefore runs inside a Fiber that
@@ -277,10 +285,22 @@ sits in the endpoint rather than in each request, one batch is one model or a
 `LogicException`. All three call `Chat::buildPayload()`,
 so request-shaping is **shared with live chat** — which is why `buildPayload()` is
 **`public` (@internal) only for Batch's sake**; changing its signature breaks batch
-across layers. `BatchResponse::getMessages()` is **lazy + memoized + status-gated** —
-a **getter that makes an HTTP call**, only when the batch is `Completed`, returning
-`Message` objects keyed by `custom_id`, with per-item failures in `getErrors()`
-alongside. Tools work in a batch only as far as the model asking: a returned message
+across layers. **Neither side of a batch is ever held whole.** Going out, the OpenAI
+lines are a generator written straight to a temp file and uploaded from disk, because a
+string would hold the whole thing twice over. Coming back,
+`Batch\Response::getResults()` is a **generator, status-gated and deliberately not
+memoized**: it yields one `Batch\Result` (`customId`, `?message`, `?error`) at a time as
+the bytes arrive, so reading twice fetches twice and stopping early stops the transfer.
+There is no `getMessages()`; an array of everything is `iterator_to_array()` away and is
+then the caller's decision, not the library's default. **`Result` has exactly two cases
+and that is deliberate**: it is built only through `answered()` and `failed()`, so the
+one-of-two invariant its two nullable fields would otherwise merely promise cannot be
+broken, and the wire's third possibility — Gemini answering with neither a result nor an
+error — is normalised into a failure rather than given a case of its own. A third case
+that genuinely deserved one would mean subtypes of `Result`, not a third field. **Gemini is the exception to the
+fetching half**: its results ride inside the job's own JSON, so they are decoded by
+`callApi()` before `getResults()` sees them and a second reading costs nothing, because
+there is nothing left to fetch. Tools work in a batch only as far as the model asking: a returned message
 can carry a `ToolCallPart`, but nothing runs it, because a batch has no round to answer
 in. Status enums and date parsing (Claude ISO string vs OpenAI unix `@ts`) differ per
 provider — unifying them is a silent regression.

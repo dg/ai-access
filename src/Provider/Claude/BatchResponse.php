@@ -8,9 +8,9 @@
 namespace AIAccess\Provider\Claude;
 
 use AIAccess;
+use AIAccess\Batch\Result;
 use AIAccess\Batch\Status;
-use AIAccess\Chat\Message;
-use function explode, implode, is_array, trim;
+use function implode, is_array, is_string;
 
 
 /**
@@ -18,13 +18,6 @@ use function explode, implode, is_array, trim;
  */
 final class BatchResponse implements AIAccess\Batch\Response
 {
-	/** @var ?array<string, Message> */
-	private ?array $messages = null;
-
-	/** @var array<string, string> */
-	private array $errors = [];
-
-
 	public function __construct(
 		private readonly Client $client,
 		/** @var mixed[] */
@@ -44,59 +37,18 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 
 	/**
+	 * @return \Generator<string, Result>
 	 * @throws AIAccess\ServiceException
 	 */
-	public function getMessages(): ?array
+	public function getResults(): \Generator
 	{
-		$this->loadResults();
-		return $this->messages;
-	}
-
-
-	/**
-	 * @throws AIAccess\ServiceException
-	 */
-	public function getErrors(): array
-	{
-		$this->loadResults();
-		return $this->errors;
-	}
-
-
-	private function loadResults(): void
-	{
-		if ($this->messages !== null
-			|| $this->getStatus() !== Status::Completed
-			|| !isset($this->batchData['results_url'])
-		) {
+		if ($this->getStatus() !== Status::Completed || !is_string($this->batchData['results_url'] ?? null)) {
 			return;
 		}
 
-		$this->messages = [];
-		$jsonl = $this->client->callApi($this->batchData['results_url'], isJson: false);
-
-		foreach (explode("\n", trim($jsonl)) as $line) {
-			if (trim($line) === '') {
-				continue;
-			}
-
-			$lineData = AIAccess\Helpers::decodeJson($line);
-			$customId = $lineData['custom_id'] ?? null;
-			if ($customId === null) {
-				continue;
-			}
-
-			$result = $lineData['result'] ?? [];
-			if (($result['type'] ?? null) === 'succeeded' && is_array($result['message'] ?? null)) {
-				// the very same parser as live chat, so a batch turn carries whatever a live one would
-				$this->messages[$customId] = (new ChatResponse($result['message']))->getMessage();
-
-			} else {
-				// the wire nests it: result.error = {type: "error", error: {type, message}}
-				$error = $result['error'] ?? [];
-				$error = is_array($error['error'] ?? null) ? $error['error'] : $error;
-				$this->errors[$customId] = ($error['message'] ?? 'Request ' . ($result['type'] ?? 'failed'))
-					. (isset($error['type']) ? " (type: {$error['type']})" : '');
+		foreach ($this->client->streamLines($this->batchData['results_url']) as $line) {
+			if ($result = self::parseLine($line)) {
+				yield $result->customId => $result;
 			}
 		}
 	}
@@ -152,5 +104,27 @@ final class BatchResponse implements AIAccess\Batch\Response
 	public function getId(): string
 	{
 		return AIAccess\Helpers::expectString($this->batchData['id'] ?? null, 'batch id');
+	}
+
+
+	private static function parseLine(string $line): ?Result
+	{
+		$data = AIAccess\Helpers::decodeJson($line);
+		$customId = $data['custom_id'] ?? null;
+		if (!is_string($customId)) {
+			return null;
+		}
+
+		$result = $data['result'] ?? [];
+		if (($result['type'] ?? null) === 'succeeded' && is_array($result['message'] ?? null)) {
+			// the very same parser as live chat, so a batch turn carries whatever a live one would
+			return Result::answered($customId, (new ChatResponse($result['message']))->getMessage());
+		}
+
+		// the wire nests it: result.error = {type: "error", error: {type, message}}
+		$error = $result['error'] ?? [];
+		$error = is_array($error['error'] ?? null) ? $error['error'] : $error;
+		return Result::failed($customId, ($error['message'] ?? 'Request ' . ($result['type'] ?? 'failed'))
+			. (isset($error['type']) ? " (type: {$error['type']})" : ''));
 	}
 }

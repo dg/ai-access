@@ -99,7 +99,7 @@ src/
 ├── Batch/              # Batch processing abstractions
 ├── Chat/               # Core chat abstractions (Chat, Response, Message, Role, etc.)
 ├── Embedding/          # Text embeddings support
-├── Http/               # HTTP transport layer (Client, CurlClient, Response, SseStream)
+├── Http/               # HTTP transport layer (Client, CurlClient, Retry/Caching/Observable decorators, SSE and JSONL streams, FormData)
 ├── Image/              # Image generation abstraction
 ├── Provider/           # Provider-specific implementations
 │   ├── OpenAI/
@@ -273,11 +273,17 @@ Refer to individual provider classes in `src/Provider/*/Chat.php` for complete o
 ### HTTP Client Abstraction
 Default HTTP client is `CurlClient`, but can be swapped by implementing `Http\Client` interface. All providers use this abstraction for API communication.
 
+Three decorators wrap it and compose in any order: `RetryClient` backs off on 408/429/5xx
+and network failures, `ObservableClient` reports requests, responses and failures
+(`onRequest`/`onResponse`/`onError`) for a log or a debug bar, and `CachingClient` replays
+identical requests from disk during development. `FormData` carries a multipart upload and
+`JsonlStream` reads a JSONL body line by line, both through the same one-method interface.
+
 ### Batch Processing
 Batch API completely abstracts provider differences:
 - **OpenAI**: Library formats requests to JSONL, uploads file, creates batch job
 - **Claude**: Library sends chat payloads directly in batch creation request
-- **Unified workflow:** `createBatch()` → `addChat()` → `submit()` → `retrieveBatch()` → `getMessages()`
+- **Unified workflow:** `createBatch()` → `addChat()` → `submit()` → `retrieveBatch()` → `getResults()`
 
 ### Embeddings
 - Returns array of `Embedding\Vector` objects

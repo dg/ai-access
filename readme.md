@@ -477,12 +477,20 @@ use AIAccess\Batch\Status;
 
 $batch = $client->retrieveBatch($batchId);
 
-if ($batch->getStatus() === Status::Completed) {
-	foreach ($batch->getMessages() as $customId => $message) {
-		echo "$customId: ", $message->getText(), "\n";
+if ($batch->getStatus() !== Status::InProgress) {
+	foreach ($batch->getResults() as $customId => $result) {
+		echo "$customId: ", $result->message?->getText() ?? "failed, $result->error", "\n";
 	}
 }
 ```
+
+A job still running is the only one with nothing to hand over: a cancelled or
+expired one still gives you the requests it finished before it stopped, and you
+have paid for those. Results are read as they arrive rather than collected first,
+so a job of any size costs the memory of one item. Each carries either the answer or the reason that
+single request failed; one bad request never sinks the batch. Nothing is kept, so
+reading a second time downloads a second time. If you would rather have them all
+at once, that is `iterator_to_array()` and your decision.
 
 `listBatches()` and `cancelBatch()` complete the toolkit.
 

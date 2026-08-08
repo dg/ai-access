@@ -30,5 +30,5 @@ if ($error = $batch->getError()) {
 echo "\n", match ($status) {
 	Status::Completed => "Done. Fetch the answers with batch/results.php.\n",
 	Status::InProgress => "Still running, check again later.\n",
-	default => "Nothing more will come out of this batch.\n",
+	default => "It will not finish, but batch/results.php may still find some answers.\n",
 };

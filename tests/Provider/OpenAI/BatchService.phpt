@@ -5,6 +5,7 @@ use AIAccess\Provider\OpenAI\Batch;
 use AIAccess\Provider\OpenAI\BatchResponse;
 use AIAccess\Provider\OpenAI\Client;
 use Tester\Assert;
+use Tests\Support\FakeHttpClient;
 
 require __DIR__ . '/../../bootstrap.php';
 
@@ -114,37 +115,24 @@ test('submit validates JSONL content structure', function () {
 	$modelName = 'gpt-4o';
 	$customId = 'content-test';
 	$userMessage = 'Test message';
-	$fileId = 'file-content-123';
 
 	$clientMock = Mockery::mock(Client::class);
 	$batch = new Batch($clientMock);
 	$chat = $batch->addChat($modelName, $customId);
 	$chat->addMessage($userMessage, Role::User);
 
-	// Capture the JSONL content
-	$capturedContent = null;
+	// Capture the lines the batch would upload
+	$capturedLines = null;
 
-	$clientMock->expects('uploadContent')
+	$clientMock->expects('submitBatch')
 		->once()
-		->with(
-			Mockery::capture($capturedContent),
-			Mockery::any(),
-			Mockery::any(),
-			Mockery::any(),
-		)
-		->andReturn($fileId);
-
-	$clientMock->expects('callApi')
-		->once()
-		->andReturn(['id' => 'batch-test']);
+		->with(Mockery::any(), Mockery::capture($capturedLines), Mockery::any())
+		->andReturn(new BatchResponse($clientMock, ['id' => 'batch-test']));
 
 	$batch->submit();
 
-	// Verify content structure
-	Assert::type('string', $capturedContent);
-
-	// Decode JSONL (each line is a JSON object)
-	$lines = explode("\n", trim($capturedContent));
+	// the lines are produced lazily, so that a huge batch never exists as one string
+	$lines = iterator_to_array($capturedLines);
 	Assert::count(1, $lines); // Should have 1 item
 
 	$requestData = json_decode($lines[0], true);
@@ -153,4 +141,30 @@ test('submit validates JSONL content structure', function () {
 	Assert::same('/v1/responses', $requestData['url']);
 	Assert::true(isset($requestData['body']['model']));
 	Assert::true(isset($requestData['body']['input']));
+});
+
+
+test('a result file is downloaded as a stream and cut into lines', function () {
+	$http = (new FakeHttpClient)->queueStream(['{"a":1}' . "\n" . '{"b', '":2}' . "\n"]);
+	$client = new Client('key', $http);
+
+	$lines = iterator_to_array($client->streamLines('files/file-1/content'));
+
+	Assert::same(['{"a":1}', '{"b":2}'], $lines);
+	Assert::same('https://api.openai.com/v1/files/file-1/content', $http->lastRequest()['url']);
+	Assert::same('Bearer key', $http->lastRequest()['headers']['Authorization']);
+	// no payload, so it goes as a GET
+	Assert::null($http->lastRequest()['payload']);
+});
+
+
+test('a failed download is reported, not parsed', function () {
+	$http = (new FakeHttpClient)->queueStreamError(['error' => ['message' => 'No such File object']], 404);
+	$client = new Client('key', $http);
+
+	Assert::exception(
+		fn() => iterator_to_array($client->streamLines('files/nope/content')),
+		AIAccess\ApiException::class,
+		'No such File object',
+	);
 });

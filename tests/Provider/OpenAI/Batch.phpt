@@ -82,7 +82,6 @@ test('submit creates content file and submits batch request', function () {
 	$userMessage1 = 'Hello GPT';
 	$userMessage2 = 'Another message';
 	$systemInstruction = 'You are a helpful assistant';
-	$fileId = 'file-12345';
 
 	// Expected response from API
 	$apiResponse = [
@@ -106,21 +105,11 @@ test('submit creates content file and submits batch request', function () {
 	$metadata = ['user_id' => '12345'];
 	$batch->setMetadata($metadata);
 
-	// Setup expectations for upload and API calls
-	$clientMock->expects('uploadContent')
+	// uploading and creating the job is the client's business, shared with the image batch
+	$clientMock->expects('submitBatch')
 		->once()
-		->with(
-			Mockery::type('string'), // JSONL content
-			'batch_requests.jsonl',
-			'batch',
-			'text/jsonl',
-		)
-		->andReturn($fileId);
-
-	$clientMock->expects('callApi')
-		->once()
-		->with('batches', Mockery::on(fn($payload) => $payload['input_file_id'] === $fileId && $payload['endpoint'] === '/v1/responses' && $payload['completion_window'] === '24h' && $payload['metadata'] === $metadata))
-		->andReturn($apiResponse);
+		->with('/v1/responses', Mockery::type('iterable'), $metadata)
+		->andReturn(new BatchResponse($clientMock, $apiResponse));
 
 	$response = $batch->submit();
 

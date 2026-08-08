@@ -27,13 +27,16 @@ and options included.
 ## status.php
 
 Batches finish in minutes or in hours, so checking is a separate step, usually
-run from cron. Only `Status::Completed` means the results are ready.
+run from cron. `Status::Completed` means the whole job went through, but a
+cancelled or expired one is worth reading too: the requests it managed to
+finish are done and paid for.
 
 ## results.php
 
 Answers come back keyed by the custom id you assigned, not in the order you sent
-them, so always look them up by id.
+them, so always look them up by id. They are read one at a time as they arrive,
+so the size of the job does not decide whether it fits in memory.
 
-Individual requests can fail without failing the batch. Those do not throw:
-they are listed by `getErrors()`, again keyed by custom id, so you can retry
-just the ones that need it.
+Individual requests can fail without failing the batch. Those do not throw
+either: such an item simply arrives with `$result->error` filled in instead of
+`$result->message`, so you can retry just the ones that need it.
