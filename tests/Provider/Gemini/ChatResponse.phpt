@@ -249,3 +249,31 @@ test('ChatResponse handles malformed response gracefully', function () {
 		Assert::same($testCase['expected'], $response->getText());
 	}
 });
+
+
+test('an image in the answer survives as a media part', function () {
+	$response = new ChatResponse(['candidates' => [['content' => ['parts' => [
+		['text' => 'Here you are:'],
+		['inlineData' => ['mimeType' => 'image/jpeg', 'data' => base64_encode('JPEGDATA')]],
+	]]]]]);
+
+	$media = $response->getMessage()->getMedia();
+	Assert::count(1, $media);
+	Assert::same('JPEGDATA', $media[0]->getData());
+	Assert::same('image/jpeg', $media[0]->getMimeType());
+	Assert::same('Here you are:', $response->getText());
+
+	// the raw response is the whole answer, not just the part that carried the bytes
+	Assert::same($response->getRawResponse(), $media[0]->getRawResponse());
+});
+
+
+test('inline data that is not base64 is skipped, the text answer survives', function () {
+	$response = new ChatResponse(['candidates' => [['content' => ['parts' => [
+		['text' => 'Here you are:'],
+		['inlineData' => ['mimeType' => 'image/png', 'data' => 'not!base64']],
+	]]]]]);
+
+	Assert::same([], $response->getMessage()->getMedia());
+	Assert::same('Here you are:', $response->getText());
+});

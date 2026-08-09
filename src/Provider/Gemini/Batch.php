@@ -8,7 +8,6 @@
 namespace AIAccess\Provider\Gemini;
 
 use AIAccess;
-use function count;
 
 
 /**
@@ -16,11 +15,10 @@ use function count;
  */
 final class Batch implements AIAccess\Batch\Batch
 {
-	/** @var array<string, Chat> */
-	private array $chats = [];
+	/** @var array<string, Chat|ImageRequest> */
+	private array $requests = [];
 
-	/** @var array<string, string> */
-	private array $models = [];
+	private ?string $model = null;
 
 
 	public function __construct(
@@ -31,38 +29,47 @@ final class Batch implements AIAccess\Batch\Batch
 
 	public function addChat(string $model, string $customId): Chat
 	{
-		if (isset($this->chats[$customId])) {
-			throw new AIAccess\LogicException("Chat with custom ID '$customId' already exists in this batch.");
-		}
-		$this->models[$customId] = $model;
-		return $this->chats[$customId] = new Chat($this->client, $model);
+		$this->checkNew($model, $customId);
+		return $this->requests[$customId] = new Chat($this->client, $model);
+	}
+
+
+	/**
+	 * Adds a request for an image to be generated - not an image, which is what the batch
+	 * gets back. Gemini draws through the ordinary chat endpoint, so pictures and chats can
+	 * share a job as long as they share a model.
+	 */
+	public function addImageRequest(string $model, string $customId, string $prompt): ImageRequest
+	{
+		$this->checkNew($model, $customId);
+		return $this->requests[$customId] = new ImageRequest($this->client, $model, $prompt);
 	}
 
 
 	public function submit(): BatchResponse
 	{
-		if (!$this->chats) {
-			throw new AIAccess\LogicException('Cannot submit batch job: No chat requests added.');
-		} elseif (count(array_unique($this->models)) > 1) {
+		if ($this->model === null) {
+			throw new AIAccess\LogicException('Cannot submit batch job: No requests added.');
+		}
+
+		$payloads = [];
+		foreach ($this->requests as $customId => $request) {
+			$payloads[$customId] = $request->buildPayload();
+		}
+
+		return $this->client->submitBatch($this->model, $payloads);
+	}
+
+
+	private function checkNew(string $model, string $customId): void
+	{
+		if (isset($this->requests[$customId])) {
+			throw new AIAccess\LogicException("Request with custom ID '$customId' already exists in this batch.");
+
+		} elseif ($this->model !== null && $this->model !== $model) {
 			// the model is part of the endpoint here, not of the individual request
-			throw new AIAccess\LogicException('A Gemini batch runs on a single model, got: ' . implode(', ', array_unique($this->models)) . '.');
+			throw new AIAccess\LogicException("A batch runs on a single model, got '{$this->model}' and '$model'.");
 		}
-
-		$model = reset($this->models);
-		$requests = [];
-		foreach ($this->chats as $customId => $chat) {
-			$requests[] = [
-				// a nested request repeats the model even though the endpoint carries it,
-				// the same way countTokens has to
-				'request' => ['model' => "models/$model"] + $chat->buildPayload(),
-				'metadata' => ['key' => $customId],
-			];
-		}
-
-		$response = $this->client->callApi("models/$model:batchGenerateContent", [
-			// the double nesting under inputConfig.requests.requests is not a typo
-			'batch' => ['inputConfig' => ['requests' => ['requests' => $requests]]],
-		]);
-		return new BatchResponse($this->client, $response);
+		$this->model = $model;
 	}
 }

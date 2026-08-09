@@ -39,6 +39,16 @@ test('a message without text parts has empty text', function () {
 });
 
 
+test('getMedia picks the media out and skips everything else', function () {
+	$image = Media::fromBinary('binary', 'image/png');
+	$message = new Message(['here it is', $image], Role::Model);
+
+	Assert::same([$image], $message->getMedia());
+	Assert::same('here it is', $message->getText());
+	Assert::same([], (new Message('just text', Role::Model))->getMedia());
+});
+
+
 test('an unsupported content type is rejected', function () {
 	Assert::exception(
 		fn() => new Message([123], Role::User),

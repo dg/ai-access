@@ -69,13 +69,12 @@ test('cancel posts to the batch and reports success', function () {
 });
 
 
-test('one batch runs one model', function () {
+test('one batch runs one model, and says so at the request that breaks it', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
 	$batch->addChat('gemini-3.5-flash-lite', 'a')->addMessage('x', Role::User);
-	$batch->addChat('gemini-3.6-flash', 'b')->addMessage('y', Role::User);
 
 	Assert::exception(
-		fn() => $batch->submit(),
+		fn() => $batch->addChat('gemini-3.6-flash', 'b'),
 		AIAccess\LogicException::class,
 		'%a%single model%a%',
 	);
@@ -89,7 +88,7 @@ test('a duplicate custom id is refused', function () {
 	Assert::exception(
 		fn() => $batch->addChat('gemini-3.5-flash-lite', 'same'),
 		AIAccess\LogicException::class,
-		"Chat with custom ID 'same' already exists in this batch.",
+		"Request with custom ID 'same' already exists in this batch.",
 	);
 });
 

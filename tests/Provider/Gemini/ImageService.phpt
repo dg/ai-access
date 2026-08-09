@@ -77,3 +77,20 @@ test('data that is not base64 is reported', function () {
 		'Image data is not valid base64.',
 	);
 });
+
+
+test('aspect ratio and size travel in the image config', function () {
+	$http = (new FakeHttpClient)->queue(imageResponse('PNGDATA'));
+
+	(new Client('key', $http))->generateImage(
+		'gemini-3.1-flash-image',
+		'a red circle',
+		aspectRatio: '16:9',
+		imageSize: '2K',
+	);
+
+	Assert::same(
+		['aspectRatio' => '16:9', 'imageSize' => '2K'],
+		$http->lastPayload()['generationConfig']['imageConfig'],
+	);
+});

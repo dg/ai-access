@@ -10,7 +10,8 @@ namespace AIAccess\Provider\Gemini;
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
 use AIAccess\Helpers;
-use function implode, is_array, is_string;
+use AIAccess\Media;
+use function base64_decode, implode, is_array, is_string;
 
 
 /**
@@ -146,6 +147,16 @@ final class ChatResponse implements Chat\Response
 						provider: self::Provider,
 						raw: $part,
 					);
+					continue;
+				} elseif (is_array($part['inlineData'] ?? null)) {
+					// bytes that do not decode are skipped like any other unreadable part, so a chat
+					// keeps its text; the image path reports it instead, see ImageRequest::generate()
+					$encoded = $part['inlineData']['data'] ?? null;
+					$decoded = is_string($encoded) ? base64_decode($encoded, strict: true) : false;
+					if ($decoded !== false) {
+						$mime = $part['inlineData']['mimeType'] ?? null;
+						$this->parts[] = new Media($decoded, is_string($mime) ? $mime : 'image/png', $data);
+					}
 					continue;
 				} elseif (!is_string($part['text'] ?? null)) {
 					continue;

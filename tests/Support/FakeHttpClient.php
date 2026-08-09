@@ -13,6 +13,9 @@ class FakeHttpClient implements Http\Client, \Countable
 	/** @var list<array{url: string, payload: mixed, headers: string[], method: ?string}> */
 	public array $requests = [];
 
+	/** @var list<array<string, string>> uploaded form fields and file contents, one entry per request */
+	public array $uploads = [];
+
 	/** @var list<Http\Response> */
 	private array $queue = [];
 
@@ -37,6 +40,18 @@ class FakeHttpClient implements Http\Client, \Countable
 	): Http\Response
 	{
 		$this->requests[] = ['url' => $url, 'payload' => $payload, 'headers' => $headers, 'method' => $method];
+
+		if ($payload instanceof Http\FormData) {
+			// read here and not in the assertion: an uploaded file is often a temporary one
+			// the caller deletes the moment the request is over
+			$upload = [];
+			foreach ($payload->getItems() as $field => $info) {
+				$upload[$field] = $info['value']
+					?? $info['content']
+					?? (string) @file_get_contents($info['path']);
+			}
+			$this->uploads[] = $upload;
+		}
 		if ($onChunk === null) {
 			return array_shift($this->queue) ?? throw new \LogicException('No response queued in FakeHttpClient.');
 		}

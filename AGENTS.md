@@ -63,7 +63,7 @@ AIAccess\Chat\Service (interface)
 
 Each provider `Client` implements the subset of the service interfaces it supports:
 - `Chat\Service` - Creates chat sessions (all providers)
-- `Batch\Service` - Optional batch processing (OpenAI, Claude, Gemini)
+- `Batch\Service` - Optional batch processing (OpenAI, Claude, Gemini); OpenAI and Gemini take image requests in the same batch
 - `Embedding\Service` - Optional embeddings (OpenAI, Gemini)
 - `Image\Service` - Optional image generation (OpenAI, Gemini, Grok)
 
@@ -96,11 +96,11 @@ Each provider extends this: `OpenAI\Chat`, `Claude\Chat`, `Gemini\Chat`, etc.
 
 ```
 src/
-├── Batch/              # Batch processing abstractions
+├── Batch/              # Batch processing abstractions (chats and images)
 ├── Chat/               # Core chat abstractions (Chat, Response, Message, Role, etc.)
 ├── Embedding/          # Text embeddings support
 ├── Http/               # HTTP transport layer (Client, CurlClient, Retry/Caching/Observable decorators, SSE and JSONL streams, FormData)
-├── Image/              # Image generation abstraction
+├── Image/              # Image generation abstraction (Service)
 ├── Provider/           # Provider-specific implementations
 │   ├── OpenAI/
 │   ├── Claude/
@@ -239,6 +239,7 @@ What AIAccess implements today:
 | Structured output | ✓ | ✓ | ✓ | - | ✓ |
 | Image generation | ✓ | - | ✓ | - | ✓ |
 | Batch | ✓ | ✓ | ✓ | - | - |
+| Batch image generation | ✓ | - | ✓ | - | - |
 | Embeddings | ✓ | - | ✓ | - | - |
 | List of models | ✓ | ✓ | ✓ | ✓ | ✓ |
 

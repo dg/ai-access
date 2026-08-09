@@ -46,7 +46,7 @@ test('addChat throws exception for duplicate IDs', function () {
 	Assert::exception(
 		fn() => $batch->addChat($modelName, $customId),
 		LogicException::class,
-		"Chat with custom ID '{$customId}' already exists in this batch.",
+		"Request with custom ID '{$customId}' already exists in this batch.",
 	);
 });
 
@@ -70,7 +70,7 @@ test('submit throws exception for empty batch', function () {
 	Assert::exception(
 		fn() => $batch->submit(),
 		LogicException::class,
-		'Cannot submit batch job: No chat requests added.',
+		'Cannot submit batch job: No requests added.',
 	);
 });
 
@@ -114,4 +114,16 @@ test('submit creates content file and submits batch request', function () {
 	$response = $batch->submit();
 
 	Assert::type(BatchResponse::class, $response);
+});
+
+
+test('one input file is one model', function () {
+	$batch = new Batch(Mockery::mock(Client::class));
+	$batch->addChat('gpt-5.6-luna', 'a');
+
+	Assert::exception(
+		fn() => $batch->addChat('gpt-5.1', 'b'),
+		LogicException::class,
+		"A batch runs on a single model, got 'gpt-5.6-luna' and 'gpt-5.1'.",
+	);
 });

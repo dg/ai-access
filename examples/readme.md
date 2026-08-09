@@ -20,8 +20,7 @@ cp examples/.env.example examples/.env
 
 Then fill in the keys of the providers you want to try. You only need the ones
 you actually use; an example that needs a key you have not set says so and
-stops. The same names work as environment variables, which is how the CI runs
-these against the live APIs once a month.
+stops. The same names work as plain environment variables too.
 
 Where a feature is not available everywhere, the example tells you who supports
 it instead of failing with an API error:

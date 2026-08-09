@@ -188,12 +188,14 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 
 	/**
-	 * Generates an image. With references the model edits them instead (max 10).
+	 * Generates an image. With references the model edits them instead (max 16).
 	 * @param  list<AIAccess\Media>  $references  reference images (PNG, JPEG or WebP)
-	 * @param  ?string  $size  e.g. '1024x1024' or '2048x1024'
+	 * @param  ?string  $size  e.g. '1024x1024' or '1536x1024'
 	 * @param  ?string  $quality  'low', 'medium' or 'high'
 	 * @param  ?string  $background  'transparent', 'opaque' or 'auto'
 	 * @param  ?string  $format  'png', 'jpeg' or 'webp'
+	 * @param  ?string  $inputFidelity  'low' or 'high', how closely the references are followed
+	 * @param  ?string  $moderation  'auto' or 'low'
 	 */
 	public function generateImage(
 		string $model,
@@ -203,46 +205,22 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 		?string $quality = null,
 		?string $background = null,
 		?string $format = null,
+		?string $inputFidelity = null,
+		?string $moderation = null,
 	): AIAccess\Media
 	{
-		$options = array_filter([
-			'size' => $size,
-			'quality' => $quality,
-			'background' => $background,
-			'output_format' => $format,
-		], fn($v) => $v !== null);
-
-		if ($references) {
-			$formData = new FormData;
-			$formData->addField('model', $model)->addField('prompt', $prompt)->addField('n', '1');
-			foreach ($options as $key => $value) {
-				$formData->addField($key, $value);
-			}
-			foreach ($references as $i => $reference) {
-				$extension = match ($reference->getMimeType()) {
-					'image/png' => 'png',
-					'image/jpeg' => 'jpg',
-					'image/webp' => 'webp',
-					default => throw new AIAccess\LogicException('Unsupported reference image type: ' . $reference->getMimeType()),
-				};
-				$formData->addFileContent("image[$i]", $reference->getData(), "image$i.$extension", $reference->getMimeType());
-			}
-			$response = $this->callApi('images/edits', $formData);
-		} else {
-			$response = $this->callApi('images/generations', ['model' => $model, 'prompt' => $prompt, 'n' => 1] + $options);
+		$request = (new ImageRequest($this, $model, $prompt))->setOptions(
+			size: $size,
+			quality: $quality,
+			background: $background,
+			format: $format,
+			inputFidelity: $inputFidelity,
+			moderation: $moderation,
+		);
+		foreach ($references as $reference) {
+			$request->addReference($reference);
 		}
-
-		$encoded = AIAccess\Helpers::expectString($response['data'][0]['b64_json'] ?? null, 'image data');
-		$data = base64_decode($encoded, strict: true);
-		if ($data === false) {
-			throw new AIAccess\UnexpectedResponseException('Image data is not valid base64.');
-		}
-
-		return new AIAccess\Media($data, match ($format) {
-			null, 'png' => 'image/png',
-			'jpg', 'jpeg' => 'image/jpeg',
-			default => 'image/' . $format,
-		}, $response);
+		return $request->generate();
 	}
 
 

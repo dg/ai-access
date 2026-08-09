@@ -49,6 +49,7 @@ Why AI Access
 | [Structured output](#structured-output)     | ✅     | ✅     | ✅     | ➖       | ✅   | ✅             |
 | [Image generation](#image-generation)       | ✅     | ➖     | ✅     | ➖       | ✅   | ➖             |
 | [Batch processing](#batch-processing)       | ✅     | ✅     | ✅     | ➖       | ➖   | ➖             |
+| [Batch image generation](#batch-processing) | ✅     | ➖     | ✅     | ➖       | ➖   | ➖             |
 | [Embeddings](#embeddings)                   | ✅     | ➖     | ✅     | ➖       | ➖   | ➖             |
 | [List of models](#list-of-models)           | ✅     | ✅     | ✅     | ✅       | ✅   | ✅             |
 
@@ -399,7 +400,9 @@ $image = $client->generateImage(
 );
 ```
 
-OpenAI adds `size`, `quality`, `background` and `format` as named arguments. Grok
+Everything else a provider takes is a named argument of its own `generateImage()`:
+OpenAI `size`, `quality`, `background`, `format`, `inputFidelity` and `moderation`,
+Gemini `aspectRatio` and `imageSize`, Grok `aspectRatio` and `resolution`. Grok
 takes no references and says so with a `LogicException` before the request leaves.
 Gemini has no image endpoint at all and reaches its image models through the
 ordinary chat one, which the interface hides from you; it answers with JPEG
@@ -493,6 +496,37 @@ reading a second time downloads a second time. If you would rather have them all
 at once, that is `iterator_to_array()` and your decision.
 
 `listBatches()` and `cancelBatch()` complete the toolkit.
+
+Pictures queue in the very same batch, at the same discount, on OpenAI and Gemini:
+
+```php
+$batch = $client->createBatch();
+$batch->addImageRequest('gpt-image-2', 'hero', 'A red fox in snow')
+	->setOptions(size: '1536x1024', quality: 'high');
+$batch->addImageRequest('gpt-image-2', 'thumb', 'The same fox, small');
+
+$batchId = $batch->submit()->getId();
+```
+
+The finished job is read exactly like any other one, because a drawn answer is
+still a message: only the pictures live in `getMedia()` rather than in `getText()`.
+And because the results arrive one at a time, a hundred of them weigh the same as
+one.
+
+```php
+foreach ($client->retrieveBatch($batchId)->getResults() as $customId => $result) {
+	$result->message?->getMedia()[0]->save("$customId.png");
+}
+```
+
+What a job may contain is the provider's rule, not ours. **OpenAI runs one
+endpoint per job**, so pictures cannot share it with chats, and generating
+cannot share it with editing; mixing raises a `LogicException` before anything
+is uploaded. **Gemini has no such rule**, because it draws through the same
+endpoint it talks through, so one job can carry both. One model per job holds
+for both: OpenAI validates the file and fails the whole job with
+`mismatched_model` otherwise, so the library refuses the second model where you
+add it.
 
  <!---->
 

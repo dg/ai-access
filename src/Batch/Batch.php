@@ -12,7 +12,8 @@ use AIAccess\ServiceException;
 
 
 /**
- * Represents a batch job containing multiple chat requests.
+ * Represents a batch job containing multiple requests. Chats are what every provider takes;
+ * those that also draw offer addImageRequest() on their own class.
  */
 interface Batch
 {
@@ -22,7 +23,7 @@ interface Batch
 	function addChat(string $model, string $customId): Chat;
 
 	/**
-	 * Submits all added chat requests as a new batch job.
+	 * Submits all added requests as a new batch job.
 	 * @throws ServiceException
 	 */
 	function submit(): Response;

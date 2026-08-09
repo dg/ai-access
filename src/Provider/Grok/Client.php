@@ -49,29 +49,23 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 	/**
 	 * Generates an image.
 	 * @param  list<AIAccess\Media>  $references  not supported by xAI, must be empty
+	 * @param  ?string  $aspectRatio  e.g. '1:1', '16:9' or 'auto'
+	 * @param  ?string  $resolution  '1k' or '2k'
 	 */
-	public function generateImage(string $model, string $prompt, array $references = []): AIAccess\Media
+	public function generateImage(
+		string $model,
+		string $prompt,
+		array $references = [],
+		?string $aspectRatio = null,
+		?string $resolution = null,
+	): AIAccess\Media
 	{
 		if ($references) {
 			throw new AIAccess\LogicException('Grok image generation does not accept reference images.');
 		}
-
-		$response = $this->callApi('images/generations', [
-			'model' => $model,
-			'prompt' => $prompt,
-			'n' => 1,
-			'response_format' => 'b64_json',
-		]);
-
-		$encoded = AIAccess\Helpers::expectString($response['data'][0]['b64_json'] ?? null, 'image data');
-		$data = base64_decode($encoded, strict: true);
-		if ($data === false) {
-			throw new AIAccess\UnexpectedResponseException('Image data is not valid base64.');
-		}
-
-		// the response carries no mime type; xAI generates JPEG, but the bytes know best
-		$mime = (new \finfo(\FILEINFO_MIME_TYPE))->buffer($data);
-		return new AIAccess\Media($data, $mime === false ? 'image/jpeg' : $mime, $response);
+		return (new ImageRequest($this, $model, $prompt))
+			->setOptions(aspectRatio: $aspectRatio, resolution: $resolution)
+			->generate();
 	}
 
 

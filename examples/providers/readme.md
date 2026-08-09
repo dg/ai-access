@@ -10,8 +10,9 @@ php examples/providers/ollama.php        # needs a local Ollama
 php examples/providers/openrouter.php    # needs OPENROUTER_API_KEY
 ```
 
-These examples do not use the shared bootstrap: the point is that you construct
-the client yourself with the URL of the service you want.
+Unlike the rest, these examples do not get their client from the shared
+bootstrap: the point is that you construct it yourself with the URL of the
+service you want.
 
 ## ollama.php
 

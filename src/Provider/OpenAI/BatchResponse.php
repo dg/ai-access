@@ -50,6 +50,9 @@ final class BatchResponse implements AIAccess\Batch\Response
 			return;
 		}
 
+		// which parser a line needs follows from the endpoint the whole batch declared
+		$images = str_starts_with((string) ($this->batchData['endpoint'] ?? ''), '/v1/images/');
+
 		// failed requests live in a separate error file; when everything failed, the output
 		// file does not even exist, so both files are results
 		foreach (['output_file_id', 'error_file_id'] as $field) {
@@ -57,7 +60,7 @@ final class BatchResponse implements AIAccess\Batch\Response
 				continue;
 			}
 			foreach ($this->client->streamLines('files/' . $this->batchData[$field] . '/content') as $line) {
-				if ($result = self::parseLine($line)) {
+				if ($result = self::parseLine($line, $images)) {
 					yield $result->customId => $result;
 				}
 			}
@@ -136,7 +139,7 @@ final class BatchResponse implements AIAccess\Batch\Response
 	}
 
 
-	private static function parseLine(string $line): ?Result
+	private static function parseLine(string $line, bool $images): ?Result
 	{
 		$data = AIAccess\Helpers::decodeJson($line);
 		$customId = $data['custom_id'] ?? null;
@@ -152,7 +155,14 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 		if ($succeeded) {
 			// the very same parser as a live call, so a batch turn carries whatever a live one would
-			return Result::answered($customId, (new ChatResponse($body))->getMessage());
+			$message = $images
+				? (new ImageResponse($body))->getMessage()
+				: (new ChatResponse($body))->getMessage();
+
+			return $images && !$message->getMedia()
+				// a 200 that carries no picture is a failure, not an empty answer
+				? Result::failed($customId, 'No image data in the response.')
+				: Result::answered($customId, $message);
 		}
 
 		return Result::failed($customId, $data['error']['message']

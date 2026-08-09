@@ -31,7 +31,13 @@ test('references switch to the edits endpoint', function () {
 
 	Assert::same('EDITED', $image->getData());
 	Assert::same('https://api.openai.com/v1/images/edits', $http->lastRequest()['url']);
-	Assert::type(AIAccess\Http\FormData::class, $http->lastRequest()['payload']);
+
+	// references travel as data URLs in a JSON body: a batch line cannot carry a multipart
+	// upload, and the endpoint takes the bytes this way just as well
+	Assert::same(
+		[['image_url' => 'data:image/png;base64,' . base64_encode('x')]],
+		$http->lastPayload()['images'],
+	);
 });
 
 
@@ -53,4 +59,31 @@ test('a malformed response is reported', function () {
 		fn() => $client->generateImage('gpt-image-2', 'a cat'),
 		AIAccess\UnexpectedResponseException::class,
 	);
+});
+
+
+test('every option the provider takes is a named argument', function () {
+	$http = (new FakeHttpClient)->queue([
+		'data' => [['b64_json' => base64_encode('WEBP')]],
+		'output_format' => 'webp',
+	]);
+
+	$image = (new Client('key', $http))->generateImage(
+		'gpt-image-2',
+		'a cat',
+		size: '1024x1536',
+		quality: 'high',
+		inputFidelity: 'high',
+		moderation: 'low',
+	);
+
+	Assert::same('WEBP', $image->getData());
+	Assert::same('image/webp', $image->getMimeType());
+
+	$payload = $http->lastPayload();
+	Assert::same('gpt-image-2', $payload['model']);
+	Assert::same('1024x1536', $payload['size']);
+	Assert::same('high', $payload['quality']);
+	Assert::same('high', $payload['input_fidelity']);
+	Assert::same('low', $payload['moderation']);
 });

@@ -62,6 +62,33 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 
 	/**
+	 * Creates a batch job out of request payloads keyed by custom id. The model sits in the
+	 * endpoint rather than in each request, hence one batch, one model.
+	 * @param  array<string, mixed[]>  $payloads
+	 * @throws AIAccess\ServiceException
+	 * @internal
+	 */
+	public function submitBatch(string $model, array $payloads): BatchResponse
+	{
+		$requests = [];
+		foreach ($payloads as $customId => $payload) {
+			$requests[] = [
+				// a nested request repeats the model even though the endpoint carries it,
+				// the same way countTokens has to
+				'request' => ['model' => "models/$model"] + $payload,
+				'metadata' => ['key' => $customId],
+			];
+		}
+
+		$response = $this->callApi("models/$model:batchGenerateContent", [
+			// the double nesting under inputConfig.requests.requests is not a typo
+			'batch' => ['inputConfig' => ['requests' => ['requests' => $requests]]],
+		]);
+		return new BatchResponse($this, $response);
+	}
+
+
+	/**
 	 * Lists existing batch jobs.
 	 * @param  ?int  $limit  Maximum number of jobs to return
 	 * @param  ?string  $pageToken  Cursor for pagination
@@ -109,32 +136,23 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * Generates an image. Gemini has no separate image endpoint: an image model is asked
 	 * through the ordinary chat one, and references are simply part of the prompt.
 	 * @param  list<AIAccess\Media>  $references  images to work from
+	 * @param  ?string  $aspectRatio  e.g. '1:1', '16:9' or '9:16'
+	 * @param  ?string  $imageSize  '1K', '2K' or '4K'; the flash-lite model draws 1K only
 	 */
-	public function generateImage(string $model, string $prompt, array $references = []): AIAccess\Media
+	public function generateImage(
+		string $model,
+		string $prompt,
+		array $references = [],
+		?string $aspectRatio = null,
+		?string $imageSize = null,
+	): AIAccess\Media
 	{
-		$parts = [['text' => $prompt]];
+		$request = (new ImageRequest($this, $model, $prompt))
+			->setOptions(aspectRatio: $aspectRatio, imageSize: $imageSize);
 		foreach ($references as $reference) {
-			$parts[] = ['inlineData' => ['mimeType' => $reference->getMimeType(), 'data' => $reference->getBase64()]];
+			$request->addReference($reference);
 		}
-
-		$response = $this->callApi("models/$model:generateContent", [
-			'contents' => [['role' => 'user', 'parts' => $parts]],
-			'generationConfig' => ['responseModalities' => ['IMAGE']],
-		]);
-
-		foreach ($response['candidates'][0]['content']['parts'] ?? [] as $part) {
-			if (isset($part['inlineData']['data'])) {
-				$data = base64_decode((string) $part['inlineData']['data'], strict: true);
-				if ($data === false) {
-					throw new AIAccess\UnexpectedResponseException('Image data is not valid base64.');
-				}
-				return new AIAccess\Media($data, (string) ($part['inlineData']['mimeType'] ?? 'image/png'), $response);
-			}
-		}
-
-		// a model that refuses answers with text instead of a picture
-		throw new AIAccess\UnexpectedResponseException('No image in the response'
-			. (isset($response['candidates'][0]['finishReason']) ? ', finish reason ' . $response['candidates'][0]['finishReason'] : '') . '.');
+		return $request->generate();
 	}
 
 

@@ -8,6 +8,7 @@
 namespace AIAccess\Provider\OpenAI;
 
 use AIAccess;
+use function array_map, array_unique, count, implode, reset;
 
 
 /**
@@ -15,10 +16,10 @@ use AIAccess;
  */
 final class Batch implements AIAccess\Batch\Batch
 {
-	/** @var array<string, Chat> */
-	private array $chats = [];
+	/** @var array<string, Chat|ImageRequest> */
+	private array $requests = [];
 
-	private string $endpoint = '/v1/responses';
+	private ?string $model = null;
 
 	/** @var mixed[]|null */
 	private ?array $metadata = null;
@@ -32,10 +33,19 @@ final class Batch implements AIAccess\Batch\Batch
 
 	public function addChat(string $model, string $customId): Chat
 	{
-		if (isset($this->chats[$customId])) {
-			throw new AIAccess\LogicException("Chat with custom ID '{$customId}' already exists in this batch.");
-		}
-		return $this->chats[$customId] = new Chat($this->client, $model);
+		$this->checkNew($model, $customId);
+		return $this->requests[$customId] = new Chat($this->client, $model);
+	}
+
+
+	/**
+	 * Adds a request for an image to be generated - not an image, which is what the batch
+	 * gets back. Pictures and chats cannot travel in one job, see submit().
+	 */
+	public function addImageRequest(string $model, string $customId, string $prompt): ImageRequest
+	{
+		$this->checkNew($model, $customId);
+		return $this->requests[$customId] = new ImageRequest($this->client, $model, $prompt);
 	}
 
 
@@ -52,23 +62,49 @@ final class Batch implements AIAccess\Batch\Batch
 
 	public function submit(): BatchResponse
 	{
-		if (!$this->chats) {
-			throw new AIAccess\LogicException('Cannot submit batch job: No chat requests added.');
+		if (!$this->requests) {
+			throw new AIAccess\LogicException('Cannot submit batch job: No requests added.');
 		}
 
-		return $this->client->submitBatch($this->endpoint, $this->buildLines(), $this->metadata);
+		// one job declares one endpoint, which is what keeps chats apart from pictures and
+		// generating apart from editing; measured, the API kills the whole job otherwise
+		$urls = array_unique(array_map($this->urlOf(...), $this->requests));
+		if (count($urls) > 1) {
+			throw new AIAccess\LogicException('A batch runs on a single endpoint, got ' . implode(' and ', $urls) . '.');
+		}
+
+		return $this->client->submitBatch(reset($urls), $this->buildLines(), $this->metadata);
+	}
+
+
+	private function checkNew(string $model, string $customId): void
+	{
+		if (isset($this->requests[$customId])) {
+			throw new AIAccess\LogicException("Request with custom ID '{$customId}' already exists in this batch.");
+
+		} elseif ($this->model !== null && $this->model !== $model) {
+			// one input file is one model: the API validates it and fails the whole job
+			throw new AIAccess\LogicException("A batch runs on a single model, got '{$this->model}' and '$model'.");
+		}
+		$this->model = $model;
+	}
+
+
+	private function urlOf(Chat|ImageRequest $request): string
+	{
+		return $request instanceof Chat ? '/v1/responses' : $request->getBatchUrl();
 	}
 
 
 	/** @return \Generator<string> */
 	private function buildLines(): \Generator
 	{
-		foreach ($this->chats as $customId => $chat) {
+		foreach ($this->requests as $customId => $request) {
 			yield AIAccess\Helpers::encodeJson([
 				'custom_id' => $customId,
 				'method' => 'POST',
-				'url' => $this->endpoint,
-				'body' => $chat->buildPayload(),
+				'url' => $this->urlOf($request),
+				'body' => $request->buildPayload(),
 			]);
 		}
 	}

@@ -8,7 +8,8 @@
 namespace AIAccess\Chat;
 
 use AIAccess\LogicException;
-use function implode, is_string;
+use AIAccess\Media;
+use function array_filter, array_values, implode, is_string;
 
 
 /**
@@ -63,6 +64,16 @@ class Message
 			}
 		}
 		return implode("\n", $texts);
+	}
+
+
+	/**
+	 * Media carried by the message, e.g. images a model drew. Other parts are skipped.
+	 * @return list<Media>
+	 */
+	public function getMedia(): array
+	{
+		return array_values(array_filter($this->parts, fn($part) => $part instanceof Media));
 	}
 
 

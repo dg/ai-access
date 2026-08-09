@@ -31,5 +31,14 @@ foreach ($batch->getResults() as $customId => $result) {
 		continue;
 	}
 
-	echo $customId, ': ', $result->message->getText(), "\n";
+	if ($result->message->getText() !== '') {
+		echo $customId, ': ', $result->message->getText(), "\n";
+	}
+
+	// a batch of images answers with pictures rather than words, in the very same messages
+	foreach ($result->message->getMedia() as $i => $media) {
+		$file = sys_get_temp_dir() . "/aiaccess-$customId-$i." . explode('/', $media->getMimeType())[1];
+		$media->save($file);
+		echo $customId, ': saved to ', $file, "\n";
+	}
 }

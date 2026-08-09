@@ -40,3 +40,8 @@ so the size of the job does not decide whether it fits in memory.
 Individual requests can fail without failing the batch. Those do not throw
 either: such an item simply arrives with `$result->error` filled in instead of
 `$result->message`, so you can retry just the ones that need it.
+
+A batch of pictures reads through the very same script: a drawn answer is still
+a message, its images sit in `getMedia()` instead of `getText()`, and this
+example saves them to the temp directory. Queue one with
+[examples/images/batch.php](../images/batch.php).

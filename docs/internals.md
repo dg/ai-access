@@ -11,7 +11,11 @@ and the shared conversation model is deliberately narrow. One file.
 There are four service interfaces — `Chat\Service::createChat`, `Batch\Service`,
 `Embedding\Service`, `Image\Service` — and each provider `Client` implements the
 **subset** it supports (Claude: Chat+Batch; OpenAI and Gemini: all four; Grok:
-Chat+Image; DeepSeek and `OpenAICompatible`: Chat only).
+Chat+Image; DeepSeek and `OpenAICompatible`: Chat only). **Extra capability lives on
+the concrete class, not in a new interface**: `addImageRequest()` is on `OpenAI\Batch` and
+`Gemini\Batch` and nowhere in `Batch\Batch`, because Claude cannot draw and should not
+have to declare that it can. The same door serves Claude's own extra, per-request
+models in one batch, which the other two forbid.
 
 `Client`, `Batch` and `BatchResponse` are interfaces with a **fully independent `final`
 implementation per provider**: each re-duplicates `callApi()` and its error mapping from
@@ -61,8 +65,10 @@ Facts that surprise:
   `RetryClient` backs off on 408/429/5xx and network failures, `ObservableClient` times
   requests, redacts the auth headers and reports a request that never answered through
   `onError` rather than `onResponse`, `CachingClient` replays identical requests from
-  disk for development. They compose, and the order changes what you see: observing a
-  retrying client logs every attempt, the other way round logs only the outcome.
+  disk for development. They compose, and the order changes what you see: retrying an
+  observed client logs every attempt, the other way round logs only the outcome, because
+  the retry loop calls its inner client once per attempt while observation fires once per
+  call. Measured, because it is easy to state backwards.
 - **A streamed error is not a stream.** The status is known once the headers are in, so
   a 4xx body is collected whole into the `Response` and the callback never sees it —
   otherwise every provider would have to detect "this SSE is actually JSON".
@@ -88,8 +94,8 @@ Facts that surprise:
   Both under `ServiceException`; `LogicException` is client misuse. **OpenAI can fail
   inside HTTP 200**: `status: failed` carries a top-level `error`, which
   `Chat::generateResponse()` turns into an `ApiException`.
-- **`trigger_error()` is gone from the library.** Per-item batch failures are readable
-  on the `Batch\Result` that carries them, and embedding count
+- **`trigger_error()` is gone from the library.** Per-item batch failures ride on the
+  `Batch\Result` that carries them, and embedding count
   mismatches raise `UnexpectedResponseException`. The single remaining warning is
   Gemini's alternating-roles check, which predicts an API error we cannot prevent.
 
@@ -280,14 +286,19 @@ One `Batch\Batch` interface, three submit mechanisms: **Claude** posts inline
 `requests[{custom_id, params}]`; **OpenAI** serializes each chat to a JSONL line,
 uploads it as a file, and submits `input_file_id`; **Gemini** posts to
 `:batchGenerateContent` with the requests nested twice under
-`batch.inputConfig.requests.requests`, keyed by `metadata.key`, and because the model
-sits in the endpoint rather than in each request, one batch is one model or a
-`LogicException`. All three call `Chat::buildPayload()`,
+`batch.inputConfig.requests.requests`, keyed by `metadata.key`. **One job is one model
+on both**, for different reasons — Gemini puts the model in the endpoint, OpenAI allows
+one model per input file — and both refuse the second model **when it is added**, not at
+submit, so the exception names the request that broke the rule. All three call `Chat::buildPayload()`,
 so request-shaping is **shared with live chat** — which is why `buildPayload()` is
 **`public` (@internal) only for Batch's sake**; changing its signature breaks batch
-across layers. **Neither side of a batch is ever held whole.** Going out, the OpenAI
-lines are a generator written straight to a temp file and uploaded from disk, because a
-string would hold the whole thing twice over. Coming back,
+across layers. The upload-and-create half of the OpenAI mechanism and the
+nest-and-post half of the Gemini one live on the **`Client`**
+(`submitBatch()`, `@internal`), because the chat batch and the image batch differ
+only in what they put in and must not drift in how they submit it. **Neither side of a
+batch is ever held whole.** Going out, the lines are a generator written straight to a
+temp file and uploaded from disk, because a batch of images with inlined references runs
+to hundreds of megabytes and a string would hold it twice over. Coming back,
 `Batch\Response::getResults()` is a **generator, status-gated and deliberately not
 memoized**: it yields one `Batch\Result` (`customId`, `?message`, `?error`) at a time as
 the bytes arrive, so reading twice fetches twice and stopping early stops the transfer.
@@ -304,6 +315,56 @@ there is nothing left to fetch. Tools work in a batch only as far as the model a
 can carry a `ToolCallPart`, but nothing runs it, because a batch has no round to answer
 in. Status enums and date parsing (Claude ISO string vs OpenAI unix `@ts`) differ per
 provider — unifying them is a silent regression.
+
+**Images ride the same rails, and that is the whole design.** An image request is an
+object (an `ImageRequest`, one `final` class per provider) exactly as a chat is, with the
+same `buildPayload()` split, so `generateImage()` is sugar over it and
+`Batch::addImageRequest()` submits the identical shape. The result needs no new
+type either: `Media` is a `Chat\Part`, so a drawn answer is a `Message` of `Role::Model`
+whose parts are the pictures, and `getResults()` keeps working untouched — `n > 1` is
+simply more parts. What genuinely differs per provider is worth knowing:
+
+- **What may share a job is the provider's rule, and only OpenAI has one.** It declares
+  one `endpoint` for the whole job, so `OpenAI\Batch::submit()` maps every item to its
+  url and refuses more than one — which is a single rule covering both "chats with
+  pictures" and "generating with editing". **Gemini has no such rule**: it draws through
+  `generateContent`, the same endpoint it talks through, so text and pictures ride
+  together as long as the model matches — measured 2026-08-11, one job carrying a text
+  request and an image request answered both. Generalizing OpenAI's restriction to
+  everyone would be forbidding what the provider allows.
+- **One model per job is measured, not read.** A mixed-model OpenAI batch is accepted at
+  creation, then killed whole during validation with `mismatched_model` and
+  `request_counts.total: 0` (measured 2026-08-11) — an hour of silence instead of an
+  error, which is why the library refuses the second model where it is added. Claude is
+  the opposite and mixes models on purpose, so its `Batch` has no such check.
+- Reading a result branches on `batchData['endpoint']`, which the batch object carries:
+  `/v1/images/*` parses through `ImageResponse`, anything else through `ChatResponse`.
+  Both expose `getMessage()`, which is what keeps `BatchResponse` free of image knowledge.
+- **References travel as base64 data URLs in a JSON body, never multipart**, because a
+  JSONL line cannot carry a multipart upload. The live path uses the same JSON form on
+  purpose: two transports for one payload would drift. Every line carries its own copy,
+  so a reference repeated across a big batch is measured against the 200 MB file cap;
+  the Files API could dedupe it, but that would mean handing the caller a file id, and
+  `Media` is how content travels here.
+- **The mime type is read from the answer** (`output_format`), not from what was asked
+  for, and Gemini's comes from `inlineData.mimeType`.
+- **A 200 without a picture is an error**, not an empty answer: an image line that parses
+  to no media becomes a `Result` carrying an error, because an empty `Message` under a
+  custom id reads like a successful blank.
+- **Gemini has no image endpoint**, so an image batch is an ordinary
+  `:batchGenerateContent` job with `responseModalities: ["IMAGE"]` in each request.
+  Google's newer Interactions API is the recommended path for pictures but **has no
+  Batch API**, which is why generateContent must stay. Consequence to respect:
+  `Gemini\ChatResponse` turns `inlineData` parts into `Media` — before that it dropped
+  them, and an image answer looked empty. Bytes that fail to decode are **skipped there
+  and reported in `ImageRequest::generate()`**: a chat must not lose its text over a
+  broken picture, while the image path has nothing else to return. The flip side is that
+  a Gemini model turn can now carry `Media`, so a history replayed on OpenAI or Claude
+  tries to put an image into an assistant turn, which those APIs reject.
+- **Gemini is the one that streaming cannot save**, for the reason given above: its
+  results ride inside the job. Only file-based batch I/O (`inputConfig.fileName` going
+  out, `response.responsesFile` coming back) would change that, and it is the
+  unimplemented next step.
 
 ## Effort is the one knob that is genuinely shared
 
