@@ -245,14 +245,14 @@ test('generateImage decodes the image and rejects references', function () {
 	$http = (new Tests\Support\FakeHttpClient)->queue(['data' => [['b64_json' => base64_encode($jpeg)]]]);
 	$client = new Client('key', $http);
 
-	$image = $client->generateImage('grok-imagine-image', 'a cat');
+	$image = $client->generateImage('a cat', 'grok-imagine-image');
 
 	Assert::same($jpeg, $image->getData());
 	Assert::same('image/jpeg', $image->getMimeType());
 	Assert::same('b64_json', $http->lastPayload()['response_format']);
 
 	Assert::exception(
-		fn() => $client->generateImage('grok-imagine-image', 'a cat', [AIAccess\Media::fromBinary('x', 'image/png')]),
+		fn() => $client->generateImage('a cat', 'grok-imagine-image', [AIAccess\Media::fromBinary('x', 'image/png')]),
 		AIAccess\LogicException::class,
 	);
 });

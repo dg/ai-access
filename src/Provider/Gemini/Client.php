@@ -140,14 +140,14 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * @param  ?string  $imageSize  '1K', '2K' or '4K'; the flash-lite model draws 1K only
 	 */
 	public function generateImage(
-		string $model,
 		string $prompt,
+		string $model,
 		array $references = [],
 		?string $aspectRatio = null,
 		?string $imageSize = null,
 	): AIAccess\Media
 	{
-		$request = (new ImageRequest($this, $model, $prompt))
+		$request = (new ImageRequest($this, $prompt, $model))
 			->setOptions(aspectRatio: $aspectRatio, imageSize: $imageSize);
 		foreach ($references as $reference) {
 			$request->addReference($reference);
@@ -165,8 +165,8 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * @return list<Vector>
 	 */
 	public function calculateEmbeddings(
-		string $model,
 		array $input,
+		string $model,
 		?string $taskType = null,
 		?string $title = null,
 		?int $outputDimensionality = null,

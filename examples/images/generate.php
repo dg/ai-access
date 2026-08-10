@@ -14,8 +14,8 @@ $client = createClient(AIAccess\Image\Service::class);
 assert($client instanceof AIAccess\Image\Service);
 
 $image = $client->generateImage(
-	imageModel($client),
 	'A lighthouse made of stacked books, storm clouds behind it, painterly style.',
+	imageModel($client),
 );
 
 // the two providers return different formats, so the mime type decides the name

@@ -378,7 +378,7 @@ Image Generation
 
 
 ```php
-$image = $client->generateImage('gpt-image-2', 'A lighthouse on a cliff, flat vector style');
+$image = $client->generateImage('A lighthouse on a cliff, flat vector style', 'gpt-image-2');
 
 $image->save('lighthouse.png');
 ```
@@ -394,8 +394,8 @@ which covers both editing a picture and continuing its style:
 use AIAccess\Media;
 
 $image = $client->generateImage(
-	'gpt-image-2',
 	'The same lighthouse at night',
+	'gpt-image-2',
 	references: [Media::fromFile('lighthouse.png')],
 );
 ```
@@ -462,11 +462,11 @@ use AIAccess\Chat\Role;
 
 $batch = $client->createBatch();
 
-$chat = $batch->addChat($model, 'greeting-1');
+$chat = $batch->addChat('greeting-1', $model);
 $chat->setSystemInstruction('Be brief and friendly.');
 $chat->addMessage('Hi!', Role::User);
 
-$chat = $batch->addChat($model, 'translate-1');
+$chat = $batch->addChat('translate-1', $model);
 $chat->addMessage('Translate to French: Hello world', Role::User);
 
 $response = $batch->submit();   // returns immediately
@@ -501,9 +501,9 @@ Pictures queue in the very same batch, at the same discount, on OpenAI and Gemin
 
 ```php
 $batch = $client->createBatch();
-$batch->addImageRequest('gpt-image-2', 'hero', 'A red fox in snow')
+$batch->addImageRequest('hero', 'A red fox in snow', 'gpt-image-2')
 	->setOptions(size: '1536x1024', quality: 'high');
-$batch->addImageRequest('gpt-image-2', 'thumb', 'The same fox, small');
+$batch->addImageRequest('thumb', 'The same fox, small', 'gpt-image-2');
 
 $batchId = $batch->submit()->getId();
 ```
@@ -538,10 +538,10 @@ Embeddings
 Embeddings turn text into numeric vectors that capture meaning, the foundation of semantic search, clustering, recommendations and RAG. Supported by OpenAI and Gemini:
 
 ```php
-$vectors = $client->calculateEmbeddings('text-embedding-3-small', [
+$vectors = $client->calculateEmbeddings([
 	'PHP is a popular general-purpose scripting language.',
 	'Paris is the capital of France.',
-]);
+], 'text-embedding-3-small');
 
 $similarity = $vectors[0]->cosineSimilarity($vectors[1]);
 ```

@@ -31,7 +31,7 @@ final class Batch implements AIAccess\Batch\Batch
 	}
 
 
-	public function addChat(string $model, string $customId): Chat
+	public function addChat(string $customId, string $model): Chat
 	{
 		$this->checkNew($model, $customId);
 		return $this->requests[$customId] = new Chat($this->client, $model);
@@ -42,10 +42,10 @@ final class Batch implements AIAccess\Batch\Batch
 	 * Adds a request for an image to be generated - not an image, which is what the batch
 	 * gets back. Pictures and chats cannot travel in one job, see submit().
 	 */
-	public function addImageRequest(string $model, string $customId, string $prompt): ImageRequest
+	public function addImageRequest(string $customId, string $prompt, string $model): ImageRequest
 	{
 		$this->checkNew($model, $customId);
-		return $this->requests[$customId] = new ImageRequest($this->client, $model, $prompt);
+		return $this->requests[$customId] = new ImageRequest($this->client, $prompt, $model);
 	}
 
 

@@ -14,7 +14,7 @@ test('calculateEmbeddings rejects empty input', function () {
 	$clientMock->shouldNotReceive('callApi');
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', []),
+		fn() => $clientMock->calculateEmbeddings([], 'gemini-embedding-2'),
 		AIAccess\LogicException::class,
 		'Input cannot be empty.',
 	);
@@ -26,7 +26,7 @@ test('calculateEmbeddings throws exception for empty string in input', function 
 	$clientMock->makePartial();
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('embedding-001', ['text1', '']),
+		fn() => $clientMock->calculateEmbeddings(['text1', ''], 'embedding-001'),
 		LogicException::class,
 		'All input elements must be non-empty strings.',
 	);
@@ -69,7 +69,7 @@ test('calculateEmbeddings basic functionality', function () {
 		}))
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input);
+	$results = $clientMock->calculateEmbeddings($input, $model);
 
 	Assert::count(2, $results);
 	Assert::type(Vector::class, $results[0]);
@@ -98,7 +98,7 @@ test('calculateEmbeddings with taskType parameter', function () {
 		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType))
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input, $taskType);
+	$results = $clientMock->calculateEmbeddings($input, $model, $taskType);
 
 	Assert::count(1, $results);
 	Assert::type(Vector::class, $results[0]);
@@ -124,7 +124,7 @@ test('calculateEmbeddings with title for document retrieval', function () {
 		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType && $payload['requests'][0]['embedContentConfig']['title'] === $title))
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input, $taskType, $title);
+	$results = $clientMock->calculateEmbeddings($input, $model, $taskType, $title);
 
 	Assert::count(1, $results);
 	Assert::type(Vector::class, $results[0]);
@@ -149,7 +149,7 @@ test('calculateEmbeddings with outputDimensionality parameter', function () {
 		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['outputDimensionality'] === $dimensionality))
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input, null, null, $dimensionality);
+	$results = $clientMock->calculateEmbeddings($input, $model, null, null, $dimensionality);
 
 	Assert::count(1, $results);
 	Assert::type(Vector::class, $results[0]);
@@ -162,7 +162,7 @@ test('calculateEmbeddings rejects title without RETRIEVAL_DOCUMENT', function ()
 	$clientMock->shouldNotReceive('callApi');
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', ['text'], 'RETRIEVAL_QUERY', 'Title'),
+		fn() => $clientMock->calculateEmbeddings(['text'], 'gemini-embedding-2', 'RETRIEVAL_QUERY', 'Title'),
 		AIAccess\LogicException::class,
 	);
 });
@@ -175,7 +175,7 @@ test('calculateEmbeddings fails when the count does not match the input', functi
 		->andReturn(['embeddings' => [['values' => [0.1]], ['values' => [0.2]]]]);
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', ['Text 1', 'Text 2', 'Text 3']),
+		fn() => $clientMock->calculateEmbeddings(['Text 1', 'Text 2', 'Text 3'], 'gemini-embedding-2'),
 		AIAccess\UnexpectedResponseException::class,
 	);
 });
@@ -191,7 +191,7 @@ test('calculateEmbeddings handles API errors', function () {
 		->andThrow(new AIAccess\ApiException('API error', 500));
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings($model, $input),
+		fn() => $clientMock->calculateEmbeddings($input, $model),
 		AIAccess\ApiException::class,
 		'API error',
 	);
@@ -205,7 +205,7 @@ test('calculateEmbeddings fails on a malformed API response', function () {
 		->andReturn(['unexpected_key' => 'unexpected_value']);
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('gemini-embedding-2', ['Text']),
+		fn() => $clientMock->calculateEmbeddings(['Text'], 'gemini-embedding-2'),
 		AIAccess\UnexpectedResponseException::class,
 	);
 });

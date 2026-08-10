@@ -34,8 +34,8 @@ OpenAI and Gemini can do this; xAI takes a prompt only and says so.
 
 ```php
 $image = $client->generateImage(
-	'gpt-image-2',
 	'Keep the composition and palette, but make it a winter scene.',
+	'gpt-image-2',
 	references: [AIAccess\Media::fromFile('cover.png')],
 	size: '1024x1024',
 	quality: 'high',

@@ -118,7 +118,7 @@ test('submit validates JSONL content structure', function () {
 
 	$clientMock = Mockery::mock(Client::class);
 	$batch = new Batch($clientMock);
-	$chat = $batch->addChat($modelName, $customId);
+	$chat = $batch->addChat($customId, $modelName);
 	$chat->addMessage($userMessage, Role::User);
 
 	// Capture the lines the batch would upload

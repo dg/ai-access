@@ -146,7 +146,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * @param  ?int  $dimensions  Size of the resulting vectors. Only supported by text-embedding-3 models. Maximum 2048 inputs per request.
 	 * @return list<Vector>
 	 */
-	public function calculateEmbeddings(string $model, array $input, ?int $dimensions = null): array
+	public function calculateEmbeddings(array $input, string $model, ?int $dimensions = null): array
 	{
 		if (!$input) {
 			throw new AIAccess\LogicException('Input cannot be empty.');
@@ -198,8 +198,8 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * @param  ?string  $moderation  'auto' or 'low'
 	 */
 	public function generateImage(
-		string $model,
 		string $prompt,
+		string $model,
 		array $references = [],
 		?string $size = null,
 		?string $quality = null,
@@ -209,7 +209,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 		?string $moderation = null,
 	): AIAccess\Media
 	{
-		$request = (new ImageRequest($this, $model, $prompt))->setOptions(
+		$request = (new ImageRequest($this, $prompt, $model))->setOptions(
 			size: $size,
 			quality: $quality,
 			background: $background,

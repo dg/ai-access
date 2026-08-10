@@ -19,7 +19,7 @@ $texts = [
 	'PHP 8.3 introduced typed class constants.',
 ];
 
-$vectors = $client->calculateEmbeddings(embeddingModel($client), $texts);
+$vectors = $client->calculateEmbeddings($texts, embeddingModel($client));
 
 foreach ([[0, 1], [0, 2]] as [$a, $b]) {
 	printf(

@@ -18,7 +18,7 @@ function imageResponse(string $binary, string $mime = 'image/png'): array
 
 test('an image model is asked through the chat endpoint', function () {
 	$http = (new FakeHttpClient)->queue(imageResponse('PNGDATA'));
-	$image = (new Client('key', $http))->generateImage('gemini-3.1-flash-image', 'a red circle');
+	$image = (new Client('key', $http))->generateImage('a red circle', 'gemini-3.1-flash-image');
 
 	Assert::same('PNGDATA', $image->getData());
 	Assert::same('image/png', $image->getMimeType());
@@ -37,7 +37,7 @@ test('references ride along as ordinary content parts', function () {
 	$http = (new FakeHttpClient)->queue(imageResponse('EDITED', 'image/jpeg'));
 	$client = new Client('key', $http);
 
-	$image = $client->generateImage('gemini-3.1-flash-image', 'make it winter', [
+	$image = $client->generateImage('make it winter', 'gemini-3.1-flash-image', [
 		Media::fromBinary('REF', 'image/png'),
 	]);
 
@@ -59,7 +59,7 @@ test('a text-only answer means the model refused to draw', function () {
 	]);
 
 	Assert::exception(
-		fn() => (new Client('key', $http))->generateImage('gemini-3.1-flash-image', 'something forbidden'),
+		fn() => (new Client('key', $http))->generateImage('something forbidden', 'gemini-3.1-flash-image'),
 		AIAccess\UnexpectedResponseException::class,
 		'No image in the response, finish reason IMAGE_SAFETY.',
 	);
@@ -72,7 +72,7 @@ test('data that is not base64 is reported', function () {
 	]]]]]);
 
 	Assert::exception(
-		fn() => (new Client('key', $http))->generateImage('gemini-3.1-flash-image', 'a circle'),
+		fn() => (new Client('key', $http))->generateImage('a circle', 'gemini-3.1-flash-image'),
 		AIAccess\UnexpectedResponseException::class,
 		'Image data is not valid base64.',
 	);
@@ -83,8 +83,8 @@ test('aspect ratio and size travel in the image config', function () {
 	$http = (new FakeHttpClient)->queue(imageResponse('PNGDATA'));
 
 	(new Client('key', $http))->generateImage(
-		'gemini-3.1-flash-image',
 		'a red circle',
+		'gemini-3.1-flash-image',
 		aspectRatio: '16:9',
 		imageSize: '2K',
 	);

@@ -22,7 +22,7 @@ test('generateImage asks for base64 and reads the format out of the bytes', func
 	$png = onePixelPng();
 	$http = (new FakeHttpClient)->queue(['data' => [['b64_json' => base64_encode($png)]]]);
 
-	$image = (new Client('key', $http))->generateImage('grok-imagine-image', 'a red fox');
+	$image = (new Client('key', $http))->generateImage('a red fox', 'grok-imagine-image');
 
 	Assert::same($png, $image->getData());
 	// the response carries no mime type at all
@@ -38,7 +38,7 @@ test('generateImage asks for base64 and reads the format out of the bytes', func
 test('the xAI options travel with the prompt', function () {
 	$http = (new FakeHttpClient)->queue(['data' => [['b64_json' => base64_encode(onePixelPng())]]]);
 
-	(new Client('key', $http))->generateImage('grok-imagine-image', 'a red fox', aspectRatio: '16:9', resolution: '2k');
+	(new Client('key', $http))->generateImage('a red fox', 'grok-imagine-image', aspectRatio: '16:9', resolution: '2k');
 
 	$payload = $http->lastPayload();
 	Assert::same('16:9', $payload['aspect_ratio']);
@@ -52,7 +52,7 @@ test('references are refused before the request leaves', function () {
 	$client = new Client('key', new FakeHttpClient);
 
 	Assert::exception(
-		fn() => $client->generateImage('grok-imagine-image', 'a fox', [Media::fromBinary('x', 'image/png')]),
+		fn() => $client->generateImage('a fox', 'grok-imagine-image', [Media::fromBinary('x', 'image/png')]),
 		AIAccess\LogicException::class,
 		'Grok image generation does not accept reference images.',
 	);
@@ -63,7 +63,7 @@ test('data that is not base64 is reported', function () {
 	$http = (new FakeHttpClient)->queue(['data' => [['b64_json' => 'not!base64']]]);
 
 	Assert::exception(
-		fn() => (new Client('key', $http))->generateImage('grok-imagine-image', 'a fox'),
+		fn() => (new Client('key', $http))->generateImage('a fox', 'grok-imagine-image'),
 		AIAccess\UnexpectedResponseException::class,
 		'Image data is not valid base64.',
 	);

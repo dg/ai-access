@@ -12,8 +12,8 @@ require __DIR__ . '/../../bootstrap.php';
 function geminiBatch(FakeHttpClient $http): AIAccess\Provider\Gemini\Batch
 {
 	$batch = (new Client('key', $http))->createBatch();
-	$batch->addChat('gemini-3.5-flash-lite', 'first')->addMessage('Question one', Role::User);
-	$batch->addChat('gemini-3.5-flash-lite', 'second')->addMessage('Question two', Role::User);
+	$batch->addChat('first', 'gemini-3.5-flash-lite')->addMessage('Question one', Role::User);
+	$batch->addChat('second', 'gemini-3.5-flash-lite')->addMessage('Question two', Role::User);
 	return $batch;
 }
 
@@ -71,10 +71,10 @@ test('cancel posts to the batch and reports success', function () {
 
 test('one batch runs one model, and says so at the request that breaks it', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
-	$batch->addChat('gemini-3.5-flash-lite', 'a')->addMessage('x', Role::User);
+	$batch->addChat('a', 'gemini-3.5-flash-lite')->addMessage('x', Role::User);
 
 	Assert::exception(
-		fn() => $batch->addChat('gemini-3.6-flash', 'b'),
+		fn() => $batch->addChat('b', 'gemini-3.6-flash'),
 		AIAccess\LogicException::class,
 		'%a%single model%a%',
 	);
@@ -83,10 +83,10 @@ test('one batch runs one model, and says so at the request that breaks it', func
 
 test('a duplicate custom id is refused', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
-	$batch->addChat('gemini-3.5-flash-lite', 'same');
+	$batch->addChat('same', 'gemini-3.5-flash-lite');
 
 	Assert::exception(
-		fn() => $batch->addChat('gemini-3.5-flash-lite', 'same'),
+		fn() => $batch->addChat('same', 'gemini-3.5-flash-lite'),
 		AIAccess\LogicException::class,
 		"Request with custom ID 'same' already exists in this batch.",
 	);

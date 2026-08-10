@@ -13,7 +13,7 @@ test('calculateEmbeddings throws exception for empty input', function () {
 	$clientMock->makePartial();
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('text-embedding-ada-002', []),
+		fn() => $clientMock->calculateEmbeddings([], 'text-embedding-ada-002'),
 		LogicException::class,
 		'Input cannot be empty.',
 	);
@@ -25,7 +25,7 @@ test('calculateEmbeddings throws exception for empty string in input', function 
 	$clientMock->makePartial();
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('text-embedding-ada-002', ['text1', '']),
+		fn() => $clientMock->calculateEmbeddings(['text1', ''], 'text-embedding-ada-002'),
 		LogicException::class,
 		'All input elements must be non-empty strings.',
 	);
@@ -53,7 +53,7 @@ test('calculateEmbeddings basic functionality', function () {
 		->with('embeddings', Mockery::on(fn($payload) => $payload['model'] === $model && $payload['input'] === $input && !isset($payload['dimensions'])))
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input);
+	$results = $clientMock->calculateEmbeddings($input, $model);
 
 	Assert::count(2, $results);
 	Assert::type(Vector::class, $results[0]);
@@ -82,7 +82,7 @@ test('calculateEmbeddings with dimensions parameter for text-embedding-3 model',
 		->with('embeddings', Mockery::on(fn($payload) => $payload['model'] === $model && $payload['input'] === $input && $payload['dimensions'] === $dimensions))
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input, $dimensions);
+	$results = $clientMock->calculateEmbeddings($input, $model, $dimensions);
 
 	Assert::count(1, $results);
 	Assert::type(Vector::class, $results[0]);
@@ -108,7 +108,7 @@ test('calculateEmbeddings handles unordered response indices', function () {
 		->once()
 		->andReturn($expectedResponse);
 
-	$results = $clientMock->calculateEmbeddings($model, $input);
+	$results = $clientMock->calculateEmbeddings($input, $model);
 
 	Assert::count(3, $results);
 
@@ -129,7 +129,7 @@ test('calculateEmbeddings fails when an item could not be embedded', function ()
 		]]);
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('text-embedding-3-small', ['a', 'b']),
+		fn() => $clientMock->calculateEmbeddings(['a', 'b'], 'text-embedding-3-small'),
 		AIAccess\UnexpectedResponseException::class,
 	);
 });
@@ -142,7 +142,7 @@ test('calculateEmbeddings fails when the count does not match the input', functi
 		->andReturn(['data' => [['index' => 0, 'embedding' => [0.1]]]]);
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('text-embedding-3-small', ['a', 'b']),
+		fn() => $clientMock->calculateEmbeddings(['a', 'b'], 'text-embedding-3-small'),
 		AIAccess\UnexpectedResponseException::class,
 	);
 });
@@ -158,7 +158,7 @@ test('calculateEmbeddings handles API errors', function () {
 		->andThrow(new AIAccess\ApiException('API error', 500));
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings($model, $input),
+		fn() => $clientMock->calculateEmbeddings($input, $model),
 		AIAccess\ApiException::class,
 		'API error',
 	);
@@ -172,7 +172,7 @@ test('calculateEmbeddings fails on a malformed API response', function () {
 		->andReturn(['unexpected' => true]);
 
 	Assert::exception(
-		fn() => $clientMock->calculateEmbeddings('text-embedding-3-small', ['a']),
+		fn() => $clientMock->calculateEmbeddings(['a'], 'text-embedding-3-small'),
 		AIAccess\UnexpectedResponseException::class,
 	);
 });

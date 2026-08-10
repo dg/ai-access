@@ -21,5 +21,5 @@ interface Service
 	 * @param  list<Media>  $references  reference images
 	 * @throws ServiceException
 	 */
-	function generateImage(string $model, string $prompt, array $references = []): Media;
+	function generateImage(string $prompt, string $model, array $references = []): Media;
 }

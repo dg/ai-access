@@ -13,7 +13,7 @@ require __DIR__ . '/../bootstrap.php';
 $client = createClient(AIAccess\Embedding\Service::class);
 assert($client instanceof AIAccess\Embedding\Service);
 
-$vectors = $client->calculateEmbeddings(embeddingModel($client), ['Text to remember.']);
+$vectors = $client->calculateEmbeddings(['Text to remember.'], embeddingModel($client));
 $binary = $vectors[0]->serialize();
 
 printf(

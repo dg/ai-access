@@ -27,7 +27,7 @@ final class Batch implements AIAccess\Batch\Batch
 	}
 
 
-	public function addChat(string $model, string $customId): Chat
+	public function addChat(string $customId, string $model): Chat
 	{
 		$this->checkNew($model, $customId);
 		return $this->requests[$customId] = new Chat($this->client, $model);
@@ -39,10 +39,10 @@ final class Batch implements AIAccess\Batch\Batch
 	 * gets back. Gemini draws through the ordinary chat endpoint, so pictures and chats can
 	 * share a job as long as they share a model.
 	 */
-	public function addImageRequest(string $model, string $customId, string $prompt): ImageRequest
+	public function addImageRequest(string $customId, string $prompt, string $model): ImageRequest
 	{
 		$this->checkNew($model, $customId);
-		return $this->requests[$customId] = new ImageRequest($this->client, $model, $prompt);
+		return $this->requests[$customId] = new ImageRequest($this->client, $prompt, $model);
 	}
 
 

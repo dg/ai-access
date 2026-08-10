@@ -25,8 +25,8 @@ final class ImageRequest
 
 	public function __construct(
 		private readonly Client $client,
-		private readonly string $model,
 		private readonly string $prompt,
+		private readonly string $model,
 	) {
 	}
 

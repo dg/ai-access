@@ -11,7 +11,7 @@ test('generateImage decodes the returned image', function () {
 	$http = (new FakeHttpClient)->queue(['data' => [['b64_json' => base64_encode('PNGDATA')]]]);
 	$client = new Client('key', $http);
 
-	$image = $client->generateImage('gpt-image-2', 'a cat', size: '1024x1024');
+	$image = $client->generateImage('a cat', 'gpt-image-2', size: '1024x1024');
 
 	Assert::same('PNGDATA', $image->getData());
 	Assert::same('image/png', $image->getMimeType());
@@ -27,7 +27,7 @@ test('references switch to the edits endpoint', function () {
 	$http = (new FakeHttpClient)->queue(['data' => [['b64_json' => base64_encode('EDITED')]]]);
 	$client = new Client('key', $http);
 
-	$image = $client->generateImage('gpt-image-2', 'winter', [AIAccess\Media::fromBinary('x', 'image/png')]);
+	$image = $client->generateImage('winter', 'gpt-image-2', [AIAccess\Media::fromBinary('x', 'image/png')]);
 
 	Assert::same('EDITED', $image->getData());
 	Assert::same('https://api.openai.com/v1/images/edits', $http->lastRequest()['url']);
@@ -45,7 +45,7 @@ test('unsupported reference type is rejected before the call', function () {
 	$client = new Client('key', new FakeHttpClient);
 
 	Assert::exception(
-		fn() => $client->generateImage('gpt-image-2', 'winter', [AIAccess\Media::fromBinary('x', 'image/bmp')]),
+		fn() => $client->generateImage('winter', 'gpt-image-2', [AIAccess\Media::fromBinary('x', 'image/bmp')]),
 		AIAccess\LogicException::class,
 	);
 });
@@ -56,7 +56,7 @@ test('a malformed response is reported', function () {
 	$client = new Client('key', $http);
 
 	Assert::exception(
-		fn() => $client->generateImage('gpt-image-2', 'a cat'),
+		fn() => $client->generateImage('a cat', 'gpt-image-2'),
 		AIAccess\UnexpectedResponseException::class,
 	);
 });
@@ -69,8 +69,8 @@ test('every option the provider takes is a named argument', function () {
 	]);
 
 	$image = (new Client('key', $http))->generateImage(
-		'gpt-image-2',
 		'a cat',
+		'gpt-image-2',
 		size: '1024x1536',
 		quality: 'high',
 		inputFidelity: 'high',

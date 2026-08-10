@@ -13,9 +13,9 @@ require __DIR__ . '/../../bootstrap.php';
 test('image requests ride in the ordinary batch, they just ask for pictures', function () {
 	$http = (new FakeHttpClient)->queue(['name' => 'batches/abc']);
 	$batch = (new Client('key', $http))->createBatch();
-	$batch->addImageRequest('gemini-3.1-flash-image', 'hero', 'A red fox')
+	$batch->addImageRequest('hero', 'A red fox', 'gemini-3.1-flash-image')
 		->setOptions(aspectRatio: '16:9', imageSize: '2K');
-	$batch->addImageRequest('gemini-3.1-flash-image', 'thumb', 'A red fox, small')
+	$batch->addImageRequest('thumb', 'A red fox, small', 'gemini-3.1-flash-image')
 		->addReference(Media::fromBinary('REF', 'image/png'));
 
 	$response = $batch->submit();
@@ -45,8 +45,8 @@ test('image requests ride in the ordinary batch, they just ask for pictures', fu
 test('text and pictures share one job, because Gemini draws through the chat endpoint', function () {
 	$http = (new FakeHttpClient)->queue(['name' => 'batches/abc']);
 	$batch = (new Client('key', $http))->createBatch();
-	$batch->addChat('gemini-3.1-flash-image', 'question')->addMessage('Describe a fox.', Role::User);
-	$batch->addImageRequest('gemini-3.1-flash-image', 'drawing', 'A red fox');
+	$batch->addChat('question', 'gemini-3.1-flash-image')->addMessage('Describe a fox.', Role::User);
+	$batch->addImageRequest('drawing', 'A red fox', 'gemini-3.1-flash-image');
 
 	$batch->submit();
 
@@ -60,10 +60,10 @@ test('text and pictures share one job, because Gemini draws through the chat end
 
 test('one job is one model, whatever the requests are', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
-	$batch->addImageRequest('gemini-3.1-flash-image', 'a', 'A fox');
+	$batch->addImageRequest('a', 'A fox', 'gemini-3.1-flash-image');
 
 	Assert::exception(
-		fn() => $batch->addChat('gemini-3-pro-image', 'b'),
+		fn() => $batch->addChat('b', 'gemini-3-pro-image'),
 		AIAccess\LogicException::class,
 		'%a%single model%a%',
 	);

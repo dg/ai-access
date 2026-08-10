@@ -53,8 +53,8 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 	 * @param  ?string  $resolution  '1k' or '2k'
 	 */
 	public function generateImage(
-		string $model,
 		string $prompt,
+		string $model,
 		array $references = [],
 		?string $aspectRatio = null,
 		?string $resolution = null,
@@ -63,7 +63,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 		if ($references) {
 			throw new AIAccess\LogicException('Grok image generation does not accept reference images.');
 		}
-		return (new ImageRequest($this, $model, $prompt))
+		return (new ImageRequest($this, $prompt, $model))
 			->setOptions(aspectRatio: $aspectRatio, resolution: $resolution)
 			->generate();
 	}

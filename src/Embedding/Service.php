@@ -20,5 +20,5 @@ interface Service
 	 * @return list<Vector>
 	 * @throws ServiceException
 	 */
-	function calculateEmbeddings(string $model, array $input): array;
+	function calculateEmbeddings(array $input, string $model): array;
 }

@@ -25,8 +25,8 @@ function uploadedLines(FakeHttpClient $http): array
 test('every request becomes one JSONL line and the job declares the endpoint once', function () {
 	$http = (new FakeHttpClient)->queue(['id' => 'file-1'])->queue(['id' => 'batch-1', 'status' => 'validating']);
 	$batch = (new Client('key', $http))->createBatch();
-	$batch->addImageRequest('gpt-image-2', 'hero', 'A red fox')->setOptions(size: '1536x1024', quality: 'high');
-	$batch->addImageRequest('gpt-image-2', 'thumb', 'A red fox, small');
+	$batch->addImageRequest('hero', 'A red fox', 'gpt-image-2')->setOptions(size: '1536x1024', quality: 'high');
+	$batch->addImageRequest('thumb', 'A red fox, small', 'gpt-image-2');
 
 	$response = $batch->submit();
 
@@ -51,7 +51,7 @@ test('every request becomes one JSONL line and the job declares the endpoint onc
 test('references move the whole job to the edits endpoint', function () {
 	$http = (new FakeHttpClient)->queue(['id' => 'file-1'])->queue(['id' => 'batch-1']);
 	$batch = (new Client('key', $http))->createBatch();
-	$batch->addImageRequest('gpt-image-2', 'winter', 'The same fox in snow')
+	$batch->addImageRequest('winter', 'The same fox in snow', 'gpt-image-2')
 		->addReference(Media::fromBinary('REF', 'image/png'));
 
 	$batch->submit();
@@ -66,8 +66,8 @@ test('references move the whole job to the edits endpoint', function () {
 
 test('generating and editing cannot share one job', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
-	$batch->addImageRequest('gpt-image-2', 'plain', 'A fox');
-	$batch->addImageRequest('gpt-image-2', 'edited', 'The same fox')->addReference(Media::fromBinary('REF', 'image/png'));
+	$batch->addImageRequest('plain', 'A fox', 'gpt-image-2');
+	$batch->addImageRequest('edited', 'The same fox', 'gpt-image-2')->addReference(Media::fromBinary('REF', 'image/png'));
 
 	Assert::exception(
 		fn() => $batch->submit(),
@@ -79,8 +79,8 @@ test('generating and editing cannot share one job', function () {
 
 test('pictures and chats cannot share one job either, for the same reason', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
-	$batch->addChat('gpt-image-2', 'talk')->addMessage('Hello', AIAccess\Chat\Role::User);
-	$batch->addImageRequest('gpt-image-2', 'draw', 'A fox');
+	$batch->addChat('talk', 'gpt-image-2')->addMessage('Hello', AIAccess\Chat\Role::User);
+	$batch->addImageRequest('draw', 'A fox', 'gpt-image-2');
 
 	Assert::exception(
 		fn() => $batch->submit(),
@@ -92,10 +92,10 @@ test('pictures and chats cannot share one job either, for the same reason', func
 
 test('one input file is one model', function () {
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
-	$batch->addImageRequest('gpt-image-2', 'a', 'A fox');
+	$batch->addImageRequest('a', 'A fox', 'gpt-image-2');
 
 	Assert::exception(
-		fn() => $batch->addImageRequest('gpt-image-1-mini', 'b', 'A fox'),
+		fn() => $batch->addImageRequest('b', 'A fox', 'gpt-image-1-mini'),
 		AIAccess\LogicException::class,
 		'%a%single model%a%',
 	);
@@ -111,9 +111,9 @@ test('an empty batch and a duplicate custom id are refused', function () {
 		'Cannot submit batch job: No requests added.',
 	);
 
-	$batch->addImageRequest('gpt-image-2', 'same', 'A fox');
+	$batch->addImageRequest('same', 'A fox', 'gpt-image-2');
 	Assert::exception(
-		fn() => $batch->addImageRequest('gpt-image-2', 'same', 'Another fox'),
+		fn() => $batch->addImageRequest('same', 'Another fox', 'gpt-image-2'),
 		AIAccess\LogicException::class,
 		"Request with custom ID 'same' already exists in this batch.",
 	);
@@ -124,7 +124,7 @@ test('an unsupported reference type is rejected before the request is built', fu
 	$batch = (new Client('key', new FakeHttpClient))->createBatch();
 
 	Assert::exception(
-		fn() => $batch->addImageRequest('gpt-image-2', 'x', 'A fox')->addReference(Media::fromBinary('x', 'image/bmp')),
+		fn() => $batch->addImageRequest('x', 'A fox', 'gpt-image-2')->addReference(Media::fromBinary('x', 'image/bmp')),
 		AIAccess\LogicException::class,
 		'Unsupported reference image type: image/bmp',
 	);

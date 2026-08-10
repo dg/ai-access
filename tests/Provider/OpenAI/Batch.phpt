@@ -26,7 +26,7 @@ test('addChat adds chat with correct model and ID', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$batch = new Batch($clientMock);
 
-	$chat = $batch->addChat($modelName, $customId);
+	$chat = $batch->addChat($customId, $modelName);
 
 	Assert::type(Chat::class, $chat);
 });
@@ -40,11 +40,11 @@ test('addChat throws exception for duplicate IDs', function () {
 	$batch = new Batch($clientMock);
 
 	// Add first chat with this ID
-	$batch->addChat($modelName, $customId);
+	$batch->addChat($customId, $modelName);
 
 	// Try to add second chat with same ID, should throw exception
 	Assert::exception(
-		fn() => $batch->addChat($modelName, $customId),
+		fn() => $batch->addChat($customId, $modelName),
 		LogicException::class,
 		"Request with custom ID '{$customId}' already exists in this batch.",
 	);
@@ -93,12 +93,12 @@ test('submit creates content file and submits batch request', function () {
 
 	// Set up the first chat
 	$batch = new Batch($clientMock);
-	$chat1 = $batch->addChat($modelName, $customId1);
+	$chat1 = $batch->addChat($customId1, $modelName);
 	$chat1->setSystemInstruction($systemInstruction);
 	$chat1->addMessage($userMessage1, Role::User);
 
 	// Set up the second chat
-	$chat2 = $batch->addChat($modelName, $customId2);
+	$chat2 = $batch->addChat($customId2, $modelName);
 	$chat2->addMessage($userMessage2, Role::User);
 
 	// Set metadata
@@ -119,10 +119,10 @@ test('submit creates content file and submits batch request', function () {
 
 test('one input file is one model', function () {
 	$batch = new Batch(Mockery::mock(Client::class));
-	$batch->addChat('gpt-5.6-luna', 'a');
+	$batch->addChat('a', 'gpt-5.6-luna');
 
 	Assert::exception(
-		fn() => $batch->addChat('gpt-5.1', 'b'),
+		fn() => $batch->addChat('b', 'gpt-5.1'),
 		LogicException::class,
 		"A batch runs on a single model, got 'gpt-5.6-luna' and 'gpt-5.1'.",
 	);

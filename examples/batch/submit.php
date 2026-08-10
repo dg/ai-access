@@ -25,7 +25,7 @@ $questions = [
 ];
 
 foreach ($questions as $customId => $question) {
-	$chat = $batch->addChat($model, $customId);
+	$chat = $batch->addChat($customId, $model);
 	$chat->setSystemInstruction('Answer with the city name only.');
 	$chat->addMessage($question, Role::User);
 }

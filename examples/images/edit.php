@@ -23,8 +23,8 @@ $references = array_map(AIAccess\Media::fromFile(...), $paths);
 // the shared signature is all three providers have in common; OpenAI adds size,
 // quality and background as named arguments of its own
 $image = $client->generateImage(
-	imageModel($client),
 	'Keep the composition and palette, but make it a winter scene.',
+	imageModel($client),
 	references: $references,
 );
 
