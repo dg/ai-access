@@ -24,7 +24,7 @@ final class Chat extends BaseChat
 		private readonly Client $client,
 		string $model,
 	) {
-		parent::__construct($model);
+		$this->setModel($model);
 	}
 
 

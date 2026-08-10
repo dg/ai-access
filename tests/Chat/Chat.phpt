@@ -41,6 +41,12 @@ class TestChat extends Chat
 	private ?string $lastErrorMessage = null;
 
 
+	public function __construct(string $model = 'test-model')
+	{
+		$this->setModel($model);
+	}
+
+
 	public function setMockedResponse(Response $response): self
 	{
 		$this->mockedResponse = $response;

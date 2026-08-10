@@ -17,6 +17,8 @@ use function array_key_exists, array_reverse, array_slice, count, is_array, is_b
  */
 abstract class Chat
 {
+	protected string $model;
+
 	/** @var list<Message> */
 	protected array $messages = [];
 	protected ?string $systemInstruction = null;
@@ -296,6 +298,17 @@ abstract class Chat
 	public function getMessages(): array
 	{
 		return $this->messages;
+	}
+
+
+	/**
+	 * Switches the model for the following requests. Only models of one provider are
+	 * interchangeable: parts with a provider payload replay to their issuer alone.
+	 */
+	public function setModel(string $model): static
+	{
+		$this->model = $model;
+		return $this;
 	}
 
 

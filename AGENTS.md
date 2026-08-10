@@ -77,6 +77,9 @@ Transport is composition, not one of those interfaces: every `Client` takes an
 - System instructions via `setSystemInstruction()`
 - Common `sendMessage()` flow with error recovery and the automatic tool loop
 - Tool registration via `addTool()`, `setToolChoice()`, `setToolLoop()`
+- `setModel()`, because the model is a per-request parameter rather than the chat's
+  identity: it can change mid-conversation and the history survives, but only within
+  one provider, since provider-tagged parts replay to their issuer alone
 - Abstract `generateResponse()` for provider-specific implementation
 
 A `Message` is a `Role` plus a list of `Part`s: `TextPart`, `ReasoningPart`,

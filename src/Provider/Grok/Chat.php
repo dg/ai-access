@@ -26,7 +26,7 @@ final class Chat extends OpenAICompatible\BaseChat
 		private readonly Client $client,
 		string $model,
 	) {
-		parent::__construct($model);
+		$this->setModel($model);
 	}
 
 

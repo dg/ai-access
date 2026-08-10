@@ -27,12 +27,6 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 	protected array $options = [];
 
 
-	public function __construct(
-		protected readonly string $model,
-	) {
-	}
-
-
 	protected function generateResponse(): BaseChatResponse
 	{
 		return $this->createResponse($this->callApi($this->buildPayload()), cancelled: false);
