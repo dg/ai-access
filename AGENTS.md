@@ -158,12 +158,13 @@ This makes adding a provider that speaks a **new** wire format straightforward: 
 adapt. It is not licence to copy within a format. DeepSeek, Grok and `OpenAICompatible`
 all speak `chat/completions`, so both sides of the wire live once in the `@internal`
 bases of `Provider/OpenAICompatible/`: response parsing and stream accumulation in
-`BaseChatResponse`/`StreamAccumulator`, message serialization, tool definitions and the
-stream loop in the abstract `BaseChat`. A fix made three times is a fix that will one
-day be made twice; if a new provider speaks a dialect already present here, extend the
-shared implementation rather than duplicating it. The provider `Chat` subclasses keep
-only what genuinely diverges: option names, effort mapping, media support and the
-response schema.
+`BaseChatResponse`/`StreamAccumulator`, message serialization, tool definitions, the response
+schema, the reasoning effort and the stream loop in the abstract `BaseChat`. A fix made
+three times is a fix that will one day be made twice; if a new provider speaks a dialect
+already present here, extend the shared implementation rather than duplicating it. The
+provider `Chat` subclasses keep only what genuinely diverges: option names, media
+support, and the effort or the schema where a provider spells it its own way - which
+today is DeepSeek alone.
 
 ### Single Responsibility
 - `Client` - API communication, service factory, HTTP handling

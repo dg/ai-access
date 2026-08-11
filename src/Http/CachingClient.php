@@ -7,7 +7,7 @@
 
 namespace AIAccess\Http;
 
-use AIAccess\LogicException;
+use AIAccess\IOException;
 
 
 /**
@@ -23,7 +23,7 @@ final class CachingClient implements Client
 		private readonly int $ttl = 86400,
 	) {
 		if (!is_dir($directory) && !@mkdir($directory, recursive: true) && !is_dir($directory)) {
-			throw new LogicException("Cannot create cache directory '$directory'.");
+			throw new IOException("Cannot create cache directory '$directory'.");
 		}
 	}
 

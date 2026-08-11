@@ -46,7 +46,7 @@ test('addChat throws exception for duplicate IDs', function () {
 	Assert::exception(
 		fn() => $batch->addChat($customId, $modelName),
 		LogicException::class,
-		"Chat with custom ID '{$customId}' already exists in this batch.",
+		"Request with custom ID '{$customId}' already exists in this batch.",
 	);
 });
 
@@ -58,7 +58,7 @@ test('submit throws exception for empty batch', function () {
 	Assert::exception(
 		fn() => $batch->submit(),
 		LogicException::class,
-		'Cannot submit batch job: No chat requests added.',
+		'Cannot submit batch job: No requests added.',
 	);
 });
 

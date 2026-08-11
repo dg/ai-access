@@ -28,7 +28,7 @@ final class Batch implements AIAccess\Batch\Batch
 	public function addChat(string $customId, string $model): Chat
 	{
 		if (isset($this->chats[$customId])) {
-			throw new AIAccess\LogicException("Chat with custom ID '{$customId}' already exists in this batch.");
+			throw new AIAccess\LogicException("Request with custom ID '{$customId}' already exists in this batch.");
 		}
 		return $this->chats[$customId] = new Chat($this->client, $model);
 	}
@@ -37,7 +37,7 @@ final class Batch implements AIAccess\Batch\Batch
 	public function submit(): BatchResponse
 	{
 		if (!$this->chats) {
-			throw new AIAccess\LogicException('Cannot submit batch job: No chat requests added.');
+			throw new AIAccess\LogicException('Cannot submit batch job: No requests added.');
 		}
 
 		$requests = [];

@@ -33,7 +33,8 @@ final class Chat extends OpenAICompatible\BaseChat
 	 * @param  ?float  $temperature  Controls randomness (0.0-2.0). Ignored while thinking is enabled, which is the default.
 	 * @param  ?float  $topP  Nucleus sampling parameter (0.0-1.0). Ignored while thinking is enabled.
 	 * @param  string|string[]|null  $stopSequences  Sequences where the API will stop generating.
-	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
+	 * @param  ?mixed[]  $responseFormat  Specify output format. JSON mode is ['type' => 'json_object']
+	 *         and demands the word "json" somewhere in the conversation, or the API answers 400.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
@@ -54,6 +55,17 @@ final class Chat extends OpenAICompatible\BaseChat
 			fn($value) => $value !== null,
 		));
 		return $this;
+	}
+
+
+	/**
+	 * Always throws: measured, a json_schema format answers "This response_format type is
+	 * unavailable now", and asking silently would return prose where the caller expects data.
+	 * @param  mixed[]  $schema
+	 */
+	public function setResponseSchema(array $schema): static
+	{
+		throw new AIAccess\LogicException("DeepSeek has no JSON schema; use setOptions(responseFormat: ['type' => 'json_object']) for its JSON mode.");
 	}
 
 

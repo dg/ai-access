@@ -16,10 +16,11 @@ final class Media implements Chat\Part
 	private ?string $base64 = null;
 
 
+	/** @param  ?mixed[]  $rawResponse */
 	public function __construct(
 		private readonly string $data,
 		private readonly string $mimeType,
-		private readonly mixed $rawResponse = null,
+		private readonly ?array $rawResponse = null,
 		private readonly ?string $fileName = null,
 	) {
 	}
@@ -85,7 +86,8 @@ final class Media implements Chat\Part
 	}
 
 
-	public function getRawResponse(): mixed
+	/** @return ?mixed[] */
+	public function getRawResponse(): ?array
 	{
 		return $this->rawResponse;
 	}

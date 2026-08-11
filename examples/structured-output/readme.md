@@ -9,9 +9,9 @@ php examples/structured-output/extraction.php claude
 ```
 
 Supported by OpenAI, Claude, Gemini and Grok. DeepSeek has a JSON mode but no
-schema enforcement, so `setResponseSchema()` does not exist there at all: your
-IDE and PHPStan tell you before you run the code, rather than the API telling
-you afterwards.
+schema enforcement, so `setResponseSchema()` throws there and points at
+`setOptions(responseFormat: ['type' => 'json_object'])` instead. That mode wants
+the word "json" somewhere in the conversation, or the API refuses the request.
 
 ## extraction.php
 

@@ -8,7 +8,6 @@
 namespace AIAccess\Provider\Grok;
 
 use AIAccess;
-use AIAccess\Chat\Effort;
 use AIAccess\Provider\OpenAICompatible;
 use function array_filter, array_merge;
 
@@ -18,10 +17,6 @@ use function array_filter, array_merge;
  */
 final class Chat extends OpenAICompatible\BaseChat
 {
-	/** @var mixed[]|null */
-	private ?array $responseSchema = null;
-
-
 	public function __construct(
 		private readonly Client $client,
 		string $model,
@@ -70,17 +65,6 @@ final class Chat extends OpenAICompatible\BaseChat
 	}
 
 
-	/**
-	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
-	 * @param  mixed[]  $schema
-	 */
-	public function setResponseSchema(array $schema): static
-	{
-		$this->responseSchema = $schema;
-		return $this;
-	}
-
-
 	protected function callApi(array $payload): array
 	{
 		return $this->client->callApi('chat/completions', $payload);
@@ -111,25 +95,5 @@ final class Chat extends OpenAICompatible\BaseChat
 			throw new AIAccess\LogicException('Grok cannot send ' . $part->getMimeType() . ' content, only images.');
 		}
 		return parent::mediaContent($part);
-	}
-
-
-	protected function amendPayload(array &$payload): void
-	{
-		if ($this->responseSchema !== null) {
-			$payload['response_format'] = [
-				'type' => 'json_schema',
-				'json_schema' => ['name' => 'response', 'schema' => $this->responseSchema, 'strict' => true],
-			];
-		}
-
-		if ($this->effort !== null) {
-			$payload['reasoning_effort'] = match ($this->effort) {
-				Effort::None => 'none',
-				Effort::Low => 'low',
-				Effort::Medium => 'medium',
-				Effort::High, Effort::XHigh, Effort::Max => 'high',
-			};
-		}
 	}
 }

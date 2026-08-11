@@ -33,12 +33,13 @@ the design, because the providers genuinely diverge on every axis:
 | finish reason source | `stop_reason` | **`status`, then `incomplete_details`** | `finishReason` (never signals tool use) | `finish_reason` |
 
 **The one place that divergence is a lie is the `chat/completions` family.** Grok, DeepSeek
-and `OpenAICompatible` speak the same wire format down to the byte, so their response
-parsing and stream accumulation live once in the `@internal` bases of
-`Provider\OpenAICompatible\` — `StreamAccumulator` verbatim, `BaseChatResponse` as an
-abstract parser the three `final` public classes extend. That namespace names the dialect,
-not the endpoint: Grok and DeepSeek extend the bases without being OpenAI-compatible
-clients themselves. A refusal is read there as well, although only Grok sends one today: it
+and `OpenAICompatible` speak the same wire format down to the byte, so both sides of it
+live once in the `@internal` bases of `Provider\OpenAICompatible\` — `StreamAccumulator`
+verbatim, `BaseChatResponse` as an abstract parser the three `final` public classes
+extend, and on the request side message serialization, tool definitions, the response
+schema and the reasoning effort in `BaseChat`. That namespace names the dialect, not the
+endpoint: Grok and DeepSeek extend the bases without being OpenAI-compatible clients
+themselves. A refusal is read there as well, although only Grok sends one today: it
 arrives as a message field of its own instead of as a finish reason, and that is a property
 of the dialect, so an endpoint reached through `OpenAICompatible` would otherwise report a
 refusal as a blank but complete answer. Note that **OpenAI is not in this family**: it

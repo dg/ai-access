@@ -8,6 +8,7 @@
 namespace AIAccess\Provider\OpenAICompatible;
 
 use AIAccess;
+use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use AIAccess\Http\SseStream;
 use function array_filter, is_array, is_string;
@@ -15,9 +16,9 @@ use function array_filter, is_array, is_string;
 
 /**
  * Shared request side of the chat/completions dialect, which several providers speak
- * verbatim: message serialization, tool definitions and the stream loop live here once.
- * What genuinely differs - option names, effort mapping, the response subclass - stays
- * in the subclasses.
+ * verbatim: message serialization, tool definitions, the response schema and the stream
+ * loop live here once. What genuinely differs - option names, the response subclass, and
+ * a dialect spelling the effort or the schema its own way - stays in the subclasses.
  *
  * @internal
  */
@@ -25,6 +26,23 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 {
 	/** @var mixed[] */
 	protected array $options = [];
+
+
+	/**
+	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
+	 * An endpoint without structured output overrides with a throw.
+	 * @param  mixed[]  $schema
+	 */
+	public function setResponseSchema(array $schema): static
+	{
+		// the same option setOptions(responseFormat:) writes, so the later call wins
+		// instead of one silently overwriting the other
+		$this->options['response_format'] = [
+			'type' => 'json_schema',
+			'json_schema' => ['name' => 'response', 'schema' => $schema, 'strict' => true],
+		];
+		return $this;
+	}
 
 
 	protected function generateResponse(): BaseChatResponse
@@ -66,14 +84,6 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 	 * The BaseChatResponse::Provider tag whose raw parts this chat replays verbatim.
 	 */
 	abstract protected function provider(): string;
-
-
-	/**
-	 * Finishes the payload with what the dialects spell differently: the response schema
-	 * and the reasoning effort.
-	 * @param  mixed[]  $payload
-	 */
-	abstract protected function amendPayload(array &$payload): void;
 
 
 	/** @return mixed[] */
@@ -203,5 +213,23 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 			throw new AIAccess\LogicException('This endpoint cannot send ' . $part->getMimeType() . ' content, only images.');
 		}
 		return ['type' => 'image_url', 'image_url' => ['url' => 'data:' . $part->getMimeType() . ';base64,' . $part->getBase64()]];
+	}
+
+
+	/**
+	 * Finishes the payload with what the dialects spell differently; a provider naming the
+	 * reasoning effort otherwise overrides this.
+	 * @param  mixed[]  $payload
+	 */
+	protected function amendPayload(array &$payload): void
+	{
+		if ($this->effort !== null) {
+			$payload['reasoning_effort'] = match ($this->effort) {
+				Effort::None => 'none',
+				Effort::Low => 'low',
+				Effort::Medium => 'medium',
+				Effort::High, Effort::XHigh, Effort::Max => 'high',
+			};
+		}
 	}
 }

@@ -445,9 +445,12 @@ echo $data['name'];
 The four providers that support this want the schema in four different shapes,
 one of them nested two levels deeper than the rest. You write it once.
 
-DeepSeek has no schema enforcement, so it simply has no `setResponseSchema()`
-method: your IDE and PHPStan say so before you run the code, instead of the API
-saying so afterwards. That is the honest-abstraction principle in practice.
+DeepSeek has no schema enforcement, so `setResponseSchema()` throws there instead
+of quietly sending something the endpoint answers with "This response_format type
+is unavailable now". What it has is a JSON mode,
+`setOptions(responseFormat: ['type' => 'json_object'])`, which guarantees valid
+JSON but not its shape, and which insists the word "json" appears somewhere in the
+conversation. Saying so out loud is the honest-abstraction principle in practice.
 
  <!---->
 

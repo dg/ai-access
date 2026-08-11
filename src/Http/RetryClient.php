@@ -30,7 +30,7 @@ final class RetryClient implements Client
 		private readonly int $maxAttempts = 3,
 		private readonly float $initialDelay = 1.0,
 		private readonly float $maxDelay = 30.0,
-		?callable $sleep = null,
+		?\Closure $sleep = null,
 	) {
 		$this->sleep = $sleep ?? static fn(float $seconds) => usleep((int) ($seconds * 1_000_000));
 	}
