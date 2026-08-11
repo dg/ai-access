@@ -9,12 +9,12 @@ use Tests\Support\FakeHttpClient;
 require __DIR__ . '/../../bootstrap.php';
 
 
-test('Client createBatch returns Batch instance', function () {
-	$clientMock = Mockery::mock(Client::class)->makePartial();
-
-	$batch = $clientMock->createBatch();
+test('createBatch hands the default models over to the batch', function () {
+	$batch = (new Client('key', chatModel: 'model-from-the-client'))->createBatch();
 
 	Assert::type(Batch::class, $batch);
+	// the batch asks for no model of its own, because the client already carries one
+	Assert::type(AIAccess\Provider\Claude\Chat::class, $batch->addChat('id'));
 });
 
 

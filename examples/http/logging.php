@@ -27,4 +27,4 @@ $client = createClient(http: new Http\ObservableClient(
 	},
 ));
 
-echo "\n", $client->createChat(chatModel($client))->sendMessage('Say hello.')->getText(), "\n";
+echo "\n", $client->createChat()->sendMessage('Say hello.')->getText(), "\n";

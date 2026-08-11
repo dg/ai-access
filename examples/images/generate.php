@@ -13,10 +13,7 @@ require __DIR__ . '/../bootstrap.php';
 $client = createClient(AIAccess\Image\Service::class);
 assert($client instanceof AIAccess\Image\Service);
 
-$image = $client->generateImage(
-	'A lighthouse made of stacked books, storm clouds behind it, painterly style.',
-	imageModel($client),
-);
+$image = $client->generateImage('A lighthouse made of stacked books, storm clouds behind it, painterly style.');
 
 // the two providers return different formats, so the mime type decides the name
 $extension = explode('/', $image->getMimeType())[1];

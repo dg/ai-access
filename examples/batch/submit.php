@@ -14,8 +14,6 @@ use AIAccess\Chat\Role;
 
 $client = createClient(AIAccess\Batch\Service::class);
 assert($client instanceof AIAccess\Batch\Service);
-$model = chatModel($client);
-
 $batch = $client->createBatch();
 
 $questions = [
@@ -25,7 +23,7 @@ $questions = [
 ];
 
 foreach ($questions as $customId => $question) {
-	$chat = $batch->addChat($customId, $model);
+	$chat = $batch->addChat($customId);
 	$chat->setSystemInstruction('Answer with the city name only.');
 	$chat->addMessage($question, Role::User);
 }

@@ -20,7 +20,7 @@ interface Batch
 	/**
 	 * Creates a new chat request to be included in the batch.
 	 */
-	function addChat(string $customId, string $model): Chat;
+	function addChat(string $customId, ?string $model = null): Chat;
 
 	/**
 	 * Submits all added requests as a new batch job.

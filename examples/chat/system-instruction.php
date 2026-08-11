@@ -11,7 +11,7 @@
 require __DIR__ . '/../bootstrap.php';
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 $chat->setSystemInstruction('You are a ship captain from the 18th century. Answer in one short sentence.');
 

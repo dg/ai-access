@@ -31,16 +31,42 @@ function loadEnv(string $file): void
  */
 function createClient(?string $capability = null, ?AIAccess\Http\Client $http = null): AIAccess\Chat\Service
 {
+	// each provider with the models the examples run on; the client carries them from here on
 	$providers = [
-		'openai' => [AIAccess\Provider\OpenAI\Client::class, 'OPENAI_API_KEY'],
-		'claude' => [AIAccess\Provider\Claude\Client::class, 'ANTHROPIC_API_KEY'],
-		'gemini' => [AIAccess\Provider\Gemini\Client::class, 'GEMINI_API_KEY'],
-		'deepseek' => [AIAccess\Provider\DeepSeek\Client::class, 'DEEPSEEK_API_KEY'],
-		'grok' => [AIAccess\Provider\Grok\Client::class, 'XAI_API_KEY'],
+		'openai' => [
+			AIAccess\Provider\OpenAI\Client::class,
+			'OPENAI_API_KEY',
+			['chatModel' => 'gpt-5.6-luna', 'imageModel' => 'gpt-image-2', 'embeddingModel' => 'text-embedding-3-small'],
+			fn(string $key, AIAccess\Http\Client $http, array $m) => new AIAccess\Provider\OpenAI\Client($key, $http, $m['chatModel'], $m['imageModel'], $m['embeddingModel']),
+		],
+		'claude' => [
+			AIAccess\Provider\Claude\Client::class,
+			'ANTHROPIC_API_KEY',
+			['chatModel' => 'claude-sonnet-5'],
+			fn(string $key, AIAccess\Http\Client $http, array $m) => new AIAccess\Provider\Claude\Client($key, $http, $m['chatModel']),
+		],
+		'gemini' => [
+			AIAccess\Provider\Gemini\Client::class,
+			'GEMINI_API_KEY',
+			['chatModel' => 'gemini-3.5-flash-lite', 'imageModel' => 'gemini-3.1-flash-image', 'embeddingModel' => 'gemini-embedding-2'],
+			fn(string $key, AIAccess\Http\Client $http, array $m) => new AIAccess\Provider\Gemini\Client($key, $http, $m['chatModel'], $m['imageModel'], $m['embeddingModel']),
+		],
+		'deepseek' => [
+			AIAccess\Provider\DeepSeek\Client::class,
+			'DEEPSEEK_API_KEY',
+			['chatModel' => 'deepseek-v4-flash'],
+			fn(string $key, AIAccess\Http\Client $http, array $m) => new AIAccess\Provider\DeepSeek\Client($key, $http, $m['chatModel']),
+		],
+		'grok' => [
+			AIAccess\Provider\Grok\Client::class,
+			'XAI_API_KEY',
+			['chatModel' => 'grok-4.3', 'imageModel' => 'grok-imagine-image'],
+			fn(string $key, AIAccess\Http\Client $http, array $m) => new AIAccess\Provider\Grok\Client($key, $http, $m['chatModel'], $m['imageModel']),
+		],
 	];
 
 	$name = $GLOBALS['argv'][1] ?? getenv('AI_PROVIDER') ?: 'openai';
-	[$class, $envName] = $providers[$name]
+	[$class, $envName, $models, $factory] = $providers[$name]
 		?? fail("Unknown provider '$name'. Use one of: " . implode(', ', array_keys($providers)));
 
 	if ($capability !== null && !is_subclass_of($class, $capability)) {
@@ -53,42 +79,23 @@ function createClient(?string $capability = null, ?AIAccess\Http\Client $http = 
 		fail("Missing $envName. Copy examples/.env.example to examples/.env and fill in your keys.");
 	}
 
+	if ($override = getenv('AI_MODEL')) {
+		$models['chatModel'] = $override;
+	}
+
+	$GLOBALS['aiModels'] = $models;
 	echo "[$name]\n";
-	return new $class($key, $http ?? new AIAccess\Http\CurlClient);
+	return $factory($key, $http ?? new AIAccess\Http\CurlClient, $models);
 }
 
 
-function chatModel(object $client): string
+/**
+ * The model the current provider was configured with, for the rare example that needs the
+ * name rather than the answer. Everything else lets the client fill it in.
+ */
+function configuredModel(string $which = 'chatModel'): string
 {
-	$models = [
-		AIAccess\Provider\OpenAI\Client::class => 'gpt-5.6-luna',
-		AIAccess\Provider\Claude\Client::class => 'claude-sonnet-5',
-		AIAccess\Provider\Gemini\Client::class => 'gemini-3.5-flash-lite',
-		AIAccess\Provider\DeepSeek\Client::class => 'deepseek-v4-flash',
-		AIAccess\Provider\Grok\Client::class => 'grok-4.3',
-	];
-	return getenv('AI_MODEL') ?: ($models[$client::class] ?? fail('No chat model configured for ' . $client::class));
-}
-
-
-function embeddingModel(object $client): string
-{
-	$models = [
-		AIAccess\Provider\OpenAI\Client::class => 'text-embedding-3-small',
-		AIAccess\Provider\Gemini\Client::class => 'gemini-embedding-2',
-	];
-	return $models[$client::class] ?? fail('No embedding model configured for ' . $client::class);
-}
-
-
-function imageModel(object $client): string
-{
-	$models = [
-		AIAccess\Provider\OpenAI\Client::class => 'gpt-image-2',
-		AIAccess\Provider\Gemini\Client::class => 'gemini-3.1-flash-image',
-		AIAccess\Provider\Grok\Client::class => 'grok-imagine-image',
-	];
-	return $models[$client::class] ?? fail('No image model configured for ' . $client::class);
+	return $GLOBALS['aiModels'][$which] ?? fail("No $which configured for this provider.");
 }
 
 

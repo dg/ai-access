@@ -11,7 +11,7 @@
 require __DIR__ . '/../bootstrap.php';
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 $response = $chat->sendMessage('Write a one-sentence haiku about PHP.');
 

@@ -27,13 +27,17 @@ final class Batch implements AIAccess\Batch\Batch
 
 	public function __construct(
 		private readonly Client $client,
+		private readonly ?string $chatModel = null,
+		private readonly ?string $imageModel = null,
 	) {
 	}
 
 
-	public function addChat(string $customId, string $model): Chat
+	public function addChat(string $customId, ?string $model = null): Chat
 	{
-		$this->checkNew($model, $customId);
+		$this->checkNew($model ??= $this->chatModel ?? throw new AIAccess\LogicException(
+			'No chat model given and the client has no default one.',
+		), $customId);
 		return $this->requests[$customId] = new Chat($this->client, $model);
 	}
 
@@ -42,9 +46,11 @@ final class Batch implements AIAccess\Batch\Batch
 	 * Adds a request for an image to be generated - not an image, which is what the batch
 	 * gets back. Pictures and chats cannot travel in one job, see submit().
 	 */
-	public function addImageRequest(string $customId, string $prompt, string $model): ImageRequest
+	public function addImageRequest(string $customId, string $prompt, ?string $model = null): ImageRequest
 	{
-		$this->checkNew($model, $customId);
+		$this->checkNew($model ??= $this->imageModel ?? throw new AIAccess\LogicException(
+			'No image model given and the client has no default one.',
+		), $customId);
 		return $this->requests[$customId] = new ImageRequest($this->client, $prompt, $model);
 	}
 

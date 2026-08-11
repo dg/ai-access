@@ -17,6 +17,17 @@ the concrete class, not in a new interface**: `addImageRequest()` is on `OpenAI\
 have to declare that it can. The same door serves Claude's own extra, per-request
 models in one batch, which the other two forbid.
 
+**A model is a request parameter, never an identity, and the default lives on the
+client.** Every entry point takes it last and optionally; the `Client` holds
+`chatModel`/`imageModel`/`embeddingModel` for exactly the capabilities it implements,
+and resolves `$model ??= $this->xModel ?? throw` inline at each one. Two consequences
+are easy to trip over. `Batch` is *handed* the defaults by `createBatch()` rather than
+reading them back from the client, so a batch built by hand (`new Batch($client)`, as
+the tests do) has none and must be told the model — this is deliberate, since the
+alternative was a public `resolve*Model()` on every client. And `Chat::setModel()`
+changes the model for later turns while the history stands, which is sound only within
+one provider, because provider-tagged parts replay to their issuer alone.
+
 `Client`, `Batch` and `BatchResponse` are interfaces with a **fully independent `final`
 implementation per provider**: each re-duplicates `callApi()` and its error mapping from
 scratch. The duplication is intentional and a "DRY it into a base class" refactor fights

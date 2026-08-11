@@ -15,15 +15,15 @@ AI Access comes from David Grudl, the author of [Nette](https://nette.org), [Lat
 The ambition is simple to state and hard to deliver: **to be the best-designed AI library in the PHP ecosystem.** Judge for yourself:
 
 ```php
-$client = new AIAccess\Provider\OpenAI\Client($apiKey);
+$client = new AIAccess\Provider\OpenAI\Client($apiKey, chatModel: 'gpt-5.6-luna');
 
-$response = $client->createChat('gpt-5.6-luna')
+$response = $client->createChat()
 	->sendMessage('Write a haiku about PHP.');
 
 echo $response->getText();
 ```
 
-Switching to Claude, Gemini, DeepSeek or Grok? Change the first line. Everything else stays.
+Switching to Claude, Gemini, DeepSeek or Grok? Change the first line. Everything else stays: the model name travels with the key, where it belongs, because it is the one string that is wholly the provider's.
 
  <!---->
 
@@ -83,18 +83,18 @@ Create a client for your chosen provider. This is the only provider-specific lin
 
 ```php
 // pick one:
-$client = new AIAccess\Provider\OpenAI\Client($apiKey);
-$client = new AIAccess\Provider\Claude\Client($apiKey);
-$client = new AIAccess\Provider\Gemini\Client($apiKey);
-$client = new AIAccess\Provider\DeepSeek\Client($apiKey);
-$client = new AIAccess\Provider\Grok\Client($apiKey);
+$client = new AIAccess\Provider\OpenAI\Client($apiKey, chatModel: 'gpt-5.6-luna');
+$client = new AIAccess\Provider\Claude\Client($apiKey, chatModel: 'claude-sonnet-5');
+$client = new AIAccess\Provider\Gemini\Client($apiKey, chatModel: 'gemini-3.5-flash-lite');
+$client = new AIAccess\Provider\DeepSeek\Client($apiKey, chatModel: 'deepseek-v4-flash');
+$client = new AIAccess\Provider\Grok\Client($apiKey, chatModel: 'grok-4.3');
 ```
 
 Get your API keys here: [OpenAI](https://platform.openai.com/api-keys) · [Anthropic](https://console.anthropic.com/settings/keys) · [Google](https://aistudio.google.com/app/apikey) · [DeepSeek](https://platform.deepseek.com/api_keys) · [xAI](https://console.x.ai/team/default/api-keys)
 
 In a real application you would register the client in a [DI container](https://doc.nette.org/en/dependency-injection); the examples below assume `$client` exists.
 
-Pick a model. Model names are ordinary strings, so new models work the day the provider releases them, with no library update needed. A few current, cost-effective choices (August 2026):
+The model travels with the key, so every call below can leave it out; passing one to a call still overrides the default. Clients that also draw or embed take `imageModel` and `embeddingModel` the same way. Model names are ordinary strings, so new models work the day the provider releases them, with no library update needed. A few current, cost-effective choices (August 2026):
 
 | Provider | Chat model              | Embedding model          |
 |----------|-------------------------|--------------------------|
@@ -112,7 +112,7 @@ Chat
 
 
 ```php
-$chat = $client->createChat('gpt-5.6-luna');
+$chat = $client->createChat();
 $response = $chat->sendMessage('Write a short haiku about PHP.');
 
 echo $response->getText();

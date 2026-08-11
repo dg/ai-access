@@ -23,15 +23,24 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	private ?string $organizationId = null;
 
 
+	/**
+	 * @param  ?string  $chatModel  used by createChat() and the batch when none is given there
+	 * @param  ?string  $imageModel  the same for generateImage() and image batch requests
+	 * @param  ?string  $embeddingModel  the same for calculateEmbeddings()
+	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		private readonly ?string $chatModel = null,
+		private readonly ?string $imageModel = null,
+		private readonly ?string $embeddingModel = null,
 	) {
 	}
 
 
-	public function createChat(string $model): Chat
+	public function createChat(?string $model = null): Chat
 	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
 		return new Chat($this, $model);
 	}
 
@@ -51,7 +60,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 	public function createBatch(): Batch
 	{
-		return new Batch($this);
+		return new Batch($this, $this->chatModel, $this->imageModel);
 	}
 
 
@@ -143,8 +152,9 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 * @param  ?int  $dimensions  Size of the resulting vectors. Only supported by text-embedding-3 models. Maximum 2048 inputs per request.
 	 * @return list<Vector>
 	 */
-	public function calculateEmbeddings(array $input, string $model, ?int $dimensions = null): array
+	public function calculateEmbeddings(array $input, ?string $model = null, ?int $dimensions = null): array
 	{
+		$model ??= $this->embeddingModel ?? throw new AIAccess\LogicException('No embedding model given and the client has no default one.');
 		if (!$input) {
 			throw new AIAccess\LogicException('Input cannot be empty.');
 		}
@@ -196,7 +206,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 */
 	public function generateImage(
 		string $prompt,
-		string $model,
+		?string $model = null,
 		array $references = [],
 		?string $size = null,
 		?string $quality = null,
@@ -206,6 +216,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 		?string $moderation = null,
 	): AIAccess\Media
 	{
+		$model ??= $this->imageModel ?? throw new AIAccess\LogicException('No image model given and the client has no default one.');
 		$request = (new ImageRequest($this, $prompt, $model))->setOptions(
 			size: $size,
 			quality: $quality,

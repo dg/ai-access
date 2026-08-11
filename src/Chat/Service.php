@@ -14,7 +14,8 @@ namespace AIAccess\Chat;
 interface Service
 {
 	/**
-	 * Creates a new chat session for the specified LLM model.
+	 * Creates a new chat session. Without a model the client's own default is used,
+	 * and a client configured with none raises a LogicException.
 	 */
-	function createChat(string $model): Chat;
+	function createChat(?string $model = null): Chat;
 }

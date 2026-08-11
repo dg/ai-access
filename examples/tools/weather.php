@@ -13,7 +13,7 @@ require __DIR__ . '/../bootstrap.php';
 use AIAccess\Chat\Tool;
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 $chat->addTool(new Tool(
 	name: 'get_weather',

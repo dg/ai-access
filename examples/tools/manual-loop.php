@@ -13,7 +13,7 @@ require __DIR__ . '/../bootstrap.php';
 use AIAccess\Chat\Tool;
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 // no handler, so the library hands the calls to you instead of running them
 $chat->addTool(new Tool(

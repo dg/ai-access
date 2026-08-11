@@ -26,6 +26,6 @@ echo "\n", count($models), " models offered\n";
 
 // the model the examples default to should be among them; if it is not,
 // it was retired and everything else here is about to break
-$default = chatModel($client);
+$default = configuredModel();
 echo 'default model ', $default, ': ',
 	in_array($default, array_column($models, 'id'), strict: true) ? "available\n" : "NOT OFFERED\n";

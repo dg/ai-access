@@ -9,6 +9,7 @@ namespace AIAccess\Provider\Claude;
 
 use AIAccess;
 use AIAccess\Http;
+use function is_array;
 
 
 /**
@@ -20,15 +21,20 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 	private string $apiVersion = '2023-06-01';
 
 
+	/**
+	 * @param  ?string  $chatModel  used by createChat() and the batch when none is given there
+	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		private readonly ?string $chatModel = null,
 	) {
 	}
 
 
-	public function createChat(string $model): Chat
+	public function createChat(?string $model = null): Chat
 	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
 		return new Chat($this, $model);
 	}
 
@@ -56,7 +62,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 
 	public function createBatch(): Batch
 	{
-		return new Batch($this);
+		return new Batch($this, $this->chatModel);
 	}
 
 

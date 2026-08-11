@@ -26,7 +26,6 @@ $references = array_map(AIAccess\Media::fromFile(...), $paths);
 // size, quality and background the same way
 $image = $client->generateImage(
 	'Keep the composition and palette, but make it a winter scene.',
-	imageModel($client),
 	references: $references,
 );
 

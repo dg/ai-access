@@ -20,5 +20,5 @@ $client = createClient(http: new Http\RetryClient(
 	maxAttempts: 5,
 ));
 
-echo $client->createChat(chatModel($client))->sendMessage('Say hello.')->getText(), "\n";
+echo $client->createChat()->sendMessage('Say hello.')->getText(), "\n";
 echo "HTTP requests made: $attempts\n";

@@ -21,15 +21,24 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/';
 
 
+	/**
+	 * @param  ?string  $chatModel  used by createChat() and the batch when none is given there
+	 * @param  ?string  $imageModel  the same for generateImage() and image batch requests
+	 * @param  ?string  $embeddingModel  the same for calculateEmbeddings()
+	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		private readonly ?string $chatModel = null,
+		private readonly ?string $imageModel = null,
+		private readonly ?string $embeddingModel = null,
 	) {
 	}
 
 
-	public function createChat(string $model): Chat
+	public function createChat(?string $model = null): Chat
 	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
 		return new Chat($this, $model);
 	}
 
@@ -57,7 +66,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 	public function createBatch(): Batch
 	{
-		return new Batch($this);
+		return new Batch($this, $this->chatModel, $this->imageModel);
 	}
 
 
@@ -141,12 +150,13 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 */
 	public function generateImage(
 		string $prompt,
-		string $model,
+		?string $model = null,
 		array $references = [],
 		?string $aspectRatio = null,
 		?string $imageSize = null,
 	): AIAccess\Media
 	{
+		$model ??= $this->imageModel ?? throw new AIAccess\LogicException('No image model given and the client has no default one.');
 		$request = (new ImageRequest($this, $prompt, $model))
 			->setOptions(aspectRatio: $aspectRatio, imageSize: $imageSize);
 		foreach ($references as $reference) {
@@ -166,12 +176,13 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 */
 	public function calculateEmbeddings(
 		array $input,
-		string $model,
+		?string $model = null,
 		?string $taskType = null,
 		?string $title = null,
 		?int $outputDimensionality = null,
 	): array
 	{
+		$model ??= $this->embeddingModel ?? throw new AIAccess\LogicException('No embedding model given and the client has no default one.');
 		if (!$input) {
 			throw new AIAccess\LogicException('Input cannot be empty.');
 		}

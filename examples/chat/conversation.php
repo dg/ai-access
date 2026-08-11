@@ -13,7 +13,7 @@ require __DIR__ . '/../bootstrap.php';
 use AIAccess\Chat\Role;
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 echo "> What is the capital of France?\n";
 echo $chat->sendMessage('What is the capital of France?')->getText(), "\n\n";
@@ -28,7 +28,7 @@ foreach ($chat->getMessages() as $message) {
 }
 
 // history can also be built by hand and continued with sendMessage() without arguments
-$restored = $client->createChat(chatModel($client));
+$restored = $client->createChat();
 $restored->addMessage('My favourite number is 42.', Role::User);
 $restored->addMessage('Noted, 42 it is.', Role::Model);
 $restored->addMessage('What is my favourite number?', Role::User);

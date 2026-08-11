@@ -13,7 +13,7 @@ require __DIR__ . '/../bootstrap.php';
 use AIAccess\Media;
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 $path = arg(2) ?? __DIR__ . '/sample.png';
 if (!is_file($path)) {

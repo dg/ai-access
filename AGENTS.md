@@ -70,6 +70,15 @@ Each provider `Client` implements the subset of the service interfaces it suppor
 Transport is composition, not one of those interfaces: every `Client` takes an
 `Http\Client` (default `CurlClient`) and calls it.
 
+A `Client` also carries the **default models** for the capabilities it implements, as
+constructor arguments next to the api key: `chatModel`, plus `imageModel` and
+`embeddingModel` where those interfaces are implemented. Every entry point then takes
+the model last and optionally (`createChat()`, `generateImage()`,
+`calculateEmbeddings()`, `Batch::addChat()`, `addImageRequest()`), so an application
+typed against an interface never has to name a provider-specific model. A call outranks
+the default; neither present is a `LogicException`. A `Batch` is handed the defaults
+when it is created and never asks the client for them afterwards.
+
 ### Abstract Base Class Pattern
 
 `AIAccess\Chat\Chat` is an abstract class that defines the conversation contract:
@@ -203,9 +212,9 @@ test('Description of what is being tested', function () {
 **Testing Exceptions:**
 ```php
 Assert::exception(
-    fn() => $mapper->getAsset('missing.txt'),
-    AssetNotFoundException::class,
-    "Expected error message pattern %a%",
+	fn() => $client->createChat(),
+	AIAccess\LogicException::class,
+	'No chat model given and the client has no default one.',
 );
 ```
 

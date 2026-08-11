@@ -20,15 +20,22 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 	private string $baseUrl = 'https://api.x.ai/v1/';
 
 
+	/**
+	 * @param  ?string  $chatModel  used by createChat() when none is given there
+	 * @param  ?string  $imageModel  the same for generateImage()
+	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		private readonly ?string $chatModel = null,
+		private readonly ?string $imageModel = null,
 	) {
 	}
 
 
-	public function createChat(string $model): Chat
+	public function createChat(?string $model = null): Chat
 	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
 		return new Chat($this, $model);
 	}
 
@@ -54,11 +61,12 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 	 */
 	public function generateImage(
 		string $prompt,
-		string $model,
+		?string $model = null,
 		?string $aspectRatio = null,
 		?string $resolution = null,
 	): AIAccess\Media
 	{
+		$model ??= $this->imageModel ?? throw new AIAccess\LogicException('No image model given and the client has no default one.');
 		return (new ImageRequest($this, $prompt, $model))
 			->setOptions(aspectRatio: $aspectRatio, resolution: $resolution)
 			->generate();

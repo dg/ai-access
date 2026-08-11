@@ -23,13 +23,17 @@ final class Batch implements AIAccess\Batch\Batch
 
 	public function __construct(
 		private readonly Client $client,
+		private readonly ?string $chatModel = null,
+		private readonly ?string $imageModel = null,
 	) {
 	}
 
 
-	public function addChat(string $customId, string $model): Chat
+	public function addChat(string $customId, ?string $model = null): Chat
 	{
-		$this->checkNew($model, $customId);
+		$this->checkNew($model ??= $this->chatModel ?? throw new AIAccess\LogicException(
+			'No chat model given and the client has no default one.',
+		), $customId);
 		return $this->requests[$customId] = new Chat($this->client, $model);
 	}
 
@@ -39,9 +43,11 @@ final class Batch implements AIAccess\Batch\Batch
 	 * gets back. Gemini draws through the ordinary chat endpoint, so pictures and chats can
 	 * share a job as long as they share a model.
 	 */
-	public function addImageRequest(string $customId, string $prompt, string $model): ImageRequest
+	public function addImageRequest(string $customId, string $prompt, ?string $model = null): ImageRequest
 	{
-		$this->checkNew($model, $customId);
+		$this->checkNew($model ??= $this->imageModel ?? throw new AIAccess\LogicException(
+			'No image model given and the client has no default one.',
+		), $customId);
 		return $this->requests[$customId] = new ImageRequest($this->client, $prompt, $model);
 	}
 

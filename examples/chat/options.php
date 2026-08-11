@@ -16,7 +16,7 @@ $client = createClient();
 $question = 'In one sentence: why do programmers prefer dark mode?';
 
 foreach ([Effort::Low, Effort::High] as $effort) {
-	$response = $client->createChat(chatModel($client))
+	$response = $client->createChat()
 		->setEffort($effort)
 		->sendMessage($question);
 

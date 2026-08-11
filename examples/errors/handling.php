@@ -36,7 +36,7 @@ try {
 // LogicException is not a service error, it is a bug in the calling code,
 // so it deliberately sits outside the ServiceException tree
 try {
-	$client->createChat(chatModel($client))->sendMessage();
+	$client->createChat()->sendMessage();
 
 } catch (AIAccess\LogicException $e) {
 	echo 'LogicException: ', $e->getMessage(), "\n";

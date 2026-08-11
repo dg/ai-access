@@ -11,7 +11,7 @@
 require __DIR__ . '/../bootstrap.php';
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 if (!method_exists($chat, 'setResponseSchema')) {
 	fail('This provider has no JSON schema mode. Try openai, claude, gemini or grok.');

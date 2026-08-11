@@ -21,12 +21,14 @@ final class Batch implements AIAccess\Batch\Batch
 
 	public function __construct(
 		private readonly Client $client,
+		private readonly ?string $chatModel = null,
 	) {
 	}
 
 
-	public function addChat(string $customId, string $model): Chat
+	public function addChat(string $customId, ?string $model = null): Chat
 	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
 		if (isset($this->chats[$customId])) {
 			throw new AIAccess\LogicException("Request with custom ID '{$customId}' already exists in this batch.");
 		}

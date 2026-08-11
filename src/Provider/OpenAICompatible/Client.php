@@ -26,17 +26,22 @@ final class Client implements AIAccess\Chat\Service
 	private array $extraHeaders = [];
 
 
+	/**
+	 * @param  ?string  $chatModel  used by createChat() when none is given there
+	 */
 	public function __construct(
 		private readonly string $apiKey,
 		string $baseUrl,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		private readonly ?string $chatModel = null,
 	) {
 		$this->baseUrl = rtrim($baseUrl, '/') . '/';
 	}
 
 
-	public function createChat(string $model): Chat
+	public function createChat(?string $model = null): Chat
 	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
 		return new Chat($this, $model);
 	}
 

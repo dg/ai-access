@@ -19,8 +19,6 @@ if (!$batch instanceof AIAccess\Provider\OpenAI\Batch && !$batch instanceof AIAc
 	fail('This provider does not batch images. Supported: openai, gemini.');
 }
 
-$model = imageModel($client);
-
 $prompts = [
 	'lighthouse' => 'A lighthouse made of stacked books, storm clouds behind it, painterly style.',
 	'harbour' => 'A harbour at dawn, the same painterly style.',
@@ -28,7 +26,7 @@ $prompts = [
 ];
 
 foreach ($prompts as $customId => $prompt) {
-	$batch->addImageRequest($model, $customId, $prompt);
+	$batch->addImageRequest($customId, $prompt);
 }
 
 $response = $batch->submit();

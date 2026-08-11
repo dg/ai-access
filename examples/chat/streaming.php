@@ -11,7 +11,7 @@
 require __DIR__ . '/../bootstrap.php';
 
 $client = createClient();
-$chat = $client->createChat(chatModel($client));
+$chat = $client->createChat();
 
 $stream = $chat->sendMessageStream('Explain in three sentences why PHP is still everywhere.');
 

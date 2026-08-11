@@ -21,5 +21,5 @@ interface Service
 	 * provider does, so it lives on the concrete clients that do.
 	 * @throws ServiceException
 	 */
-	function generateImage(string $prompt, string $model): Media;
+	function generateImage(string $prompt, ?string $model = null): Media;
 }
