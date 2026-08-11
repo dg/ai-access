@@ -35,7 +35,7 @@ test('ChatResponse parses standard text response', function () {
 });
 
 
-test('ChatResponse treats null finish_reason as complete', function () {
+test('a missing finish_reason is not a finished answer', function () {
 	$rawResponse = [
 		'choices' => [
 			[
@@ -49,7 +49,9 @@ test('ChatResponse treats null finish_reason as complete', function () {
 
 	$response = new ChatResponse($rawResponse);
 
-	Assert::same(FinishReason::Complete, $response->getFinishReason());
+	// the enum says so itself: Unknown covers a reason that is null or not standardised,
+	// and in a stream a missing one is the mark of an answer cut off mid-flight
+	Assert::same(FinishReason::Unknown, $response->getFinishReason());
 	Assert::null($response->getRawFinishReason());
 });
 
@@ -61,8 +63,7 @@ test('ChatResponse handles different finish reasons correctly', function () {
 		['finish_reason' => 'content_filter', 'expected' => FinishReason::ContentFiltered],
 		['finish_reason' => 'tool_calls', 'expected' => FinishReason::ToolCall],
 		['finish_reason' => 'unknown_reason', 'expected' => FinishReason::Unknown],
-		// Test missing finish_reason (defaults to Complete in Grok)
-		['no_finish_reason' => true, 'expected' => FinishReason::Complete],
+		['no_finish_reason' => true, 'expected' => FinishReason::Unknown],
 	];
 
 	foreach ($testCases as $testCase) {

@@ -238,3 +238,51 @@ test('parallel tool calls are assembled from chat/completions deltas by index', 
 	Assert::same([['x' => 1], ['y' => 'long']], array_map(fn($c) => $c->arguments, $calls));
 	Assert::same(FinishReason::ToolCall, $response->getFinishReason());
 });
+
+
+test('a tool call cut off mid-arguments is dropped, not run with what survived', function () {
+	// no content_block_stop: the arguments never finished arriving
+	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
+		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]])
+		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confi']]);
+
+	$http = (new FakeHttpClient)->queueStream([$sse]);
+	$chat = (new AIAccess\Provider\Claude\Client('key', $http))->createChat('claude-sonnet-5');
+	$chat->addTool(new Tool('wipe_database', 'destroys things', handler: fn() => 'wiped'));
+
+	$response = $chat->sendMessage('Clean up', onStream: fn() => null);
+
+	Assert::same([], $response->getToolCalls());
+	Assert::same(AIAccess\Chat\FinishReason::Unknown, $response->getFinishReason());
+});
+
+
+test('the chat/completions dialect drops a half-written call the same way', function () {
+	$chunk = fn(array $delta) => 'data: ' . json_encode(['choices' => [['index' => 0, 'delta' => $delta]]]) . "\n\n";
+	$sse = $chunk(['role' => 'assistant'])
+		. $chunk(['tool_calls' => [['index' => 0, 'id' => 'call_a', 'type' => 'function', 'function' => ['name' => 'wipe_database', 'arguments' => '']]]])
+		. $chunk(['tool_calls' => [['index' => 0, 'function' => ['arguments' => '{"confi']]]]);
+
+	$http = (new FakeHttpClient)->queueStream([$sse]);
+	$response = (new AIAccess\Provider\Grok\Client('key', $http))->createChat('m')
+		->sendMessage('Clean up', onStream: fn() => null);
+
+	Assert::same([], $response->getToolCalls());
+	// a stream that stopped without a finish_reason did not finish
+	Assert::same(AIAccess\Chat\FinishReason::Unknown, $response->getFinishReason());
+});
+
+
+test('once the stream did finish, malformed arguments stay the model to answer for', function () {
+	$chunk = fn(array $delta, ?string $finish = null) => 'data: ' . json_encode(['choices' => [['index' => 0, 'delta' => $delta, 'finish_reason' => $finish]]]) . "\n\n";
+	$sse = $chunk(['role' => 'assistant'])
+		. $chunk(['tool_calls' => [['index' => 0, 'id' => 'call_a', 'type' => 'function', 'function' => ['name' => 'lookup', 'arguments' => 'not json']]]])
+		. $chunk([], 'tool_calls');
+
+	$http = (new FakeHttpClient)->queueStream([$sse]);
+	$response = (new AIAccess\Provider\Grok\Client('key', $http))->createChat('m')
+		->sendMessage('Q', onStream: fn() => null);
+
+	// kept, so the tool loop can hand the model its own mistake back
+	Assert::count(1, $response->getToolCalls());
+});

@@ -163,7 +163,14 @@ suspends on every piece of text. Consequences worth knowing:
   would make every following request invalid; a caller running tools by hand keeps that
   responsibility, so nothing is answered behind their back. Claude's accumulator also
   drops a thinking block whose `content_block_stop` never arrived, since its truncated
-  signature would poison the replay the same way.
+  signature would poison the replay the same way, and does the same for a `tool_use`
+  block, whose arguments would otherwise reach the handler as an empty array and run the
+  tool with something the model never asked for. The `chat/completions` dialect has no
+  such closing event, so there the mark of a truncated stream is a **missing
+  `finish_reason`**, and only then are unparsable arguments treated as a fragment; once
+  the stream did finish, malformed arguments are the model's own error and travel back
+  to it through the tool loop. For the same reason a missing `finish_reason` maps to
+  `Unknown` rather than `Complete`.
 - **`cancelled` is the only state a `ChatResponse` is told rather than parses, and that
   is deliberate.** Every other thing it reports is a function of the provider's raw
   answer; "the caller stopped reading" has no representation on the wire, so it rides in

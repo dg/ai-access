@@ -22,7 +22,7 @@ final class ChatResponse extends OpenAICompatible\BaseChatResponse
 	protected function resolveFinishReason(): FinishReason
 	{
 		return match ($this->getRawFinishReason()) {
-			'stop', 'end_turn', null => FinishReason::Complete,
+			'stop', 'end_turn' => FinishReason::Complete,
 			'length' => FinishReason::TokenLimit,
 			'tool_calls' => FinishReason::ToolCall,
 			'content_filter' => FinishReason::ContentFiltered,

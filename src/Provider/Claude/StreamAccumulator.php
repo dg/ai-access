@@ -149,11 +149,12 @@ final class StreamAccumulator
 			$this->blocks[$index]['input'] = is_array($decoded) ? $decoded : [];
 		}
 
-		// a thinking block cut off before content_block_stop has a truncated signature,
-		// and replaying that in the history means a 400 for every following request
+		// a block cut off before content_block_stop is a fragment: a thinking one has a
+		// truncated signature, which means a 400 for every following request, and a tool call
+		// has arguments that never arrived, which would run the tool with whatever survived
 		foreach ($this->blocks as $index => $block) {
 			if (!isset($this->closed[$index])
-				&& in_array($block['type'] ?? null, ['thinking', 'redacted_thinking'], true)) {
+				&& in_array($block['type'] ?? null, ['thinking', 'redacted_thinking', 'tool_use'], true)) {
 				unset($this->blocks[$index]);
 			}
 		}

@@ -120,9 +120,20 @@ final class StreamAccumulator
 		if ($this->refusal !== '') {
 			$message['refusal'] = $this->refusal;
 		}
-		if ($this->toolCalls) {
-			ksort($this->toolCalls);
-			$message['tool_calls'] = array_values($this->toolCalls);
+		// no finish_reason means the stream was cut off, so arguments that do not parse are a
+		// fragment rather than a mistake the model could be told about; running the tool with
+		// what survived would call it with arguments it never asked for. Once the stream did
+		// finish, malformed arguments are the model's error and travel back to it as one.
+		$calls = $this->finishReason !== null
+			? $this->toolCalls
+			: array_filter(
+				$this->toolCalls,
+				fn(array $call) => ($json = (string) ($call['function']['arguments'] ?? '')) === '' || json_validate($json),
+			);
+
+		if ($calls) {
+			ksort($calls);
+			$message['tool_calls'] = array_values($calls);
 		}
 
 		return $this->meta + [
