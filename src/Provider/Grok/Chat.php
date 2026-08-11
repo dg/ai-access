@@ -38,7 +38,7 @@ final class Chat extends OpenAICompatible\BaseChat
 	 * @param  ?float  $topP  Nucleus sampling parameter (0.0-1.0).
 	 * @param  ?float  $frequencyPenalty  Penalizes new tokens based on frequency (-2.0 to 2.0). Not supported by reasoning models.
 	 * @param  ?float  $presencePenalty  Penalizes new tokens based on presence (-2.0 to 2.0). Not supported by reasoning models.
-	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating. Not supported by reasoning models.
+	 * @param  string|string[]|null  $stopSequences  Sequences where the API will stop generating. Not supported by reasoning models.
 	 * @param  ?int  $seed  Seed for deterministic sampling (best effort).
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
 	 */
@@ -48,7 +48,7 @@ final class Chat extends OpenAICompatible\BaseChat
 		?float $topP = null,
 		?float $frequencyPenalty = null,
 		?float $presencePenalty = null,
-		string|array|null $stop = null,
+		string|array|null $stopSequences = null,
 		?int $seed = null,
 		?array $responseFormat = null,
 	): static
@@ -60,7 +60,7 @@ final class Chat extends OpenAICompatible\BaseChat
 				'top_p' => $topP,
 				'frequency_penalty' => $frequencyPenalty,
 				'presence_penalty' => $presencePenalty,
-				'stop' => $stop,
+				'stop' => $stopSequences,
 				'seed' => $seed,
 				'response_format' => $responseFormat,
 			],

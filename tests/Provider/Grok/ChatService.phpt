@@ -30,7 +30,7 @@ test('Chat setOptions returns self for fluent interface', function () {
 		topP: 0.9,
 		frequencyPenalty: 0.5,
 		presencePenalty: 0.5,
-		stop: ['STOP'],
+		stopSequences: ['STOP'],
 		seed: 12345,
 		responseFormat: ['type' => 'json_object'],
 	);
@@ -98,7 +98,7 @@ test('Chat builds correct API payload with all options', function () {
 		topP: 0.8,
 		frequencyPenalty: 0.3,
 		presencePenalty: 0.2,
-		stop: ['STOP', 'END'],
+		stopSequences: ['STOP', 'END'],
 		seed: 12345,
 		responseFormat: ['type' => 'json_object'],
 	);

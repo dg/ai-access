@@ -268,7 +268,9 @@ Each provider's `Chat` class implements `setOptions()` with provider-specific pa
 - **maxOutputTokens**: Maximum tokens in response (same name on every provider,
   whatever the wire calls it)
 - **topP**: Nucleus sampling threshold
-- **stopSequences/stop**: Strings that halt generation
+- **stopSequences**: Strings that halt generation (same name and type wherever it
+  exists, whatever the wire calls it; a single string is accepted too; OpenAI's
+  Responses API has no such parameter)
 
 Refer to individual provider classes in `src/Provider/*/Chat.php` for complete option sets.
 

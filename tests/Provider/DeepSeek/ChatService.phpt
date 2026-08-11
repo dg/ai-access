@@ -28,7 +28,7 @@ test('Chat setOptions returns self for fluent interface', function () {
 		maxOutputTokens: 100,
 		temperature: 0.7,
 		topP: 0.9,
-		stop: ['STOP'],
+		stopSequences: ['STOP'],
 		responseFormat: ['type' => 'json_object'],
 	);
 
@@ -93,7 +93,7 @@ test('Chat builds correct API payload with all options', function () {
 		maxOutputTokens: 500,
 		temperature: 0.5,
 		topP: 0.8,
-		stop: ['STOP', 'END'],
+		stopSequences: ['STOP', 'END'],
 		responseFormat: ['type' => 'json_object'],
 	);
 	$chat->addTool(new AIAccess\Chat\Tool('get_weather', 'Weather for a city'));

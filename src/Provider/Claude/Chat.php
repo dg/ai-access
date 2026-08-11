@@ -37,14 +37,14 @@ final class Chat extends AIAccess\Chat\Chat
 	/**
 	 * Sets options specific to this Claude chat session.
 	 * @param  ?int  $maxOutputTokens  Maximum tokens to generate (max_tokens)
-	 * @param  ?string[]  $stopSequences  Sequences where the API will stop generating
+	 * @param  string|string[]|null  $stopSequences  Sequences where the API will stop generating
 	 * @param  ?float  $temperature  Controls randomness (0.0-1.0). Works on 4.6 and older only.
 	 * @param  ?int  $topK  Top-k sampling parameter. Same restriction as temperature.
 	 * @param  ?float  $topP  Nucleus sampling parameter. Same restriction as temperature.
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
-		?array $stopSequences = null,
+		string|array|null $stopSequences = null,
 		?float $temperature = null,
 		?int $topK = null,
 		?float $topP = null,
@@ -53,7 +53,7 @@ final class Chat extends AIAccess\Chat\Chat
 		$this->options = array_merge($this->options, array_filter(
 			[
 				'max_tokens' => $maxOutputTokens,
-				'stop_sequences' => $stopSequences,
+				'stop_sequences' => $stopSequences === null ? null : (array) $stopSequences,
 				'temperature' => $temperature,
 				'top_k' => $topK,
 				'top_p' => $topP,

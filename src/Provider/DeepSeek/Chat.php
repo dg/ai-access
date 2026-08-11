@@ -32,14 +32,14 @@ final class Chat extends OpenAICompatible\BaseChat
 	 * @param  ?int  $maxOutputTokens  Maximum tokens to generate (max_tokens).
 	 * @param  ?float  $temperature  Controls randomness (0.0-2.0). Ignored while thinking is enabled, which is the default.
 	 * @param  ?float  $topP  Nucleus sampling parameter (0.0-1.0). Ignored while thinking is enabled.
-	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating.
+	 * @param  string|string[]|null  $stopSequences  Sequences where the API will stop generating.
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
 	 */
 	public function setOptions(
 		?int $maxOutputTokens = null,
 		?float $temperature = null,
 		?float $topP = null,
-		string|array|null $stop = null,
+		string|array|null $stopSequences = null,
 		?array $responseFormat = null,
 	): static
 	{
@@ -48,7 +48,7 @@ final class Chat extends OpenAICompatible\BaseChat
 				'max_tokens' => $maxOutputTokens,
 				'temperature' => $temperature,
 				'top_p' => $topP,
-				'stop' => $stop,
+				'stop' => $stopSequences,
 				'response_format' => $responseFormat,
 			],
 			fn($value) => $value !== null,

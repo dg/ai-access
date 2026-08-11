@@ -29,7 +29,7 @@ final class Chat extends BaseChat
 
 
 	/**
-	 * @param  string|string[]|null  $stop  Sequences where the API will stop generating.
+	 * @param  string|string[]|null  $stopSequences  Sequences where the API will stop generating.
 	 * @param  ?mixed[]  $responseFormat  Specify output format (e.g., ['type' => 'json_object']).
 	 * @param  ?mixed[]  $custom  Anything else the endpoint accepts, merged into the payload as is.
 	 *                            Streaming sends no stream_options, so pass
@@ -42,7 +42,7 @@ final class Chat extends BaseChat
 		?float $topP = null,
 		?float $frequencyPenalty = null,
 		?float $presencePenalty = null,
-		string|array|null $stop = null,
+		string|array|null $stopSequences = null,
 		?int $seed = null,
 		?array $responseFormat = null,
 		?array $custom = null,
@@ -55,7 +55,7 @@ final class Chat extends BaseChat
 				'top_p' => $topP,
 				'frequency_penalty' => $frequencyPenalty,
 				'presence_penalty' => $presencePenalty,
-				'stop' => $stop,
+				'stop' => $stopSequences,
 				'seed' => $seed,
 				'response_format' => $responseFormat,
 			],

@@ -38,7 +38,7 @@ final class Chat extends AIAccess\Chat\Chat
 	 *
 	 * @param  ?int  $maxOutputTokens  Maximum tokens to generate.
 	 * @param  ?mixed[]  $safetySettings  Safety filter settings.
-	 * @param  ?string[]  $stopSequences  Sequences where the API will stop generating.
+	 * @param  string|string[]|null  $stopSequences  Sequences where the API will stop generating.
 	 * @param  ?float  $temperature  Controls randomness (0.0-2.0). Deprecated, silently ignored by Gemini 3.6 and later.
 	 * @param  ?int  $topK  Top-k sampling parameter. Same deprecation as temperature.
 	 * @param  ?float  $topP  Nucleus sampling parameter. Same deprecation as temperature.
@@ -46,12 +46,13 @@ final class Chat extends AIAccess\Chat\Chat
 	public function setOptions(
 		?int $maxOutputTokens = null,
 		?array $safetySettings = null,
-		?array $stopSequences = null,
+		string|array|null $stopSequences = null,
 		?float $temperature = null,
 		?int $topK = null,
 		?float $topP = null,
 	): static
 	{
+		$stopSequences = $stopSequences === null ? null : (array) $stopSequences;
 		$this->options = array_merge($this->options, array_filter(
 			compact('maxOutputTokens', 'safetySettings', 'stopSequences', 'temperature', 'topK', 'topP'),
 			fn($value) => $value !== null,
