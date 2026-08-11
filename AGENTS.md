@@ -290,6 +290,8 @@ Batch API completely abstracts provider differences:
 - **OpenAI**: Library formats requests to JSONL, uploads file, creates batch job
 - **Claude**: Library sends chat payloads directly in batch creation request
 - **Unified workflow:** `createBatch()` → `addChat()` → `submit()` → `retrieveBatch()` → `getResults()`
+- `listBatches()` returns a generator that follows the provider's pages as they are
+  reached, so the interface takes no paging arguments at all
 
 ### Embeddings
 - Returns array of `Embedding\Vector` objects

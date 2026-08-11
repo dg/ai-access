@@ -18,35 +18,34 @@ test('Client createBatch returns Batch instance', function () {
 });
 
 
-test('Client listBatches calls API with correct parameters', function () {
-	$limit = 10;
-	$after = 'batch-after-123';
-	$before = 'batch-before-456';
+test('listBatches follows the pages on its own', function () {
+	$http = (new FakeHttpClient)
+		->queue(['data' => [['id' => 'batch-1', 'processing_status' => 'in_progress']], 'has_more' => true, 'last_id' => 'batch-1'])
+		->queue(['data' => [['id' => 'batch-2', 'processing_status' => 'ended']], 'has_more' => false]);
 
-	$apiResponse = [
-		'data' => [
-			[
-				'id' => 'batch-1',
-				'processing_status' => 'in_progress',
-			],
-			[
-				'id' => 'batch-2',
-				'processing_status' => 'ended',
-			],
-		],
-	];
-
-	$clientMock = Mockery::mock(Client::class)->makePartial();
-	$clientMock->expects('callApi')
-		->once()
-		->with("v1/messages/batches?limit={$limit}&after_id={$after}&before_id={$before}")
-		->andReturn($apiResponse);
-
-	$batches = $clientMock->listBatches($limit, $after, $before);
+	$batches = iterator_to_array((new Client('key', $http))->listBatches(), preserve_keys: false);
 
 	Assert::count(2, $batches);
 	Assert::type(BatchResponse::class, $batches[0]);
-	Assert::type(BatchResponse::class, $batches[1]);
+	Assert::same('batch-1', $batches[0]->getId());
+	Assert::same('batch-2', $batches[1]->getId());
+
+	Assert::same(2, $http->count());
+	Assert::contains('after_id=batch-1', $http->lastRequest()['url']);
+});
+
+
+test('a caller who stops reading stops the fetching', function () {
+	// the second page is queued but must never be asked for
+	$http = (new FakeHttpClient)
+		->queue(['data' => [['id' => 'batch-1', 'processing_status' => 'ended']], 'has_more' => true, 'last_id' => 'batch-1'])
+		->queue(['data' => [['id' => 'batch-2', 'processing_status' => 'ended']], 'has_more' => false]);
+
+	foreach ((new Client('key', $http))->listBatches() as $batch) {
+		break;
+	}
+
+	Assert::same(1, $http->count());
 });
 
 

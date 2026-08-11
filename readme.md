@@ -496,7 +496,9 @@ single request failed; one bad request never sinks the batch. Nothing is kept, s
 reading a second time downloads a second time. If you would rather have them all
 at once, that is `iterator_to_array()` and your decision.
 
-`listBatches()` and `cancelBatch()` complete the toolkit.
+`listBatches()` and `cancelBatch()` complete the toolkit. Listing reads the same way
+as the results, one job at a time, and fetches further pages only as you reach them,
+so a hundred jobs are one `foreach` and stopping early stops the requests.
 
 Pictures queue in the very same batch, at the same discount, on OpenAI and Gemini:
 

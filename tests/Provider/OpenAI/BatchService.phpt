@@ -19,34 +19,29 @@ test('Client createBatch returns Batch instance', function () {
 });
 
 
-test('Client listBatches calls API with correct parameters', function () {
-	$limit = 10;
-	$after = 'batch-after-123';
+test('listBatches follows the pages on its own', function () {
+	$http = (new FakeHttpClient)
+		->queue(['data' => [['id' => 'batch-1', 'status' => 'in_progress']], 'has_more' => true, 'last_id' => 'batch-1'])
+		->queue(['data' => [['id' => 'batch-2', 'status' => 'completed']], 'has_more' => false]);
 
-	$apiResponse = [
-		'data' => [
-			[
-				'id' => 'batch-1',
-				'status' => 'in_progress',
-			],
-			[
-				'id' => 'batch-2',
-				'status' => 'completed',
-			],
-		],
-	];
-
-	$clientMock = Mockery::mock(Client::class)->makePartial();
-	$clientMock->expects('callApi')
-		->once()
-		->with("batches?limit={$limit}&after={$after}")
-		->andReturn($apiResponse);
-
-	$batches = $clientMock->listBatches($limit, $after);
+	$batches = iterator_to_array((new Client('key', $http))->listBatches(), preserve_keys: false);
 
 	Assert::count(2, $batches);
 	Assert::type(BatchResponse::class, $batches[0]);
-	Assert::type(BatchResponse::class, $batches[1]);
+	Assert::same('batch-1', $batches[0]->getId());
+	Assert::same('batch-2', $batches[1]->getId());
+
+	Assert::same(2, $http->count());
+	Assert::contains('after=batch-1', $http->lastRequest()['url']);
+});
+
+
+test('the first page asks for no cursor at all', function () {
+	$http = (new FakeHttpClient)->queue(['data' => [], 'has_more' => false]);
+
+	iterator_to_array((new Client('key', $http))->listBatches());
+
+	Assert::same('https://api.openai.com/v1/batches', $http->lastRequest()['url']);
 });
 
 

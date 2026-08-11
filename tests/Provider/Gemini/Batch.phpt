@@ -44,18 +44,18 @@ test('submit nests the requests the way the API wants', function () {
 test('listing survives an empty response, which is what the API sends', function () {
 	// a project with no batches answers {} - no operations key at all
 	$http = (new FakeHttpClient)->queue([]);
-	Assert::same([], (new Client('key', $http))->listBatches());
+	Assert::same([], iterator_to_array((new Client('key', $http))->listBatches()));
 
-	$http = (new FakeHttpClient)->queue(['operations' => [
-		['name' => 'batches/one', 'metadata' => ['state' => 'BATCH_STATE_RUNNING']],
-		['name' => 'batches/two', 'metadata' => ['state' => 'BATCH_STATE_SUCCEEDED']],
-	]]);
-	$batches = (new Client('key', $http))->listBatches(limit: 10);
+	// the token is read from the answer, so a second page needs nothing from the caller
+	$http = (new FakeHttpClient)
+		->queue(['operations' => [['name' => 'batches/one', 'metadata' => ['state' => 'BATCH_STATE_RUNNING']]], 'nextPageToken' => 'tok'])
+		->queue(['operations' => [['name' => 'batches/two', 'metadata' => ['state' => 'BATCH_STATE_SUCCEEDED']]]]);
+	$batches = iterator_to_array((new Client('key', $http))->listBatches(), preserve_keys: false);
 
 	Assert::count(2, $batches);
 	Assert::same('batches/one', $batches[0]->getId());
 	Assert::same(Status::Completed, $batches[1]->getStatus());
-	Assert::contains('pageSize=10', $http->lastRequest()['url']);
+	Assert::contains('pageToken=tok', $http->lastRequest()['url']);
 });
 
 
@@ -205,7 +205,7 @@ test('a listed batch fetches its results, because listing leaves them out', func
 	]]]];
 
 	$http = (new FakeHttpClient)->queue(['operations' => [$listed]])->queue($full);
-	$batches = (new Client('key', $http))->listBatches();
+	$batches = iterator_to_array((new Client('key', $http))->listBatches(), preserve_keys: false);
 
 	Assert::same(Status::Completed, $batches[0]->getStatus());
 	Assert::same('Paris', iterator_to_array($batches[0]->getResults())['first']->message->getText());

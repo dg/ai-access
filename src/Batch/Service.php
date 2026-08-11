@@ -24,7 +24,7 @@ interface Service
 	 * @return Response[]
 	 * @throws ServiceException
 	 */
-	function listBatches(/* Implementation defines named arguments */): array;
+	function listBatches(): iterable;
 
 	/**
 	 * Retrieves the current status and details of a specific batch job by its ID.

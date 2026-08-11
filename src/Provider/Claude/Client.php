@@ -9,7 +9,6 @@ namespace AIAccess\Provider\Claude;
 
 use AIAccess;
 use AIAccess\Http;
-use function array_filter, http_build_query, is_array, rtrim, str_contains;
 
 
 /**
@@ -62,26 +61,21 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 
 
 	/**
-	 * Lists existing batch jobs.
-	 * @param  ?int  $limit  Maximum number of jobs to return
-	 * @param  ?string  $after  Cursor for pagination (retrieve the page after this batch ID)
-	 * @param  ?string  $before  Cursor for pagination (retrieve the page before this batch ID)
-	 * @return list<BatchResponse>
+	 * Lists existing batch jobs, newest first.
+	 * @return \Generator<BatchResponse>
+	 * @throws AIAccess\ServiceException
 	 */
-	public function listBatches(?int $limit = null, ?string $after = null, ?string $before = null): array
+	public function listBatches(): \Generator
 	{
-		$params = array_filter([
-			'limit' => $limit,
-			'after_id' => $after,
-			'before_id' => $before,
-		], fn($v) => $v !== null);
-		$response = $this->callApi('v1/messages/batches' . ($params ? '?' . http_build_query($params) : ''));
-
-		$res = [];
-		foreach ($response['data'] ?? [] as $batchData) {
-			$res[] = new BatchResponse($this, $batchData);
-		}
-		return $res;
+		$after = null;
+		do {
+			$params = $after === null ? [] : ['after_id' => $after];
+			$response = $this->callApi('v1/messages/batches' . ($params ? '?' . http_build_query($params) : ''));
+			foreach ($response['data'] ?? [] as $batchData) {
+				yield new BatchResponse($this, $batchData);
+			}
+			$after = ($response['has_more'] ?? false) ? $response['last_id'] ?? null : null;
+		} while ($after !== null);
 	}
 
 

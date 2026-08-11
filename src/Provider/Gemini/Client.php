@@ -90,21 +90,21 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 	/**
 	 * Lists existing batch jobs.
-	 * @param  ?int  $limit  Maximum number of jobs to return
-	 * @param  ?string  $pageToken  Cursor for pagination
-	 * @return list<BatchResponse>
+	 * @return \Generator<BatchResponse>
+	 * @throws AIAccess\ServiceException
 	 */
-	public function listBatches(?int $limit = null, ?string $pageToken = null): array
+	public function listBatches(): \Generator
 	{
-		$params = array_filter(['pageSize' => $limit, 'pageToken' => $pageToken], fn($v) => $v !== null);
-		$response = $this->callApi('batches' . ($params ? '?' . http_build_query($params) : ''));
-
-		$res = [];
-		// a batch is a long-running operation, hence the key
-		foreach ($response['operations'] ?? $response['batches'] ?? [] as $batchData) {
-			$res[] = new BatchResponse($this, $batchData);
-		}
-		return $res;
+		$token = null;
+		do {
+			$params = $token === null ? [] : ['pageToken' => $token];
+			$response = $this->callApi('batches' . ($params ? '?' . http_build_query($params) : ''));
+			// a batch is a long-running operation, hence the key
+			foreach ($response['operations'] ?? $response['batches'] ?? [] as $batchData) {
+				yield new BatchResponse($this, $batchData);
+			}
+			$token = $response['nextPageToken'] ?? null;
+		} while ($token !== null);
 	}
 
 

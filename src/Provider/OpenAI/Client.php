@@ -104,24 +104,21 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 
 
 	/**
-	 * Lists existing batch jobs.
-	 * @param  ?int  $limit  Maximum number of jobs to return
-	 * @param  ?string  $after  Cursor for pagination (retrieve the page after this batch ID)
-	 * @return list<BatchResponse>
+	 * Lists existing batch jobs, newest first.
+	 * @return \Generator<BatchResponse>
+	 * @throws AIAccess\ServiceException
 	 */
-	public function listBatches(?int $limit = null, ?string $after = null): array
+	public function listBatches(): \Generator
 	{
-		$params = array_filter([
-			'limit' => $limit,
-			'after' => $after,
-		], fn($v) => $v !== null);
-		$response = $this->callApi('batches?' . http_build_query($params));
-
-		$res = [];
-		foreach ($response['data'] ?? [] as $batchData) {
-			$res[] = new BatchResponse($this, $batchData);
-		}
-		return $res;
+		$after = null;
+		do {
+			$params = $after === null ? [] : ['after' => $after];
+			$response = $this->callApi('batches' . ($params ? '?' . http_build_query($params) : ''));
+			foreach ($response['data'] ?? [] as $batchData) {
+				yield new BatchResponse($this, $batchData);
+			}
+			$after = ($response['has_more'] ?? false) ? $response['last_id'] ?? null : null;
+		} while ($after !== null);
 	}
 
 
