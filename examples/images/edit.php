@@ -11,7 +11,9 @@
 require __DIR__ . '/../bootstrap.php';
 
 $client = createClient(AIAccess\Image\Service::class);
-assert($client instanceof AIAccess\Image\Service);
+if (!$client instanceof AIAccess\Provider\OpenAI\Client && !$client instanceof AIAccess\Provider\Gemini\Client) {
+	fail('Only OpenAI and Gemini work from reference images.');
+}
 
 $paths = array_values(array_map(strval(...), array_slice($GLOBALS['argv'], 2)));
 if (!$paths) {
@@ -20,8 +22,8 @@ if (!$paths) {
 
 $references = array_map(AIAccess\Media::fromFile(...), $paths);
 
-// the shared signature is all three providers have in common; OpenAI adds size,
-// quality and background as named arguments of its own
+// references are the provider's own argument, not part of Image\Service; OpenAI adds
+// size, quality and background the same way
 $image = $client->generateImage(
 	'Keep the composition and palette, but make it a winter scene.',
 	imageModel($client),

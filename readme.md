@@ -387,8 +387,9 @@ The same `Media` object you put into a conversation comes back out of the
 generator, so a freshly generated picture can be handed straight to a model
 without ever touching the disk.
 
-Pass reference images and the model works from them instead of from words alone,
-which covers both editing a picture and continuing its style:
+OpenAI and Gemini also work from reference images instead of from words alone, which
+covers both editing a picture and continuing its style. That one is asked of the
+client rather than of `Image\Service`, because xAI draws from a prompt only:
 
 ```php
 use AIAccess\Media;
@@ -402,8 +403,8 @@ $image = $client->generateImage(
 
 Everything else a provider takes is a named argument of its own `generateImage()`:
 OpenAI `size`, `quality`, `background`, `format`, `inputFidelity` and `moderation`,
-Gemini `aspectRatio` and `imageSize`, Grok `aspectRatio` and `resolution`. Grok
-takes no references and says so with a `LogicException` before the request leaves.
+Gemini `aspectRatio` and `imageSize`, Grok `aspectRatio` and `resolution`, and
+`references` on the two that take them.
 Gemini has no image endpoint at all and reaches its image models through the
 ordinary chat one, which the interface hides from you; it answers with JPEG
 rather than PNG, so read `getMimeType()` instead of assuming the extension.

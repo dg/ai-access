@@ -47,22 +47,18 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Image\Service
 
 
 	/**
-	 * Generates an image.
-	 * @param  list<AIAccess\Media>  $references  not supported by xAI, must be empty
+	 * Generates an image. xAI draws from a prompt alone, so there is no way to pass
+	 * reference images here.
 	 * @param  ?string  $aspectRatio  e.g. '1:1', '16:9' or 'auto'
 	 * @param  ?string  $resolution  '1k' or '2k'
 	 */
 	public function generateImage(
 		string $prompt,
 		string $model,
-		array $references = [],
 		?string $aspectRatio = null,
 		?string $resolution = null,
 	): AIAccess\Media
 	{
-		if ($references) {
-			throw new AIAccess\LogicException('Grok image generation does not accept reference images.');
-		}
 		return (new ImageRequest($this, $prompt, $model))
 			->setOptions(aspectRatio: $aspectRatio, resolution: $resolution)
 			->generate();

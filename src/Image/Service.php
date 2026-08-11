@@ -17,9 +17,9 @@ use AIAccess\ServiceException;
 interface Service
 {
 	/**
-	 * Generates a single image. With references the model edits or continues from them.
-	 * @param  list<Media>  $references  reference images
+	 * Generates a single image. Working from reference images is not something every
+	 * provider does, so it lives on the concrete clients that do.
 	 * @throws ServiceException
 	 */
-	function generateImage(string $prompt, string $model, array $references = []): Media;
+	function generateImage(string $prompt, string $model): Media;
 }

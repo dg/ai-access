@@ -1,6 +1,5 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Media;
 use AIAccess\Provider\Grok\Client;
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
@@ -45,17 +44,6 @@ test('the xAI options travel with the prompt', function () {
 	Assert::same('2k', $payload['resolution']);
 	// one picture is what the method promises, so it asks for one
 	Assert::same(1, $payload['n']);
-});
-
-
-test('references are refused before the request leaves', function () {
-	$client = new Client('key', new FakeHttpClient);
-
-	Assert::exception(
-		fn() => $client->generateImage('a fox', 'grok-imagine-image', [Media::fromBinary('x', 'image/png')]),
-		AIAccess\LogicException::class,
-		'Grok image generation does not accept reference images.',
-	);
 });
 
 

@@ -240,7 +240,7 @@ test('Chat preserves messages when API call fails', function () {
 });
 
 
-test('generateImage decodes the image and rejects references', function () {
+test('generateImage decodes the image out of the base64 answer', function () {
 	$jpeg = "\xFF\xD8\xFF\xE0" . 'JPEGDATA';
 	$http = (new Tests\Support\FakeHttpClient)->queue(['data' => [['b64_json' => base64_encode($jpeg)]]]);
 	$client = new Client('key', $http);
@@ -250,9 +250,4 @@ test('generateImage decodes the image and rejects references', function () {
 	Assert::same($jpeg, $image->getData());
 	Assert::same('image/jpeg', $image->getMimeType());
 	Assert::same('b64_json', $http->lastPayload()['response_format']);
-
-	Assert::exception(
-		fn() => $client->generateImage('a cat', 'grok-imagine-image', [AIAccess\Media::fromBinary('x', 'image/png')]),
-		AIAccess\LogicException::class,
-	);
 });
