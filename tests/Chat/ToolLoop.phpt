@@ -205,6 +205,19 @@ test('validate sends the model its own homework back', function () {
 });
 
 
+test('validate returning an empty string is a bug, not another turn', function () {
+	$http = (new FakeHttpClient)->queue(fixture('claude/chat'));
+	$chat = (new AIAccess\Provider\Claude\Client('key', $http))->createChat('m');
+
+	// an empty user turn is what Claude and Gemini reject outright
+	Assert::exception(
+		fn() => $chat->sendMessage('Say something', validate: fn() => ''),
+		AIAccess\LogicException::class,
+		'The validate() callback must return a non-empty string or null.',
+	);
+});
+
+
 test('a failure in a later round keeps what the earlier rounds produced', function () {
 	$http = (new FakeHttpClient)->queue(fixture('claude/tool-call'));
 	$chat = (new AIAccess\Provider\Claude\Client('key', $http))->createChat('m');

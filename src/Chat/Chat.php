@@ -116,6 +116,10 @@ abstract class Chat
 				}
 
 				if ($validate !== null && ($feedback = $validate($response)) !== null) {
+					if ($feedback === '') {
+						// providers reject an empty turn, so this would fail on the wire a round later
+						throw new LogicException('The validate() callback must return a non-empty string or null.');
+					}
 					$this->addMessage($feedback, Role::User);
 					continue;
 				}
