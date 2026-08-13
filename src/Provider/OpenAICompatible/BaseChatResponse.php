@@ -66,6 +66,9 @@ abstract class BaseChatResponse implements Chat\Response
 		}
 
 		foreach ($calls as $call) {
+			if (!is_array($call)) {
+				throw new UnexpectedResponseException('Expected an object in choices[0].message.tool_calls, got ' . get_debug_type($call) . '.');
+			}
 			[$arguments, $error] = Helpers::decodeArguments($call['function']['arguments'] ?? null);
 			$this->parts[] = new Chat\ToolCallPart(
 				(string) ($call['id'] ?? ''),

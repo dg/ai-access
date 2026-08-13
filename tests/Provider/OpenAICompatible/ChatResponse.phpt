@@ -72,6 +72,17 @@ test('a refusal is read here too, although only Grok sends one today', function 
 });
 
 
+test('a tool call that is not an object is a broken response, not an empty call', function () {
+	Assert::exception(
+		fn() => new ChatResponse([
+			'choices' => [['message' => ['content' => 'x', 'tool_calls' => ['nonsense']], 'finish_reason' => 'tool_calls']],
+		]),
+		AIAccess\UnexpectedResponseException::class,
+		'Expected an object in choices[0].message.tool_calls, got string.',
+	);
+});
+
+
 test('reasoning and tool calls become parts tagged for this provider only', function () {
 	$response = new ChatResponse([
 		'choices' => [[
