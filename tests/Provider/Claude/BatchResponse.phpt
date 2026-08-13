@@ -231,7 +231,7 @@ test('getError returns null for successful batch', function () {
 });
 
 
-test('getError returns error message for problematic batch', function () {
+test('getError says nothing about requests that failed one by one', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'processing_status' => 'ended',
@@ -247,10 +247,8 @@ test('getError returns error message for problematic batch', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$response = new BatchResponse($clientMock, $batchData);
 
-	$error = $response->getError();
-	Assert::type('string', $error);
-	Assert::contains('1 requests encountered errors', $error);
-	Assert::contains('3 requests expired', $error);
+	// the wire has no batch-level error at all; each failure travels with its own Result
+	Assert::null($response->getError());
 });
 
 

@@ -70,34 +70,13 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 	public function getError(): ?string
 	{
-		// Check for batch-level errors
-		if (isset($this->batchData['errors']) && !empty($this->batchData['errors']['data'])) {
-			$errorMessages = [];
-			foreach ($this->batchData['errors']['data'] as $error) {
-				if (isset($error['message'])) {
-					$errorMessages[] = $error['message'];
-				}
-			}
-			if (!empty($errorMessages)) {
-				return 'Batch errors: ' . implode(', ', $errorMessages);
+		$errors = [];
+		foreach ($this->batchData['errors']['data'] ?? [] as $error) {
+			if (is_string($error['message'] ?? null)) {
+				$errors[] = $error['message'];
 			}
 		}
-
-		// Check for batch-level errors based on request counts
-		if (isset($this->batchData['request_counts'])) {
-			$counts = $this->batchData['request_counts'];
-			$errorInfo = [];
-
-			if (isset($counts['failed']) && $counts['failed'] > 0) {
-				$errorInfo[] = "{$counts['failed']} requests failed";
-			}
-
-			if (!empty($errorInfo)) {
-				return 'Batch encountered issues: ' . implode(', ', $errorInfo);
-			}
-		}
-
-		return null;
+		return $errors ? 'Batch errors: ' . implode(', ', $errors) : null;
 	}
 
 

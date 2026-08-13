@@ -36,7 +36,9 @@ interface Response
 
 	/**
 	 * Gets the error information if the batch job as a whole had any issues, otherwise null.
-	 * Failures of individual requests belong to their Result.
+	 * Failures of individual requests belong to their Result, so a job whose requests merely
+	 * failed one by one reports nothing here; a provider whose API has no such error at all
+	 * always answers null.
 	 */
 	function getError(): ?string;
 

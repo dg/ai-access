@@ -91,11 +91,8 @@ final class BatchResponse implements AIAccess\Batch\Response
 
 	public function getError(): ?string
 	{
-		if (isset($this->batchData['error']['message'])) {
-			return $this->batchData['error']['message'];
-		}
-		$failed = $this->batchData['metadata']['batchStats']['failedRequestCount'] ?? 0;
-		return $failed > 0 ? "$failed requests failed" : null;
+		$message = $this->batchData['error']['message'] ?? null;
+		return is_string($message) ? $message : null;
 	}
 
 

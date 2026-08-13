@@ -294,7 +294,7 @@ test('getError returns error message from batch-level errors', function () {
 });
 
 
-test('getError returns error message based on request counts', function () {
+test('getError says nothing about requests that failed one by one', function () {
 	$batchData = [
 		'id' => 'batch-123',
 		'status' => 'completed',
@@ -307,9 +307,8 @@ test('getError returns error message based on request counts', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$response = new BatchResponse($clientMock, $batchData);
 
-	$error = $response->getError();
-	Assert::type('string', $error);
-	Assert::contains('3 requests failed', $error);
+	// the job itself went through; each failure travels with its own Result
+	Assert::null($response->getError());
 });
 
 

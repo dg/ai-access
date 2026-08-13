@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Claude;
 use AIAccess;
 use AIAccess\Batch\Result;
 use AIAccess\Batch\Status;
-use function implode, is_array, is_string;
+use function is_array, is_string;
 
 
 /**
@@ -54,20 +54,13 @@ final class BatchResponse implements AIAccess\Batch\Response
 	}
 
 
+	/**
+	 * Always null: the wire has no batch-level error, because a job here always ends and
+	 * what went wrong is reported per request. Read the failures from getResults().
+	 */
 	public function getError(): ?string
 	{
-		$counts = $this->batchData['request_counts'] ?? null;
-		$errorInfo = [];
-		if (isset($counts['errored']) && $counts['errored'] > 0) {
-			$errorInfo[] = "{$counts['errored']} requests encountered errors";
-		}
-		if (isset($counts['expired']) && $counts['expired'] > 0) {
-			$errorInfo[] = "{$counts['expired']} requests expired";
-		}
-		if (isset($counts['canceled']) && $counts['canceled'] > 0) {
-			$errorInfo[] = "{$counts['canceled']} requests were canceled";
-		}
-		return $errorInfo ? 'Batch encountered issues: ' . implode(', ', $errorInfo) : null;
+		return null;
 	}
 
 
