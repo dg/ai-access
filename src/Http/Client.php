@@ -26,7 +26,7 @@ interface Client
 	 * timeout, however long the whole answer takes.
 	 * @param  string  $url  URL for the request
 	 * @param  string|mixed[]|FormData|null  $payload  Request body (array is encoded as JSON)
-	 * @param  string[]  $headers  HTTP headers
+	 * @param  array<string, string>  $headers  HTTP headers, keyed by name
 	 * @param  non-empty-string|null  $method  HTTP method (GET, POST, ...), defaults to GET for null payload or POST for non-null payload
 	 * @param  ?\Closure(string): (bool|null)  $onChunk  streams the response body; returning false stops the transfer
 	 * @throws CommunicationException  On connection errors, timeouts, stalled transfers, etc.
