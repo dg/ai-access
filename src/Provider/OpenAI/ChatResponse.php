@@ -61,7 +61,7 @@ final class ChatResponse implements Chat\Response
 				default => FinishReason::Unknown,
 			},
 			'cancelled' => FinishReason::Cancelled,
-			'completed', null => $this->hasToolCall() ? FinishReason::ToolCall : FinishReason::Complete,
+			'completed', null => $this->getToolCalls() ? FinishReason::ToolCall : FinishReason::Complete,
 			default => FinishReason::Unknown,
 		};
 	}
@@ -98,17 +98,6 @@ final class ChatResponse implements Chat\Response
 	public function getToolCalls(): array
 	{
 		return array_values(array_filter($this->parts, fn($part) => $part instanceof Chat\ToolCallPart));
-	}
-
-
-	private function hasToolCall(): bool
-	{
-		foreach ($this->rawResponse['output'] ?? [] as $item) {
-			if (($item['type'] ?? null) === 'function_call') {
-				return true;
-			}
-		}
-		return false;
 	}
 
 
