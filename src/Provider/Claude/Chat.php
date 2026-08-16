@@ -210,7 +210,10 @@ final class Chat extends AIAccess\Chat\Chat
 				}
 				$blocks[] = $block;
 			} elseif ($part instanceof AIAccess\Chat\TextPart) {
-				$blocks[] = ['type' => 'text', 'text' => $part->text];
+				// measured: "text content blocks must be non-empty" is a 400 from the API
+				if ($part->text !== '') {
+					$blocks[] = ['type' => 'text', 'text' => $part->text];
+				}
 			} elseif ($part instanceof AIAccess\Media) {
 				$blocks[] = [
 					'type' => $part->isImage() ? 'image' : 'document',

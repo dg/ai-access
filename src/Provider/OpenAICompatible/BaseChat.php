@@ -174,7 +174,11 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 				$content[] = $this->mediaContent($part);
 				$hasMedia = true;
 			} elseif ($part instanceof AIAccess\Chat\TextPart) {
-				$content[] = ['type' => 'text', 'text' => $part->text];
+				// an empty block carries nothing, and the stricter endpoints of the dialect
+				// reject it outright
+				if ($part->text !== '') {
+					$content[] = ['type' => 'text', 'text' => $part->text];
+				}
 			} else {
 				throw new AIAccess\LogicException('This chat cannot send ' . get_debug_type($part) . ' content.');
 			}

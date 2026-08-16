@@ -2,6 +2,8 @@
 
 use AIAccess\Chat\ReasoningPart;
 use AIAccess\Chat\Role;
+use AIAccess\Chat\TextPart;
+use AIAccess\Chat\ToolCallPart;
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 
@@ -41,6 +43,27 @@ test('a foreign payload is never replayed, and leaves no empty turn behind', fun
 });
 
 
+test('openai leaves no empty turn behind either', function () {
+	$http = (new FakeHttpClient)->queue(fixture('openai/chat'))->queue(fixture('openai/chat'));
+	$chat = (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
+
+	$chat->addMessage('Question', Role::User);
+	$chat->addMessage([new ReasoningPart('thought', 'gemini', ['thoughtSignature' => 'x'])], Role::Model);
+	$chat->addMessage('', Role::User);
+	$chat->sendMessage('Next');
+
+	Assert::same(['Question', 'Next'], array_column($http->lastPayload()['input'], 'content'));
+
+	// a text part with nothing in it does not make an item of its own next to a call
+	$chat->clearMessages();
+	$chat->addMessage([new TextPart(''), new ToolCallPart('call_1', 'get_time', [])], Role::Model);
+	$chat->sendMessage('Again');
+
+	$types = array_map(fn($item) => $item['type'] ?? $item['role'], $http->lastPayload()['input']);
+	Assert::same(['function_call', 'user'], $types);
+});
+
+
 test('gemini drops an empty text turn, which its API rejects', function () {
 	$http = (new FakeHttpClient)->queue(['candidates' => [['content' => ['parts' => [['text' => 'x']]]]]]);
 	$chat = (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m');
@@ -52,6 +75,33 @@ test('gemini drops an empty text turn, which its API rejects', function () {
 
 	$texts = array_map(fn($turn) => $turn['parts'][0]['text'], $http->lastPayload()['contents']);
 	Assert::same(['Question', 'Answer', 'Next'], $texts);
+});
+
+
+test('no provider puts an empty text block next to real content', function () {
+	// measured at Anthropic: "text content blocks must be non-empty" is a 400
+	$cases = [
+		'openai' => [['output' => []], 'input', fn($turn) => $turn['content']],
+		'claude' => [['content' => []], 'messages', fn($turn) => $turn['content']],
+		'gemini' => [['candidates' => []], 'contents', fn($turn) => $turn['parts']],
+		'grok' => [['choices' => []], 'messages', fn($turn) => $turn['content']],
+	];
+
+	foreach ($cases as $name => [$answer, $key, $blocksOf]) {
+		$http = (new FakeHttpClient)->queue($answer);
+		$chat = match ($name) {
+			'openai' => (new AIAccess\Provider\OpenAI\Client('k', $http))->createChat('m'),
+			'claude' => (new AIAccess\Provider\Claude\Client('k', $http))->createChat('m'),
+			'gemini' => (new AIAccess\Provider\Gemini\Client('k', $http))->createChat('m'),
+			'grok' => (new AIAccess\Provider\Grok\Client('k', $http))->createChat('m'),
+		};
+		$chat->addMessage([new TextPart(''), AIAccess\Media::fromBinary('PNG', 'image/png')], Role::User);
+		$chat->sendMessage();
+
+		$blocks = $blocksOf($http->lastPayload()[$key][0]);
+		Assert::count(1, $blocks, $name);
+		Assert::same([], array_filter($blocks, fn($block) => ($block['text'] ?? null) === ''), $name);
+	}
 });
 
 

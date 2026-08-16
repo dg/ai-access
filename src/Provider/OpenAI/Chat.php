@@ -10,7 +10,7 @@ namespace AIAccess\Provider\OpenAI;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
-use function array_filter, array_merge, count, is_array;
+use function array_filter, array_merge, array_values, count, is_array;
 
 
 /**
@@ -222,7 +222,9 @@ final class Chat extends AIAccess\Chat\Chat
 	private function appendMessage(array &$input, AIAccess\Chat\Message $message, string $role): void
 	{
 		if ($message->isTextOnly()) {
-			$input[] = ['role' => $role, 'content' => $message->getText()];
+			if (($text = $message->getText()) !== '') {
+				$input[] = ['role' => $role, 'content' => $text];
+			}
 			return;
 		}
 
@@ -274,12 +276,15 @@ final class Chat extends AIAccess\Chat\Chat
 
 	/**
 	 * Turns the text and media piled up so far into an item of their own, so that a standalone
-	 * item that follows them does not jump ahead of them.
+	 * item that follows them does not jump ahead of them. Empty text is left out on the way.
 	 * @param  list<mixed>  $input
 	 * @param  list<mixed>  $content
 	 */
 	private function flushContent(array &$input, array &$content, string $role): void
 	{
+		// an empty text block carries nothing on the wire, and an item made of one alone
+		// is the empty content the API rejects
+		$content = array_values(array_filter($content, fn($item) => !isset($item['text']) || $item['text'] !== ''));
 		if (!$content) {
 			return;
 		}
