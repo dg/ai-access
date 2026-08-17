@@ -7,20 +7,36 @@
 
 namespace AIAccess\Chat;
 
+use AIAccess\Helpers;
+use Nette\Schema\Elements\Structure;
+
 
 /**
  * A function the model may call.
  */
 final readonly class Tool
 {
+	/**
+	 * JSON Schema of the arguments, as sent to the provider
+	 * @var mixed[]
+	 */
+	public array $parameters;
+
+	/** the Nette schema the arguments were given as, if they were; it validates and casts them before the handler */
+	public ?Structure $schema;
+
+
+	/**
+	 * @param  mixed[]|Structure  $parameters  JSON Schema of the arguments, or a Nette schema (Expect::structure(), Expect::from())
+	 */
 	public function __construct(
 		public string $name,
 		public string $description = '',
-		/** @var mixed[] JSON Schema of the arguments */
-		public array $parameters = [],
+		array|Structure $parameters = [],
 		/**
-		 * @var ?\Closure(mixed[], ToolCallPart): mixed omit to drive the loop yourself;
-		 * a string or an array reaches the model as it is, a scalar becomes text
+		 * @var ?\Closure(mixed, ToolCallPart): mixed omit to drive the loop yourself; gets the arguments
+		 * as an array, or as whatever a Nette schema yields; a string or an array it returns
+		 * reaches the model as it is, a scalar becomes text
 		 */
 		public ?\Closure $handler = null,
 		/**
@@ -29,5 +45,10 @@ final readonly class Tool
 		 */
 		public bool $strict = false,
 	) {
+		$this->parameters = Helpers::exportSchema($parameters);
+		$this->schema = $parameters instanceof Structure ? $parameters : null;
+		if ($strict && $this->schema) {
+			Helpers::assertStrictSchema($this->parameters);
+		}
 	}
 }

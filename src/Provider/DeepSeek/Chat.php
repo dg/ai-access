@@ -10,6 +10,7 @@ namespace AIAccess\Provider\DeepSeek;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Provider\OpenAICompatible;
+use Nette\Schema\Elements\Structure;
 
 
 /**
@@ -60,9 +61,9 @@ final class Chat extends OpenAICompatible\BaseChat
 	/**
 	 * Always throws: measured, a json_schema format answers "This response_format type is
 	 * unavailable now", and asking silently would return prose where the caller expects data.
-	 * @param  mixed[]  $schema
+	 * @param  mixed[]|Structure  $schema
 	 */
-	public function setResponseSchema(array $schema): static
+	public function setResponseSchema(array|Structure $schema): static
 	{
 		throw new AIAccess\LogicException("DeepSeek has no JSON schema; use setOptions(responseFormat: ['type' => 'json_object']) for its JSON mode.");
 	}

@@ -10,6 +10,7 @@ namespace AIAccess\Provider\Claude;
 use AIAccess;
 use AIAccess\Chat\{Effort, Role};
 use AIAccess\ServiceException;
+use Nette\Schema\Elements\Structure;
 use function is_array;
 
 
@@ -21,8 +22,8 @@ final class Chat extends AIAccess\Chat\Chat
 	/** @var mixed[] */
 	private array $options = [];
 
-	/** @var mixed[]|null */
-	private ?array $responseSchema = null;
+	/** @var mixed[]|Structure|null */
+	private array|Structure|null $responseSchema = null;
 
 
 	public function __construct(
@@ -78,10 +79,13 @@ final class Chat extends AIAccess\Chat\Chat
 
 	/**
 	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
-	 * @param  mixed[]  $schema
+	 * @param  mixed[]|Structure  $schema  JSON Schema, or a Nette schema that also validates and casts the answer
 	 */
-	public function setResponseSchema(array $schema): static
+	public function setResponseSchema(array|Structure $schema): static
 	{
+		if ($schema instanceof Structure) {
+			self::fitSchema(AIAccess\Helpers::exportSchema($schema));
+		}
 		$this->responseSchema = $schema;
 		return $this;
 	}
@@ -89,7 +93,7 @@ final class Chat extends AIAccess\Chat\Chat
 
 	protected function generateResponse(): ChatResponse
 	{
-		return new ChatResponse($this->client->callApi('v1/messages', $this->buildPayload()));
+		return new ChatResponse($this->client->callApi('v1/messages', $this->buildPayload()), schema: $this->responseSchema);
 	}
 
 
@@ -100,7 +104,7 @@ final class Chat extends AIAccess\Chat\Chat
 			fn(\Closure $onChunk) => $this->client->callApiStream('v1/messages', $this->buildPayload(), $onChunk),
 			fn(?string $name, string $json) => $accumulator->event($name, $json, $onDelta),
 		);
-		return new ChatResponse($accumulator->getResponse(), cancelled: $stopped);
+		return new ChatResponse($accumulator->getResponse(), cancelled: $stopped, schema: $this->responseSchema);
 	}
 
 
@@ -142,7 +146,12 @@ final class Chat extends AIAccess\Chat\Chat
 		}
 
 		if ($this->responseSchema !== null) {
-			$payload['output_config']['format'] = ['type' => 'json_schema', 'schema' => $this->responseSchema];
+			$payload['output_config']['format'] = [
+				'type' => 'json_schema',
+				'schema' => $this->responseSchema instanceof Structure
+					? self::fitSchema(AIAccess\Helpers::exportSchema($this->responseSchema))
+					: $this->responseSchema,
+			];
 		}
 
 		foreach ($this->tools as $tool) {
@@ -228,5 +237,39 @@ final class Chat extends AIAccess\Chat\Chat
 		}
 		// tool_result blocks are rejected unless they lead the turn
 		return [...$first, ...$blocks];
+	}
+
+
+	/**
+	 * Claude's structured output takes no numeric or size bounds, which getJson() checks
+	 * through the Nette schema anyway, and has no form for open maps and tuples at all.
+	 * @param  mixed[]  $schema  JSON Schema exported from a Nette schema
+	 * @return mixed[]
+	 */
+	private static function fitSchema(array $schema, string $path = ''): array
+	{
+		$name = rtrim($path, '.') ?: '(root)';
+		if (($schema['additionalProperties'] ?? false) !== false) {
+			throw new AIAccess\LogicException("Object '$name' allows additional properties (arrayOf(), otherItems()), which Claude's structured output does not; use structure() or listOf().");
+		} elseif (isset($schema['prefixItems'])) {
+			throw new AIAccess\LogicException("Array '$name' is a tuple, which Claude's structured output does not support; use listOf() or structure().");
+		}
+
+		unset($schema['minimum'], $schema['maximum'], $schema['maxItems'], $schema['minProperties'], $schema['maxProperties']);
+		if (($schema['minItems'] ?? 0) > 1) {
+			$schema['minItems'] = 1; // the most it accepts
+		}
+		if (is_array($schema['properties'] ?? null)) { // an empty one is exported as an object
+			foreach ($schema['properties'] as $key => $property) {
+				$schema['properties'][$key] = self::fitSchema($property, "$path$key.");
+			}
+		}
+		if (is_array($schema['items'] ?? null)) {
+			$schema['items'] = self::fitSchema($schema['items'], "{$path}items.");
+		}
+		foreach ($schema['anyOf'] ?? [] as $i => $variant) {
+			$schema['anyOf'][$i] = is_array($variant) ? self::fitSchema($variant, $path) : $variant;
+		}
+		return $schema;
 	}
 }

@@ -9,6 +9,7 @@ namespace AIAccess\Provider\OpenAI;
 
 use AIAccess\{Chat, Helpers};
 use AIAccess\Chat\FinishReason;
+use Nette\Schema\Elements\Structure;
 use function is_array, is_string;
 
 
@@ -32,6 +33,11 @@ final class ChatResponse implements Chat\Response
 		private readonly array $rawResponse,
 		/** the caller stopped a stream, so the answer is whatever had arrived */
 		private readonly bool $cancelled = false,
+		/**
+		 * the schema the answer was asked for; a Nette schema validates and casts it in getJson()
+		 * @var mixed[]|Structure|null
+		 */
+		private readonly array|Structure|null $schema = null,
 	) {
 		$this->parseRawResponse($this->rawResponse);
 	}
@@ -118,7 +124,7 @@ final class ChatResponse implements Chat\Response
 
 	public function getJson(): mixed
 	{
-		return Helpers::decodeResponseJson($this->getText());
+		return Helpers::decodeResponseJson($this->getText(), $this->schema);
 	}
 
 

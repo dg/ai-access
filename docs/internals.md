@@ -287,6 +287,34 @@ did** — the parts are internal until something non-text appears. Consequences:
   whose JSON will not decode arrives with empty `arguments` and a filled
   `argumentsError`, so the caller can hand the model its own error instead of catching
   an exception.
+- **A schema is either a JSON Schema array or a `Nette\Schema\Elements\Structure`**, on
+  `setResponseSchema()` and `Tool::$parameters` alike, and the two are not treated the
+  same. An array is sent as it is and checked by the provider only. Each provider `Chat`
+  keeps what it got (`array|Structure|null $responseSchema`), exports it for the wire in
+  `buildPayload()` (`Helpers::exportSchema()` over `Nette\Schema\JsonSchema`) and hands
+  it to its `ChatResponse`, whose `getJson()` runs the answer through `Processor` and
+  returns what a Nette schema yields, an `UnexpectedResponseException` when it does not
+  fit. In the `chat/completions` dialect the schema and `setOptions(responseFormat:)`
+  write the same option, so the later call wins on the wire and a raw format set later
+  drops the Nette schema for the answer too. `Tool` keeps it as `$schema` next to the
+  exported `$parameters`, `executeTool()` validates the arguments with it
+  (`Helpers::processArguments()`) instead of `checkArguments()`, and the handler
+  receives the processed value. nette/schema is a `suggest`, not a requirement: the
+  union types resolve without the class being loadable, and nothing touches it unless a
+  `Structure` arrives.
+- **A Nette schema is checked against the provider's dialect up front**, a
+  `LogicException` before the request instead of an `ApiException` after it. Strict mode
+  (OpenAI, Grok, the generic client; a `Tool` with `strict: true`) wants every key
+  required and no additional properties, which `Helpers::assertStrictSchema()` enforces,
+  naming the optional key or the object that allows more (`arrayOf()`, `otherItems()`);
+  mind that `Expect::from()` leaves an optional constructor parameter optional, so on a
+  strict provider it needs the override in its second argument. Claude's structured
+  output is a narrower dialect (measured): it refuses `minimum`, `maximum`,
+  `exclusiveMinimum`, `multipleOf`, `maxItems`, `minItems` above 1, `min/maxProperties`,
+  `prefixItems` and any `additionalProperties` but `false`, while `minLength`,
+  `maxLength`, `pattern` and `format` pass. `Claude\Chat::fitSchema()` drops the bounds,
+  since the `Processor` in `getJson()` checks them anyway, and refuses open maps and
+  tuples, which have no form there.
 - **`Media` is one class for images and documents**, and the mime type decides which the
   wire format calls for: Claude `image` vs `document` blocks, OpenAI `input_image` vs
   `input_file` (which is the only one needing a filename), Gemini `inlineData` for both,

@@ -60,6 +60,9 @@ final class Chat extends OpenAICompatible\BaseChat
 			],
 			fn($value) => $value !== null,
 		)];
+		if ($responseFormat !== null) {
+			$this->responseSchema = null; // the raw format replaced the schema on the wire, so it must not judge the answer either
+		}
 		return $this;
 	}
 
@@ -78,7 +81,7 @@ final class Chat extends OpenAICompatible\BaseChat
 
 	protected function createResponse(array $raw, bool $cancelled): ChatResponse
 	{
-		return new ChatResponse($raw, $cancelled);
+		return new ChatResponse($raw, $cancelled, $this->responseSchema);
 	}
 
 
