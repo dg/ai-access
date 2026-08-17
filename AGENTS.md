@@ -286,6 +286,21 @@ Refer to individual provider classes in `src/Provider/*/Chat.php` for complete o
 
 ## Key Implementation Notes
 
+### Nette Schema
+`setResponseSchema()` and `Tool::$parameters` take a JSON Schema array or a
+`Nette\Schema\Elements\Structure` (`Expect::structure()`, `Expect::from()`). Each provider
+`Chat` keeps what it got (`array|Structure|null $responseSchema`), exports it for the
+wire in `buildPayload()` (`Helpers::exportSchema()` over `Nette\Schema\JsonSchema`;
+nette/schema 1.4 is a `suggest`, wired as `require-dev`) and hands it to its
+`ChatResponse`: `getJson()` runs the answer through `Processor` and returns what a
+Nette schema yields (`UnexpectedResponseException` when it does not fit); tool
+arguments are validated by `Tool::$schema` before the handler and the model gets the
+exact messages. Strict providers (OpenAI, Grok, generic client; a `Tool` with
+`strict: true`) check a Nette schema against the strict rules up front
+(`Helpers::assertStrictSchema()`: every key required, no additional properties) and
+throw a `LogicException`; JSON Schema arrays are sent as they are. In the
+`chat/completions` dialect a later `setOptions(responseFormat:)` drops the schema.
+
 ### HTTP Client Abstraction
 Default HTTP client is `CurlClient`, but can be swapped by implementing `Http\Client` interface. All providers use this abstraction for API communication.
 

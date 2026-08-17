@@ -18,12 +18,16 @@
 	},
 	"require-dev": {
 		"nette/tester": "^2.5",
+		"nette/schema": "1.4.x-dev",
 		"tracy/tracy": "^2.10",
 		"phpstan/phpstan": "^2.2@stable",
 		"phpstan/extension-installer": "^1.4@stable",
 		"nette/phpstan-rules": "^1.0",
 		"mockery/mockery": "^1.6",
 		"dg/bypass-finals": "^1.9"
+	},
+	"suggest": {
+		"nette/schema": "to write response and tool schemas with Expect and get the answer validated and cast"
 	},
 	"autoload": {
 		"classmap": ["src/"]
