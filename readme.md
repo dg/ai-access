@@ -322,6 +322,25 @@ your schema. It corrects itself on the next round. Your handler throwing is a
 different matter and propagates, unless you ask for
 `setToolLoop(catchErrors: true)`.
 
+The parameters can be a [nette/schema](https://doc.nette.org/en/schema) structure
+as well. Then the arguments are validated by it in full, the model gets its exact
+messages when they do not fit, and your handler receives what the schema yields,
+defaults filled in and casts applied:
+
+```php
+use Nette\Schema\Expect;
+
+$chat->addTool(new Tool(
+	name: 'get_weather',
+	description: 'Returns the current weather for a city.',
+	parameters: Expect::structure([
+		'city' => Expect::string()->required(),
+		'units' => Expect::anyOf('celsius', 'fahrenheit')->default('celsius'),
+	]),
+	handler: fn(stdClass $args) => $weatherService->for($args->city, $args->units),
+));
+```
+
 Prefer to drive the loop yourself? Leave the handler out and nothing happens
 behind your back:
 
@@ -444,6 +463,40 @@ echo $data['name'];
 
 The four providers that support this want the schema in four different shapes,
 one of them nested two levels deeper than the rest. You write it once.
+
+With [nette/schema](https://doc.nette.org/en/schema) installed you can write the
+schema as `Expect::` instead of a JSON Schema array, and get more than the wire
+format out of it: the answer is validated against the same schema on the PHP side
+and cast to what it yields, so `getJson()` hands you an object, an array or your
+own class instead of a decoded array:
+
+```php
+use Nette\Schema\Expect;
+
+$chat->setResponseSchema(Expect::structure([
+	'name' => Expect::string()->required()->description('Company name'),
+	'founded' => Expect::int()->min(1000)->required(),
+	'note' => Expect::string()->nullable()->required(),
+]));
+
+$data = $chat->sendMessage($text)->getJson();
+echo $data->name;
+
+$chat->setResponseSchema(Expect::from(new Company));   // typed properties become the schema
+$company = $chat->sendMessage($text)->getJson();        // an instance of Company
+```
+
+`description()` reaches the model, `min()`, `enum`-like `anyOf()`, `nullable()`
+and `listOf()` become their JSON Schema counterparts, while `assert()`,
+`transform()` and `castTo()` stay on the PHP side and run on the answer. An answer
+the schema refuses is an `UnexpectedResponseException`. OpenAI, Grok and the
+generic client send the schema in strict mode, which needs every key required;
+a key left optional or an open map (`arrayOf()`) is reported by `setResponseSchema()`
+right away, so keep keys `required()` and make them `nullable()` instead; note that
+`Expect::from()` leaves an optional constructor parameter optional, so override it
+through its second argument, `Expect::from(new Company, ['note' => Expect::string()->nullable()->required()])`.
+Class types (`Expect::type(DateTime::class)`) have no JSON counterpart and are refused
+too: use `Expect::string()->castTo(DateTime::class)`.
 
 DeepSeek has no schema enforcement, so `setResponseSchema()` throws there instead
 of quietly sending something the endpoint answers with "This response_format type

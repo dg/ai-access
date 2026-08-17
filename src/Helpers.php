@@ -7,7 +7,11 @@
 
 namespace AIAccess;
 
-use function is_array, is_int, is_string;
+use Nette\Schema\Elements\Structure;
+use Nette\Schema\JsonSchema;
+use Nette\Schema\Processor;
+use Nette\Schema\ValidationException;
+use function array_diff, array_keys, implode, is_array, is_int, is_string;
 use const JSON_THROW_ON_ERROR;
 
 
@@ -37,17 +41,84 @@ final class Helpers
 
 
 	/**
-	 * Decodes text the model produced under a response schema.
+	 * Decodes text the model produced under a response schema; a Nette schema also validates
+	 * and casts it, so the caller gets what the schema yields.
+	 * @param  mixed[]|Structure|null  $schema
+	 * @throws UnexpectedResponseException  when the text is not valid JSON or does not match the schema
 	 */
-	public static function decodeResponseJson(string $text): mixed
+	public static function decodeResponseJson(string $text, array|Structure|null $schema = null): mixed
 	{
 		if ($text === '') { // the model produced no text at all; that is not a malformed answer
 			return null;
 		}
 		try {
-			return json_decode($text, true, 512, JSON_THROW_ON_ERROR);
+			$data = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
 		} catch (\JsonException $e) {
 			throw new UnexpectedResponseException('Response is not valid JSON: ' . $e->getMessage(), 0, $e);
+		}
+		if (!$schema instanceof Structure) {
+			return $data;
+		}
+		try {
+			return (new Processor)->process($schema, $data);
+		} catch (ValidationException $e) {
+			throw new UnexpectedResponseException('Response does not match the schema: ' . implode(' ', $e->getMessages()), 0, $e);
+		}
+	}
+
+
+	/**
+	 * Turns a Nette schema into the JSON Schema sent to the provider; an array is already one.
+	 * @param  mixed[]|Structure  $schema
+	 * @return mixed[]
+	 */
+	public static function exportSchema(array|Structure $schema): array
+	{
+		return is_array($schema) ? $schema : (array) JsonSchema::export($schema);
+	}
+
+
+	/**
+	 * A strict provider wants every property required and no additional ones; a Nette schema
+	 * breaking that is a mistake to report now, not an ApiException a request later.
+	 * @param  mixed[]  $schema  JSON Schema
+	 */
+	public static function assertStrictSchema(array $schema, string $path = ''): void
+	{
+		if (($schema['type'] ?? null) === 'object') {
+			if (($schema['additionalProperties'] ?? true) !== false) {
+				throw new LogicException("Object '" . ($path ?: '(root)') . "' allows additional properties (arrayOf(), otherItems()), which the provider's strict mode does not; use structure() or listOf().");
+			}
+			foreach (array_diff(array_keys($schema['properties'] ?? []), $schema['required'] ?? []) as $key) {
+				throw new LogicException("Key '$path$key' is optional, but the provider's strict mode needs every key required; make it required() or nullable(), with Expect::from() through its second argument.");
+			}
+			foreach ($schema['properties'] ?? [] as $key => $property) {
+				self::assertStrictSchema($property, "$path$key.");
+			}
+		}
+		if (is_array($schema['items'] ?? null)) {
+			self::assertStrictSchema($schema['items'], "{$path}items.");
+		}
+		foreach ($schema['anyOf'] ?? [] as $variant) {
+			if (is_array($variant)) {
+				self::assertStrictSchema($variant, $path);
+			}
+		}
+	}
+
+
+	/**
+	 * Validates tool arguments against a Nette schema. A mismatch is the model's mistake to
+	 * correct, hence the message instead of an exception.
+	 * @param  mixed[]  $arguments
+	 * @return array{mixed, ?string}  the arguments as the schema yields them, and the reason they were refused
+	 */
+	public static function processArguments(Structure $schema, array $arguments): array
+	{
+		try {
+			return [(new Processor)->process($schema, $arguments), null];
+		} catch (ValidationException $e) {
+			return [null, implode(' ', $e->getMessages())];
 		}
 	}
 

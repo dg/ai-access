@@ -11,6 +11,7 @@ use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use AIAccess\Http\SseStream;
+use Nette\Schema\Elements\Structure;
 use function array_filter, is_array, is_string;
 
 
@@ -27,20 +28,30 @@ abstract class BaseChat extends AIAccess\Chat\Chat
 	/** @var mixed[] */
 	protected array $options = [];
 
+	/**
+	 * the schema setResponseSchema() got, for the response; setOptions(responseFormat:) drops it
+	 * @var mixed[]|Structure|null
+	 */
+	protected array|Structure|null $responseSchema = null;
+
 
 	/**
 	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
 	 * An endpoint without structured output overrides with a throw.
-	 * @param  mixed[]  $schema
+	 * @param  mixed[]|Structure  $schema  JSON Schema, or a Nette schema that also validates and casts the answer
 	 */
-	public function setResponseSchema(array $schema): static
+	public function setResponseSchema(array|Structure $schema): static
 	{
+		if ($schema instanceof Structure) {
+			AIAccess\Helpers::assertStrictSchema(AIAccess\Helpers::exportSchema($schema));
+		}
 		// the same option setOptions(responseFormat:) writes, so the later call wins
 		// instead of one silently overwriting the other
 		$this->options['response_format'] = [
 			'type' => 'json_schema',
-			'json_schema' => ['name' => 'response', 'schema' => $schema, 'strict' => true],
+			'json_schema' => ['name' => 'response', 'schema' => AIAccess\Helpers::exportSchema($schema), 'strict' => true],
 		];
+		$this->responseSchema = $schema;
 		return $this;
 	}
 

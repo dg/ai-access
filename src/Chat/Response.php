@@ -48,8 +48,9 @@ interface Response
 	function getUsage(): ?Usage;
 
 	/**
-	 * Decodes the response text as JSON. Use together with setResponseSchema().
-	 * @throws UnexpectedResponseException  when the text is not valid JSON
+	 * Decodes the response text as JSON. Use together with setResponseSchema(); given a Nette schema
+	 * there, the answer is validated by it and this returns what the schema yields.
+	 * @throws UnexpectedResponseException  when the text is not valid JSON or does not match the Nette schema
 	 */
 	function getJson(): mixed;
 

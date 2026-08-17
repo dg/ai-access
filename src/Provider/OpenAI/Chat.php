@@ -10,6 +10,7 @@ namespace AIAccess\Provider\OpenAI;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
+use Nette\Schema\Elements\Structure;
 use function array_filter, array_merge, array_values, count, is_array;
 
 
@@ -21,8 +22,8 @@ final class Chat extends AIAccess\Chat\Chat
 	/** @var mixed[] */
 	private array $options = [];
 
-	/** @var mixed[]|null */
-	private ?array $responseSchema = null;
+	/** @var mixed[]|Structure|null */
+	private array|Structure|null $responseSchema = null;
 
 
 	public function __construct(
@@ -84,10 +85,13 @@ final class Chat extends AIAccess\Chat\Chat
 	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
 	 * Sent with strict mode on, so the schema must meet its rules: every property required,
 	 * additionalProperties: false.
-	 * @param  mixed[]  $schema
+	 * @param  mixed[]|Structure  $schema  JSON Schema, or a Nette schema that also validates and casts the answer
 	 */
-	public function setResponseSchema(array $schema): static
+	public function setResponseSchema(array|Structure $schema): static
 	{
+		if ($schema instanceof Structure) {
+			AIAccess\Helpers::assertStrictSchema(AIAccess\Helpers::exportSchema($schema));
+		}
 		$this->responseSchema = $schema;
 		return $this;
 	}
@@ -97,7 +101,7 @@ final class Chat extends AIAccess\Chat\Chat
 	{
 		$response = $this->client->callApi('responses', $this->buildPayload());
 		$this->checkFailure($response);
-		return new ChatResponse($response);
+		return new ChatResponse($response, schema: $this->responseSchema);
 	}
 
 
@@ -115,7 +119,7 @@ final class Chat extends AIAccess\Chat\Chat
 		}
 		$response = $accumulator->getResponse();
 		$this->checkFailure($response);
-		return new ChatResponse($response, cancelled: $stopped);
+		return new ChatResponse($response, cancelled: $stopped, schema: $this->responseSchema);
 	}
 
 
@@ -182,7 +186,7 @@ final class Chat extends AIAccess\Chat\Chat
 			$payload['text']['format'] = [
 				'type' => 'json_schema',
 				'name' => 'response',
-				'schema' => $this->responseSchema,
+				'schema' => AIAccess\Helpers::exportSchema($this->responseSchema),
 				'strict' => true,
 			];
 		}

@@ -6,6 +6,7 @@
  */
 
 namespace AIAccess\Chat;
+use AIAccess\Helpers;
 use AIAccess\LogicException;
 use AIAccess\ServiceException;
 use AIAccess\TooManyRoundsException;
@@ -229,12 +230,17 @@ abstract class Chat
 			return ["Tool '$call->name' has no handler.", true];
 		} elseif ($call->argumentsError !== null) {
 			return [$call->argumentsError, true];
-		} elseif ($error = $this->checkArguments($tool, $call->arguments)) {
+		}
+
+		[$arguments, $error] = $tool->schema
+			? Helpers::processArguments($tool->schema, $call->arguments)
+			: [$call->arguments, $this->checkArguments($tool, $call->arguments)];
+		if ($error !== null) {
 			return [$error, true];
 		}
 
 		try {
-			$result = ($tool->handler)($call->arguments, $call);
+			$result = ($tool->handler)($arguments, $call);
 		} catch (\Throwable $e) {
 			// a failed tool is the model's business, but an \Error is a bug in the handler;
 			// feeding that to the model would hide it behind a plausible-looking conversation
@@ -254,7 +260,7 @@ abstract class Chat
 
 	/**
 	 * Required keys and scalar types only; a full JSON Schema validator is not worth
-	 * a dependency when the model gets the error message anyway.
+	 * a dependency when the model gets the error message anyway. A Nette schema validates itself.
 	 * @param  mixed[]  $arguments
 	 */
 	private function checkArguments(Tool $tool, array $arguments): ?string

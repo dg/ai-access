@@ -11,6 +11,7 @@ use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use AIAccess\ServiceException;
+use Nette\Schema\Elements\Structure;
 use function array_filter, array_flip, array_intersect_key, array_merge, is_array;
 
 
@@ -22,8 +23,8 @@ final class Chat extends AIAccess\Chat\Chat
 	/** @var mixed[] */
 	private array $options = [];
 
-	/** @var mixed[]|null */
-	private ?array $responseSchema = null;
+	/** @var mixed[]|Structure|null */
+	private array|Structure|null $responseSchema = null;
 
 
 	public function __construct(
@@ -79,9 +80,9 @@ final class Chat extends AIAccess\Chat\Chat
 
 	/**
 	 * Constrains the answer to the given JSON Schema. Read the result with Response::getJson().
-	 * @param  mixed[]  $schema
+	 * @param  mixed[]|Structure  $schema  JSON Schema, or a Nette schema that also validates and casts the answer
 	 */
-	public function setResponseSchema(array $schema): static
+	public function setResponseSchema(array|Structure $schema): static
 	{
 		$this->responseSchema = $schema;
 		return $this;
@@ -90,7 +91,7 @@ final class Chat extends AIAccess\Chat\Chat
 
 	protected function generateResponse(): ChatResponse
 	{
-		return new ChatResponse($this->client->callApi('v1/messages', $this->buildPayload()));
+		return new ChatResponse($this->client->callApi('v1/messages', $this->buildPayload()), schema: $this->responseSchema);
 	}
 
 
@@ -101,7 +102,7 @@ final class Chat extends AIAccess\Chat\Chat
 			fn(\Closure $onChunk) => $this->client->callApiStream('v1/messages', $this->buildPayload(), $onChunk),
 			fn(?string $name, string $json) => $accumulator->event($name, $json, $onDelta),
 		);
-		return new ChatResponse($accumulator->getResponse(), cancelled: $stopped);
+		return new ChatResponse($accumulator->getResponse(), cancelled: $stopped, schema: $this->responseSchema);
 	}
 
 
@@ -143,7 +144,7 @@ final class Chat extends AIAccess\Chat\Chat
 		}
 
 		if ($this->responseSchema !== null) {
-			$payload['output_config']['format'] = ['type' => 'json_schema', 'schema' => $this->responseSchema];
+			$payload['output_config']['format'] = ['type' => 'json_schema', 'schema' => AIAccess\Helpers::exportSchema($this->responseSchema)];
 		}
 
 		foreach ($this->tools as $tool) {
