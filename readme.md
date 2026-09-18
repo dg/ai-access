@@ -58,7 +58,7 @@ wrap it yet; xAI has batch and file endpoints that are not wrapped at all.
 Gemini counts batches among its paid features, so they need a billing-enabled
 Google project rather than a free-tier key.
 
-The last column is the [generic client](https://doc.nette.org/ai-access/providers#toc-the-generic-client-for-everything-else) for anything speaking the OpenAI dialect:
+The last column is the [generic client](https://ai-access.deegee.dev/providers#toc-the-generic-client-for-everything-else) for anything speaking the OpenAI dialect:
 Ollama, Mistral, OpenRouter, Together, vLLM or Azure. The mark means something
 different there, namely what the library is able to send; whether it actually
 works is decided by the endpoint and the model you point it at.
@@ -78,7 +78,7 @@ Requires PHP 8.3 or later.
 
 Getting Started
 ===============
-📖 Docs: [Getting Started](https://doc.nette.org/ai-access/getting-started)
+📖 Docs: [Getting Started](https://ai-access.deegee.dev/getting-started)
 
 Create a client for your chosen provider. This is the only provider-specific line in your application:
 
@@ -109,7 +109,7 @@ The model travels with the key, so every call below can leave it out; passing on
 
 Chat
 ====
-📖 Docs: [Conversation](https://doc.nette.org/ai-access/chat) · ▶ Full runnable examples: [examples/chat/](examples/chat)
+📖 Docs: [Conversation](https://ai-access.deegee.dev/chat) · ▶ Full runnable examples: [examples/chat/](examples/chat)
 
 ```php
 $chat = $client->createChat();
@@ -191,7 +191,7 @@ And when you need something the abstraction does not cover, `$response->getRawRe
 
 Model Options
 -------------
-📖 Docs: [Options and Reasoning Effort](https://doc.nette.org/ai-access/options) · ▶ Full runnable example: [examples/chat/options.php](examples/chat/options.php)
+📖 Docs: [Options and Reasoning Effort](https://ai-access.deegee.dev/options) · ▶ Full runnable example: [examples/chat/options.php](examples/chat/options.php)
 
 How hard should the model think before answering? That is the one knob every
 provider now has, and AI Access unifies it:
@@ -230,7 +230,7 @@ swallow the names that do not apply to the provider you happen to be using.
 
 Streaming
 =========
-📖 Docs: [Streaming](https://doc.nette.org/ai-access/streaming) · ▶ Full runnable example: [examples/chat/streaming.php](examples/chat/streaming.php)
+📖 Docs: [Streaming](https://ai-access.deegee.dev/streaming) · ▶ Full runnable example: [examples/chat/streaming.php](examples/chat/streaming.php)
 
 ```php
 foreach ($chat->sendMessageStream('Explain PHP generators') as $delta) {
@@ -282,7 +282,7 @@ wherever the network happened to cut them. You get `foreach`.
 
 Tool Calling
 ============
-📖 Docs: [Tool Calling](https://doc.nette.org/ai-access/tools) · ▶ Full runnable examples: [examples/tools/](examples/tools)
+📖 Docs: [Tool Calling](https://ai-access.deegee.dev/tools) · ▶ Full runnable examples: [examples/tools/](examples/tools)
 
 Describe a function, give it a handler, and the model can call your code:
 
@@ -339,7 +339,7 @@ what the whole thing cost; `$response->getUsage()` is only the last round.
 
 Images and Documents
 ====================
-📖 Docs: [Images and Documents](https://doc.nette.org/ai-access/multimodal) · ▶ Full runnable example: [examples/multimodal/image-input.php](examples/multimodal/image-input.php)
+📖 Docs: [Images and Documents](https://ai-access.deegee.dev/multimodal) · ▶ Full runnable example: [examples/multimodal/image-input.php](examples/multimodal/image-input.php)
 
 A message is not only text. Pass a picture or a PDF alongside the words:
 
@@ -369,7 +369,7 @@ drop it from the history once you are done with it.
 
 Image Generation
 ================
-📖 Docs: [Image Generation](https://doc.nette.org/ai-access/images) · ▶ Full runnable examples: [examples/images/](examples/images)
+📖 Docs: [Image Generation](https://ai-access.deegee.dev/images) · ▶ Full runnable examples: [examples/images/](examples/images)
 
 ```php
 $image = $client->generateImage('A lighthouse on a cliff, flat vector style', 'gpt-image-2');
@@ -404,7 +404,7 @@ ordinary chat one, which the interface hides from you; it answers with JPEG
 rather than PNG, so read `getMimeType()` instead of assuming the extension.
 
 Generating a high-quality picture from references legitimately runs for minutes,
-while the [HTTP client](https://doc.nette.org/ai-access/http) gives up after three.
+while the [HTTP client](https://ai-access.deegee.dev/http) gives up after three.
 Raise its timeout for this kind of work:
 
 ```php
@@ -416,7 +416,7 @@ $client = new AIAccess\Provider\OpenAI\Client($apiKey, $http);
 
 Structured Output
 =================
-📖 Docs: [Structured Output](https://doc.nette.org/ai-access/structured-output) · ▶ Full runnable example: [examples/structured-output/extraction.php](examples/structured-output/extraction.php)
+📖 Docs: [Structured Output](https://ai-access.deegee.dev/structured-output) · ▶ Full runnable example: [examples/structured-output/extraction.php](examples/structured-output/extraction.php)
 
 Ask for data instead of prose. Hand the model a JSON Schema and read the result
 as a PHP array:
@@ -450,7 +450,7 @@ conversation. Saying so out loud is the honest-abstraction principle in practice
 
 Batch Processing
 ================
-📖 Docs: [Batch Processing](https://doc.nette.org/ai-access/batch) · ▶ Full runnable examples: [examples/batch/](examples/batch)
+📖 Docs: [Batch Processing](https://ai-access.deegee.dev/batch) · ▶ Full runnable examples: [examples/batch/](examples/batch)
 
 When you do not need answers immediately, batch processing gets you the same models at **half the price**. Supported by OpenAI, Claude and Gemini; all three use completely different mechanics under the hood (a JSONL file upload, inline requests, and a long-running operation), and AIAccess hides that difference entirely:
 
@@ -531,7 +531,7 @@ add it.
 
 Embeddings
 ==========
-📖 Docs: [Embeddings](https://doc.nette.org/ai-access/embeddings) · ▶ Full runnable examples: [examples/embeddings/](examples/embeddings)
+📖 Docs: [Embeddings](https://ai-access.deegee.dev/embeddings) · ▶ Full runnable examples: [examples/embeddings/](examples/embeddings)
 
 Embeddings turn text into numeric vectors that capture meaning, the foundation of semantic search, clustering, recommendations and RAG. Supported by OpenAI and Gemini:
 
@@ -558,7 +558,7 @@ Provider-specific options (OpenAI `dimensions`, Gemini `taskType`, ...) are agai
 
 List of Models
 ==============
-📖 Docs: [Providers and Models](https://doc.nette.org/ai-access/providers#toc-which-models-a-provider-currently-offers) · ▶ Full runnable example: [examples/models/list.php](examples/models/list.php)
+📖 Docs: [Providers and Models](https://ai-access.deegee.dev/providers#toc-which-models-a-provider-currently-offers) · ▶ Full runnable example: [examples/models/list.php](examples/models/list.php)
 
 Model names are ordinary strings, which is what lets a new model work the day it
 ships. The price is that a retired name fails only when you call it, so ask the
@@ -588,7 +588,7 @@ $tokens = $chat->countTokens();
 
 Error Handling
 ==============
-📖 Docs: [Error Handling](https://doc.nette.org/ai-access/errors) · ▶ Full runnable example: [examples/errors/handling.php](examples/errors/handling.php)
+📖 Docs: [Error Handling](https://ai-access.deegee.dev/errors) · ▶ Full runnable example: [examples/errors/handling.php](examples/errors/handling.php)
 
 The exception hierarchy is organized around recovery strategy, so a `catch` block reads like an incident-response plan:
 
@@ -620,7 +620,7 @@ try {
 }
 ```
 
-The backing off is not yours to write either: the [HTTP layer](https://doc.nette.org/ai-access/http) ships a `RetryClient` that repeats rate limits and outages, honors `Retry-After`, and repeats nothing that would fail identically the second time.
+The backing off is not yours to write either: the [HTTP layer](https://ai-access.deegee.dev/http) ships a `RetryClient` that repeats rate limits and outages, honors `Retry-After`, and repeats nothing that would fail identically the second time.
 
 `LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production. It extends PHP's own `\LogicException`, which is where any PHP developer expects to find it. `IOException` sits outside for a similar reason: a file that cannot be read or written (`Media::fromFile()`, saving media, uploading a batch) is a local filesystem problem, not something the service said, and it extends PHP's `\RuntimeException`.
 
