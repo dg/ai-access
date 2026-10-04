@@ -46,7 +46,7 @@ final class Vector
 
 		$this->norm ??= sqrt(array_reduce($this->vector, fn($carry, $value) => $carry + $value * $value, 0.0));
 		$embedding->norm ??= sqrt(array_reduce($embedding->vector, fn($carry, $value) => $carry + $value * $value, 0.0));
-		if ($this->norm == 0.0 || $embedding->norm == 0.0) {
+		if ($this->norm === 0.0 || $embedding->norm === 0.0) {
 			return 0.0;
 		}
 

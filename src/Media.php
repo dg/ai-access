@@ -28,7 +28,7 @@ final class Media implements Chat\Part
 
 	public static function fromFile(string $path): static
 	{
-		$data = @file_get_contents($path);
+		$data = @file_get_contents($path); // @ is escalated to exception
 		if ($data === false) {
 			throw new IOException("Cannot read file '$path'.");
 		}
@@ -80,7 +80,7 @@ final class Media implements Chat\Part
 
 	public function save(string $path): void
 	{
-		if (@file_put_contents($path, $this->data) === false) {
+		if (@file_put_contents($path, $this->data) === false) { // @ is escalated to exception
 			throw new IOException("Cannot write file '$path'.");
 		}
 	}

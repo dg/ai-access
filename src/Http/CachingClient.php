@@ -22,7 +22,7 @@ final class CachingClient implements Client
 		private readonly string $directory,
 		private readonly int $ttl = 86400,
 	) {
-		if (!is_dir($directory) && !@mkdir($directory, recursive: true) && !is_dir($directory)) {
+		if (!is_dir($directory) && !@mkdir($directory, recursive: true) && !is_dir($directory)) { // @ directory may already exist
 			throw new IOException("Cannot create cache directory '$directory'.");
 		}
 	}
@@ -58,7 +58,7 @@ final class CachingClient implements Client
 		ksort($identity);
 		$file = $this->directory . '/' . hash('xxh128', serialize([$method, $url, $payload, $identity])) . '.cache';
 		if (is_file($file) && filemtime($file) > time() - $this->ttl) {
-			$cached = @unserialize((string) file_get_contents($file), ['allowed_classes' => [Response::class]]);
+			$cached = @unserialize((string) file_get_contents($file), ['allowed_classes' => [Response::class]]); // @ the cache may be corrupted
 			if ($cached instanceof Response) {
 				return $cached;
 			}
