@@ -76,7 +76,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	public function submitBatch(string $endpoint, iterable $lines, ?array $metadata = null): BatchResponse
 	{
 		$path = sys_get_temp_dir() . '/aiaccess-batch-' . bin2hex(random_bytes(8)) . '.jsonl';
-		$handle = @fopen($path, 'wb');
+		$handle = @fopen($path, 'wb'); // @ is escalated to exception
 		if ($handle === false) {
 			throw new AIAccess\IOException("Cannot write file '$path'.");
 		}
@@ -87,7 +87,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 					$line .= "\n";
 					// a full disk writes a part of the line and reports no error; the job would
 					// then fail remotely, on a request nobody wrote that way
-					if (@fwrite($handle, $line) !== strlen($line)) {
+					if (@fwrite($handle, $line) !== strlen($line)) { // @ is escalated to exception
 						throw new AIAccess\IOException("Cannot write file '$path'.");
 					}
 				}
@@ -96,7 +96,7 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 			}
 			$fileId = $this->uploadFile($path, 'batch', 'text/jsonl', 'batch_requests.jsonl');
 		} finally {
-			@unlink($path);
+			@unlink($path); // @ file may not exist
 		}
 
 		$payload = [

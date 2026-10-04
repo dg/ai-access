@@ -48,7 +48,7 @@ class FakeHttpClient implements Http\Client, \Countable
 			foreach ($payload->getItems() as $field => $info) {
 				$upload[$field] = $info['value']
 					?? $info['content']
-					?? (string) @file_get_contents($info['path']);
+					?? (string) @file_get_contents($info['path']); // @ file may not exist
 			}
 			$this->uploads[] = $upload;
 		}
