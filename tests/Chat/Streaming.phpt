@@ -155,8 +155,14 @@ test('a cancelled stream does not run tools or ask again', function () {
 	$event = fn(string $name, array $data) => "event: $name\ndata: " . json_encode($data) . "\n\n";
 
 	// the tool call arrives complete, and the caller stops on the text that follows it
-	$sse = $event('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
-		. $event('content_block_start', ['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]])
+	$sse = $event(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
+		. $event(
+			'content_block_start',
+			['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]],
+		)
 		. $event('content_block_delta', ['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confirm":true}']])
 		. $event('content_block_stop', ['index' => 0])
 		. $event('content_block_start', ['index' => 1, 'content_block' => ['type' => 'text', 'text' => '']])

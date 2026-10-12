@@ -77,7 +77,13 @@ test('a foreign call with no arguments replays as an object on every wire', func
 
 
 test('gemini wraps a list result, because a JSON array is not a Struct', function () {
-	$call = new ToolCallPart('get_items#0', 'get_items', [], provider: 'gemini', raw: ['functionCall' => ['name' => 'get_items', 'args' => new stdClass]]);
+	$call = new ToolCallPart(
+		'get_items#0',
+		'get_items',
+		[],
+		provider: 'gemini',
+		raw: ['functionCall' => ['name' => 'get_items', 'args' => new stdClass]],
+	);
 
 	$http = (new FakeHttpClient)->queue(geminiAnswer());
 	$chat = (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m');

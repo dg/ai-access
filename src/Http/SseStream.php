@@ -8,7 +8,6 @@
 namespace AIAccess\Http;
 
 
-
 /**
  * Cuts a byte stream into server-sent events.
  *

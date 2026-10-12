@@ -51,9 +51,18 @@ test('getText() answers in full no matter how much was already read', function (
 
 
 test('a cancelled stream leaves a history the next request can use', function () {
-	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
-		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]])
-		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confirm":true}']])
+	$sse = claudeEvent(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
+		. claudeEvent(
+			'content_block_start',
+			['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]],
+		)
+		. claudeEvent(
+			'content_block_delta',
+			['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confirm":true}']],
+		)
 		. claudeEvent('content_block_stop', ['index' => 0])
 		. claudeEvent('content_block_start', ['index' => 1, 'content_block' => ['type' => 'text', 'text' => '']])
 		. claudeEvent('content_block_delta', ['index' => 1, 'delta' => ['type' => 'text_delta', 'text' => 'Wiping now.']])
@@ -81,9 +90,18 @@ test('a cancelled stream leaves a history the next request can use', function ()
 
 
 test('a cancel does not answer calls the caller runs by hand', function () {
-	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
-		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]])
-		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confirm":true}']])
+	$sse = claudeEvent(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
+		. claudeEvent(
+			'content_block_start',
+			['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]],
+		)
+		. claudeEvent(
+			'content_block_delta',
+			['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confirm":true}']],
+		)
 		. claudeEvent('content_block_stop', ['index' => 0])
 		. claudeEvent('content_block_start', ['index' => 1, 'content_block' => ['type' => 'text', 'text' => '']])
 		. claudeEvent('content_block_delta', ['index' => 1, 'delta' => ['type' => 'text_delta', 'text' => 'Wiping now.']]);
@@ -101,7 +119,10 @@ test('a cancel does not answer calls the caller runs by hand', function () {
 
 
 test('claude text blocks stream apart the way getText() reads them', function () {
-	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
+	$sse = claudeEvent(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
 		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'text', 'text' => '']])
 		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'text_delta', 'text' => 'First block.']])
 		. claudeEvent('content_block_stop', ['index' => 0])
@@ -125,7 +146,10 @@ test('claude text blocks stream apart the way getText() reads them', function ()
 
 
 test('an incomplete thinking block is dropped rather than replayed with a broken signature', function () {
-	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
+	$sse = claudeEvent(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
 		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'thinking', 'thinking' => '']])
 		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'thinking_delta', 'thinking' => 'half a thought']])
 		. claudeEvent('content_block_start', ['index' => 1, 'content_block' => ['type' => 'text', 'text' => '']])
@@ -145,7 +169,10 @@ test('an incomplete thinking block is dropped rather than replayed with a broken
 
 
 test('an error event inside an HTTP 200 stream throws instead of truncating', function () {
-	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
+	$sse = claudeEvent(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
 		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'text', 'text' => '']])
 		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'text_delta', 'text' => 'Half an ans']])
 		. claudeEvent('error', ['type' => 'error', 'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded']]);
@@ -215,8 +242,17 @@ test('parallel tool calls are assembled from chat/completions deltas by index', 
 	]) . "\n\n";
 
 	$sse = $chunk(['role' => 'assistant'])
-		. $chunk(['tool_calls' => [['index' => 0, 'id' => 'call_a', 'type' => 'function', 'function' => ['name' => 'alpha', 'arguments' => '']]]])
-		. $chunk(['tool_calls' => [['index' => 1, 'id' => 'call_b', 'type' => 'function', 'function' => ['name' => 'beta', 'arguments' => '']]]])
+		. $chunk(
+			['tool_calls' => [[
+				'index' => 0,
+				'id' => 'call_a',
+				'type' => 'function',
+				'function' => ['name' => 'alpha', 'arguments' => ''],
+			]]],
+		)
+		. $chunk(
+			['tool_calls' => [['index' => 1, 'id' => 'call_b', 'type' => 'function', 'function' => ['name' => 'beta', 'arguments' => '']]]],
+		)
 		. $chunk(['tool_calls' => [['index' => 0, 'function' => ['arguments' => '{"x":']]]])
 		. $chunk(['tool_calls' => [['index' => 1, 'function' => ['arguments' => '{"y":"lo']]]])
 		. $chunk(['tool_calls' => [['index' => 0, 'function' => ['arguments' => '1}']]]])
@@ -240,8 +276,14 @@ test('parallel tool calls are assembled from chat/completions deltas by index', 
 
 test('a tool call cut off mid-arguments is dropped, not run with what survived', function () {
 	// no content_block_stop: the arguments never finished arriving
-	$sse = claudeEvent('message_start', ['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]])
-		. claudeEvent('content_block_start', ['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]])
+	$sse = claudeEvent(
+		'message_start',
+		['type' => 'message_start', 'message' => ['id' => 'm', 'role' => 'assistant', 'content' => [], 'usage' => ['input_tokens' => 5]]],
+	)
+		. claudeEvent(
+			'content_block_start',
+			['index' => 0, 'content_block' => ['type' => 'tool_use', 'id' => 't1', 'name' => 'wipe_database', 'input' => []]],
+		)
 		. claudeEvent('content_block_delta', ['index' => 0, 'delta' => ['type' => 'input_json_delta', 'partial_json' => '{"confi']]);
 
 	$http = (new FakeHttpClient)->queueStream([$sse]);
@@ -258,7 +300,14 @@ test('a tool call cut off mid-arguments is dropped, not run with what survived',
 test('the chat/completions dialect drops a half-written call the same way', function () {
 	$chunk = fn(array $delta) => 'data: ' . json_encode(['choices' => [['index' => 0, 'delta' => $delta]]]) . "\n\n";
 	$sse = $chunk(['role' => 'assistant'])
-		. $chunk(['tool_calls' => [['index' => 0, 'id' => 'call_a', 'type' => 'function', 'function' => ['name' => 'wipe_database', 'arguments' => '']]]])
+		. $chunk(
+			['tool_calls' => [[
+				'index' => 0,
+				'id' => 'call_a',
+				'type' => 'function',
+				'function' => ['name' => 'wipe_database', 'arguments' => ''],
+			]]],
+		)
 		. $chunk(['tool_calls' => [['index' => 0, 'function' => ['arguments' => '{"confi']]]]);
 
 	$http = (new FakeHttpClient)->queueStream([$sse]);
@@ -272,9 +321,18 @@ test('the chat/completions dialect drops a half-written call the same way', func
 
 
 test('once the stream did finish, malformed arguments stay the model to answer for', function () {
-	$chunk = fn(array $delta, ?string $finish = null) => 'data: ' . json_encode(['choices' => [['index' => 0, 'delta' => $delta, 'finish_reason' => $finish]]]) . "\n\n";
+	$chunk = fn(array $delta, ?string $finish = null) => 'data: '
+		. json_encode(['choices' => [['index' => 0, 'delta' => $delta, 'finish_reason' => $finish]]])
+		. "\n\n";
 	$sse = $chunk(['role' => 'assistant'])
-		. $chunk(['tool_calls' => [['index' => 0, 'id' => 'call_a', 'type' => 'function', 'function' => ['name' => 'lookup', 'arguments' => 'not json']]]])
+		. $chunk(
+			['tool_calls' => [[
+				'index' => 0,
+				'id' => 'call_a',
+				'type' => 'function',
+				'function' => ['name' => 'lookup', 'arguments' => 'not json'],
+			]]],
+		)
 		. $chunk([], 'tool_calls');
 
 	$http = (new FakeHttpClient)->queueStream([$sse]);

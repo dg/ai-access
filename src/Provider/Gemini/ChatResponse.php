@@ -61,8 +61,14 @@ final class ChatResponse implements Chat\Response
 		return match ($this->getRawFinishReason()) {
 			'STOP' => FinishReason::Complete,
 			'MAX_TOKENS' => FinishReason::TokenLimit,
-			'SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII',
-			'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT', 'IMAGE_RECITATION' => FinishReason::ContentFiltered,
+			'SAFETY',
+			'RECITATION',
+			'BLOCKLIST',
+			'PROHIBITED_CONTENT',
+			'SPII',
+			'IMAGE_SAFETY',
+			'IMAGE_PROHIBITED_CONTENT',
+			'IMAGE_RECITATION' => FinishReason::ContentFiltered,
 			default => FinishReason::Unknown,
 		};
 	}

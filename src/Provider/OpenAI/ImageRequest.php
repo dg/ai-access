@@ -65,7 +65,7 @@ final class ImageRequest
 		?string $moderation = null,
 	): static
 	{
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			[
 				'size' => $size,
 				'quality' => $quality,
@@ -76,7 +76,7 @@ final class ImageRequest
 				'moderation' => $moderation,
 			],
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 

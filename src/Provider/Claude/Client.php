@@ -21,12 +21,10 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Batch\Service
 	private string $apiVersion = '2023-06-01';
 
 
-	/**
-	 * @param  ?string  $chatModel  used by createChat() and the batch when none is given there
-	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		/** used by createChat() and the batch when none is given there */
 		private readonly ?string $chatModel = null,
 	) {
 	}

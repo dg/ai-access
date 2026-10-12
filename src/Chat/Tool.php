@@ -13,18 +13,20 @@ namespace AIAccess\Chat;
  */
 final readonly class Tool
 {
-	/**
-	 * @param  mixed[]  $parameters  JSON Schema of the arguments
-	 * @param  ?\Closure(mixed[], ToolCallPart): mixed  $handler  omit to drive the loop yourself;
-	 *                       a string or an array reaches the model as it is, a scalar becomes text
-	 * @param  bool  $strict  ask the provider to enforce the schema; Claude and Gemini have
-	 *                       no such switch and ignore it
-	 */
 	public function __construct(
 		public string $name,
 		public string $description = '',
+		/** @var mixed[] JSON Schema of the arguments */
 		public array $parameters = [],
+		/**
+		 * @var ?\Closure(mixed[], ToolCallPart): mixed omit to drive the loop yourself;
+		 * a string or an array reaches the model as it is, a scalar becomes text
+		 */
 		public ?\Closure $handler = null,
+		/**
+		 * ask the provider to enforce the schema; Claude and Gemini have
+		 * no such switch and ignore it
+		 */
 		public bool $strict = false,
 	) {
 	}

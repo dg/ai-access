@@ -26,13 +26,11 @@ final class Client implements AIAccess\Chat\Service
 	private array $extraHeaders = [];
 
 
-	/**
-	 * @param  ?string  $chatModel  used by createChat() when none is given there
-	 */
 	public function __construct(
 		private readonly string $apiKey,
 		string $baseUrl,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		/** used by createChat() when none is given there */
 		private readonly ?string $chatModel = null,
 	) {
 		$this->baseUrl = rtrim($baseUrl, '/') . '/';

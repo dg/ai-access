@@ -49,7 +49,7 @@ final class Chat extends AIAccess\Chat\Chat
 		?float $topP = null,
 	): static
 	{
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			[
 				'max_tokens' => $maxOutputTokens,
 				'stop_sequences' => $stopSequences === null ? null : (array) $stopSequences,
@@ -58,7 +58,7 @@ final class Chat extends AIAccess\Chat\Chat
 				'top_p' => $topP,
 			],
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 
@@ -227,6 +227,6 @@ final class Chat extends AIAccess\Chat\Chat
 			}
 		}
 		// tool_result blocks are rejected unless they lead the turn
-		return array_merge($first, $blocks);
+		return [...$first, ...$blocks];
 	}
 }

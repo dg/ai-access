@@ -38,14 +38,14 @@ final class ImageRequest
 		?int $n = null,
 	): static
 	{
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			[
 				'aspect_ratio' => $aspectRatio,
 				'resolution' => $resolution,
 				'n' => $n,
 			],
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 
@@ -69,11 +69,12 @@ final class ImageRequest
 	/** @return mixed[] */
 	private function buildPayload(): array
 	{
-		return array_merge([
+		return [
 			'model' => $this->model,
 			'prompt' => $this->prompt,
 			'n' => 1,
 			'response_format' => 'b64_json',
-		], $this->options);
+			...$this->options,
+		];
 	}
 }
