@@ -11,7 +11,7 @@ namespace AIAccess\Chat;
 /**
  * The model asking for a function to be called.
  */
-final class ToolCallPart implements Part
+final readonly class ToolCallPart implements Part
 {
 	/**
 	 * @param  string  $callId  the value the provider wants back with the result
@@ -19,12 +19,12 @@ final class ToolCallPart implements Part
 	 * @param  ?string  $argumentsError  why the arguments could not be read
 	 */
 	public function __construct(
-		public readonly string $callId,
-		public readonly string $name,
-		public readonly array $arguments = [],
-		public readonly ?string $argumentsError = null,
-		public readonly ?string $provider = null,
-		public readonly mixed $raw = null,
+		public string $callId,
+		public string $name,
+		public array $arguments = [],
+		public ?string $argumentsError = null,
+		public ?string $provider = null,
+		public mixed $raw = null,
 	) {
 	}
 }

@@ -16,7 +16,7 @@ use AIAccess\CommunicationException;
  * Requests are replayed as they are, so a 5xx that in fact created something
  * server-side (a batch job, an uploaded file) can be created twice.
  */
-final class RetryClient implements Client
+final readonly class RetryClient implements Client
 {
 	/** @var \Closure(float): void */
 	private \Closure $sleep;
@@ -26,10 +26,10 @@ final class RetryClient implements Client
 	 * @param  \Closure(float): void  $sleep
 	 */
 	public function __construct(
-		private readonly Client $inner,
-		private readonly int $maxAttempts = 3,
-		private readonly float $initialDelay = 1.0,
-		private readonly float $maxDelay = 30.0,
+		private Client $inner,
+		private int $maxAttempts = 3,
+		private float $initialDelay = 1.0,
+		private float $maxDelay = 30.0,
 		?\Closure $sleep = null,
 	) {
 		$this->sleep = $sleep ?? static fn(float $seconds) => usleep((int) ($seconds * 1_000_000));

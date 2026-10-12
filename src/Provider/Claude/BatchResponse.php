@@ -15,12 +15,12 @@ use function is_array, is_string;
 /**
  * Represents the state and eventual result of a Claude Batch API job.
  */
-final class BatchResponse implements AIAccess\Batch\Response
+final readonly class BatchResponse implements AIAccess\Batch\Response
 {
 	public function __construct(
-		private readonly Client $client,
+		private Client $client,
 		/** @var mixed[] */
-		private readonly array $batchData,
+		private array $batchData,
 	) {
 	}
 

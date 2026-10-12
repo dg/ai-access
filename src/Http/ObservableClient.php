@@ -11,16 +11,16 @@ namespace AIAccess\Http;
 /**
  * Reports every request and how it ended, for logging or a debug bar.
  */
-final class ObservableClient implements Client
+final readonly class ObservableClient implements Client
 {
 	public function __construct(
-		private readonly Client $inner,
+		private Client $inner,
 		/** @var ?\Closure(string, mixed): void */
-		private readonly ?\Closure $onRequest = null,
+		private ?\Closure $onRequest = null,
 		/** @var ?\Closure(Response, float): void */
-		private readonly ?\Closure $onResponse = null,
+		private ?\Closure $onResponse = null,
 		/** @var ?\Closure(\Throwable, float): void */
-		private readonly ?\Closure $onError = null,
+		private ?\Closure $onError = null,
 	) {
 	}
 

@@ -34,7 +34,7 @@ final class TextStream implements \IteratorAggregate
 	private ?\Throwable $failure = null;
 
 	/** @var \Closure(\Closure(string): (bool|null)): Response */
-	private \Closure $run;
+	private readonly \Closure $run;
 
 
 	/**

@@ -15,12 +15,12 @@ use AIAccess\Chat\Message;
  * both travel together, because telling them apart afterwards would mean reading the results
  * a second time.
  */
-final class Result
+final readonly class Result
 {
 	private function __construct(
-		public readonly string $customId,
-		public readonly ?Message $message,
-		public readonly ?string $error,
+		public string $customId,
+		public ?Message $message,
+		public ?string $error,
 	) {
 	}
 

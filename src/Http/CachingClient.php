@@ -15,12 +15,12 @@ use AIAccess\IOException;
  * where re-running a script should not cost money; in production a model
  * answering the same thing every time is a bug, not a feature.
  */
-final class CachingClient implements Client
+final readonly class CachingClient implements Client
 {
 	public function __construct(
-		private readonly Client $inner,
-		private readonly string $directory,
-		private readonly int $ttl = 86400,
+		private Client $inner,
+		private string $directory,
+		private int $ttl = 86400,
 	) {
 		if (!is_dir($directory) && !@mkdir($directory, recursive: true) && !is_dir($directory)) { // @ directory may already exist
 			throw new IOException("Cannot create cache directory '$directory'.");

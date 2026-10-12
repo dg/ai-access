@@ -18,7 +18,7 @@ use function is_array, is_string;
  */
 final class Client implements AIAccess\Chat\Service
 {
-	private string $baseUrl;
+	private readonly string $baseUrl;
 	private string $authHeader = 'Authorization';
 	private string $authPrefix = 'Bearer ';
 

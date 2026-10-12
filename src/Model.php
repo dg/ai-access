@@ -11,12 +11,12 @@ namespace AIAccess;
 /**
  * A model offered by a provider. Metadata differ wildly, so only the id is unified.
  */
-final class Model
+final readonly class Model
 {
 	public function __construct(
-		public readonly string $id,
+		public string $id,
 		/** @var mixed[] */
-		public readonly array $raw = [],
+		public array $raw = [],
 	) {
 	}
 }
