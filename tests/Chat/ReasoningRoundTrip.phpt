@@ -1,9 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Chat\ReasoningPart;
-use AIAccess\Chat\Role;
-use AIAccess\Chat\TextPart;
-use AIAccess\Chat\ToolCallPart;
+use AIAccess\Chat\{ReasoningPart, Role, TextPart, ToolCallPart};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

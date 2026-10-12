@@ -1,9 +1,7 @@
 <?php declare(strict_types=1);
 
-use AIAccess\ApiException;
-use AIAccess\CommunicationException;
-use AIAccess\Http\Client as HttpClient;
-use AIAccess\Http\Response;
+use AIAccess\{ApiException, CommunicationException};
+use AIAccess\Http\{Client as HttpClient, Response};
 use AIAccess\Provider\OpenAI\Client;
 use Tester\Assert;
 

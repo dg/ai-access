@@ -1,8 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Chat\Message;
-use AIAccess\Chat\Role;
-use AIAccess\Chat\TextPart;
+use AIAccess\Chat\{Message, Role, TextPart};
 use AIAccess\Media;
 use Tester\Assert;
 

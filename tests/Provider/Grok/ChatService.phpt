@@ -2,9 +2,7 @@
 
 use AIAccess\Chat\Role;
 use AIAccess\LogicException;
-use AIAccess\Provider\Grok\Chat;
-use AIAccess\Provider\Grok\ChatResponse;
-use AIAccess\Provider\Grok\Client;
+use AIAccess\Provider\Grok\{Chat, ChatResponse, Client};
 use Tester\Assert;
 
 require __DIR__ . '/../../bootstrap.php';

@@ -8,8 +8,7 @@
 namespace AIAccess\Provider\OpenAICompatible;
 
 use AIAccess;
-use AIAccess\Chat\Effort;
-use AIAccess\Chat\Role;
+use AIAccess\Chat\{Effort, Role};
 use AIAccess\Http\SseStream;
 use function is_array, is_string;
 

@@ -1,8 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Provider\Claude\Batch;
-use AIAccess\Provider\Claude\BatchResponse;
-use AIAccess\Provider\Claude\Client;
+use AIAccess\Provider\Claude\{Batch, BatchResponse, Client};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

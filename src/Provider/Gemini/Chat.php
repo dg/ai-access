@@ -8,8 +8,7 @@
 namespace AIAccess\Provider\Gemini;
 
 use AIAccess;
-use AIAccess\Chat\Effort;
-use AIAccess\Chat\Role;
+use AIAccess\Chat\{Effort, Role};
 use function is_array;
 
 

@@ -7,11 +7,8 @@
 
 namespace AIAccess\Provider\OpenAICompatible;
 
-use AIAccess\Chat;
+use AIAccess\{Chat, Helpers, LogicException, UnexpectedResponseException};
 use AIAccess\Chat\FinishReason;
-use AIAccess\Helpers;
-use AIAccess\LogicException;
-use AIAccess\UnexpectedResponseException;
 use function is_array, is_string;
 
 

@@ -1,9 +1,7 @@
 <?php declare(strict_types=1);
 
 use AIAccess\Chat\Role;
-use AIAccess\Provider\OpenAI\Batch;
-use AIAccess\Provider\OpenAI\BatchResponse;
-use AIAccess\Provider\OpenAI\Client;
+use AIAccess\Provider\OpenAI\{Batch, BatchResponse, Client};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

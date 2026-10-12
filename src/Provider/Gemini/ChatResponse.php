@@ -7,10 +7,8 @@
 
 namespace AIAccess\Provider\Gemini;
 
-use AIAccess\Chat;
+use AIAccess\{Chat, Helpers, Media};
 use AIAccess\Chat\FinishReason;
-use AIAccess\Helpers;
-use AIAccess\Media;
 use function is_array, is_string;
 
 

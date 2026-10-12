@@ -7,10 +7,8 @@
 
 namespace AIAccess\Provider\OpenAI;
 
-use AIAccess\ApiException;
-use AIAccess\Chat\Delta;
-use AIAccess\Chat\DeltaType;
-use AIAccess\Helpers;
+use AIAccess\{ApiException, Helpers};
+use AIAccess\Chat\{Delta, DeltaType};
 use function is_array, is_string;
 
 

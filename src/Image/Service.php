@@ -7,8 +7,7 @@
 
 namespace AIAccess\Image;
 
-use AIAccess\Media;
-use AIAccess\ServiceException;
+use AIAccess\{Media, ServiceException};
 
 
 /**
