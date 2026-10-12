@@ -10,7 +10,6 @@ namespace AIAccess\Provider\DeepSeek;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Provider\OpenAICompatible;
-use function array_filter, array_merge;
 
 
 /**

@@ -9,7 +9,7 @@ namespace AIAccess\Chat;
 use AIAccess\LogicException;
 use AIAccess\ServiceException;
 use AIAccess\TooManyRoundsException;
-use function array_key_exists, array_reverse, array_slice, count, is_array, is_bool, is_float, is_int, is_scalar, is_string;
+use function array_key_exists, count, is_array, is_bool, is_float, is_int, is_scalar, is_string;
 
 
 /**

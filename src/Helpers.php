@@ -8,7 +8,6 @@
 namespace AIAccess;
 
 use function is_array, is_int, is_string;
-use const JSON_THROW_ON_ERROR;
 
 
 /**

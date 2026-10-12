@@ -8,7 +8,7 @@
 namespace AIAccess\Provider\OpenAI;
 
 use AIAccess;
-use function array_map, array_unique, count, implode, reset;
+use function count;
 
 
 /**

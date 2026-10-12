@@ -32,7 +32,7 @@ final class Media implements Chat\Part
 		if ($data === false) {
 			throw new IOException("Cannot read file '$path'.");
 		}
-		$mime = (new \finfo(\FILEINFO_MIME_TYPE))->buffer($data);
+		$mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($data);
 		return new static($data, $mime === false ? 'application/octet-stream' : $mime, fileName: basename($path));
 	}
 

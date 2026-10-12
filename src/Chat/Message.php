@@ -9,7 +9,7 @@ namespace AIAccess\Chat;
 
 use AIAccess\LogicException;
 use AIAccess\Media;
-use function array_filter, array_values, implode, is_string;
+use function is_string;
 
 
 /**

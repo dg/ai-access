@@ -8,7 +8,6 @@
 namespace AIAccess\Provider\Grok;
 
 use AIAccess;
-use function array_filter, array_merge, base64_decode;
 
 
 /**
@@ -62,7 +61,7 @@ final class ImageRequest
 		}
 
 		// the response carries no mime type; xAI generates JPEG, but the bytes know best
-		$mime = (new \finfo(\FILEINFO_MIME_TYPE))->buffer($data);
+		$mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($data);
 		return new AIAccess\Media($data, $mime === false ? 'image/jpeg' : $mime, $response);
 	}
 

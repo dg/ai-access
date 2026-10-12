@@ -11,7 +11,7 @@ use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
 use AIAccess\Helpers;
 use AIAccess\Media;
-use function base64_decode, implode, is_array, is_string;
+use function is_array, is_string;
 
 
 /**

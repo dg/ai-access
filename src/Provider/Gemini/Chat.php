@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Gemini;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
-use function array_filter, array_flip, array_intersect_key, array_merge, compact, is_array;
+use function is_array;
 
 
 /**

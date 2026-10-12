@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Claude;
 use AIAccess\Chat;
 use AIAccess\Chat\FinishReason;
 use AIAccess\Helpers;
-use function implode, is_array, is_string;
+use function is_array, is_string;
 
 
 /**

@@ -9,7 +9,7 @@ namespace AIAccess\Provider\OpenAICompatible;
 
 use AIAccess;
 use AIAccess\Http;
-use function is_array, is_string, rtrim;
+use function is_array, is_string;
 
 
 /**

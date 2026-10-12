@@ -8,7 +8,7 @@
 namespace AIAccess\Provider\OpenAI;
 
 use AIAccess;
-use function base64_decode, is_array, is_string;
+use function is_array, is_string;
 
 
 /**
