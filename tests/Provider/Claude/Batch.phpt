@@ -2,10 +2,7 @@
 
 use AIAccess\Chat\Role;
 use AIAccess\LogicException;
-use AIAccess\Provider\Claude\Batch;
-use AIAccess\Provider\Claude\BatchResponse;
-use AIAccess\Provider\Claude\Chat;
-use AIAccess\Provider\Claude\Client;
+use AIAccess\Provider\Claude\{Batch, BatchResponse, Chat, Client};
 use Tester\Assert;
 
 require __DIR__ . '/../../bootstrap.php';

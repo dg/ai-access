@@ -7,8 +7,7 @@
 
 namespace AIAccess\Provider\OpenAICompatible;
 
-use AIAccess\Chat\Delta;
-use AIAccess\Chat\DeltaType;
+use AIAccess\Chat\{Delta, DeltaType};
 use AIAccess\Helpers;
 use function is_array, is_string;
 

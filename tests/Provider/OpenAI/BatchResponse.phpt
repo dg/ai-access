@@ -1,10 +1,8 @@
 <?php declare(strict_types=1);
 
 use AIAccess\Batch\Status;
-use AIAccess\Chat\Message;
-use AIAccess\Chat\Role;
-use AIAccess\Provider\OpenAI\BatchResponse;
-use AIAccess\Provider\OpenAI\Client;
+use AIAccess\Chat\{Message, Role};
+use AIAccess\Provider\OpenAI\{BatchResponse, Client};
 use Tester\Assert;
 
 require __DIR__ . '/../../bootstrap.php';

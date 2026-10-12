@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Provider;
-use AIAccess\UnexpectedResponseException;
+use AIAccess\{Provider, UnexpectedResponseException};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

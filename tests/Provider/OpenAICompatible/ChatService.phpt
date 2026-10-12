@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Chat\Effort;
-use AIAccess\Chat\Role;
+use AIAccess\Chat\{Effort, Role};
 use AIAccess\Provider\OpenAICompatible\Client;
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;

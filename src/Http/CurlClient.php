@@ -7,8 +7,7 @@
 
 namespace AIAccess\Http;
 
-use AIAccess\CommunicationException;
-use AIAccess\Helpers;
+use AIAccess\{CommunicationException, Helpers};
 use function defined, is_array, is_string, strlen;
 
 

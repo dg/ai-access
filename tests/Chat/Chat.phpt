@@ -1,9 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Chat\Chat;
-use AIAccess\Chat\Message;
-use AIAccess\Chat\Response;
-use AIAccess\Chat\Role;
+use AIAccess\Chat\{Chat, Message, Response, Role};
 use Tester\Assert;
 
 require __DIR__ . '/../bootstrap.php';

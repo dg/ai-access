@@ -1,9 +1,7 @@
 <?php declare(strict_types=1);
 
 use AIAccess\CommunicationException;
-use AIAccess\Http\CurlClient;
-use AIAccess\Http\CurlMocker;
-use AIAccess\Http\FormData;
+use AIAccess\Http\{CurlClient, CurlMocker, FormData};
 use Tester\Assert;
 
 require __DIR__ . '/../bootstrap.php';

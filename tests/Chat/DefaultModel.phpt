@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\LogicException;
-use AIAccess\Provider;
+use AIAccess\{LogicException, Provider};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

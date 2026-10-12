@@ -8,8 +8,7 @@
 namespace AIAccess\Provider\OpenAI;
 
 use AIAccess;
-use AIAccess\Chat\Effort;
-use AIAccess\Chat\Role;
+use AIAccess\Chat\{Effort, Role};
 use function count, is_array;
 
 

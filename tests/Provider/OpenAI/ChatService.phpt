@@ -2,9 +2,7 @@
 
 use AIAccess\Chat\Role;
 use AIAccess\LogicException;
-use AIAccess\Provider\OpenAI\Chat;
-use AIAccess\Provider\OpenAI\ChatResponse;
-use AIAccess\Provider\OpenAI\Client;
+use AIAccess\Provider\OpenAI\{Chat, ChatResponse, Client};
 use Tester\Assert;
 
 require __DIR__ . '/../../bootstrap.php';

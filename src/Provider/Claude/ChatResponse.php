@@ -7,9 +7,8 @@
 
 namespace AIAccess\Provider\Claude;
 
-use AIAccess\Chat;
+use AIAccess\{Chat, Helpers};
 use AIAccess\Chat\FinishReason;
-use AIAccess\Helpers;
 use function is_array, is_string;
 
 

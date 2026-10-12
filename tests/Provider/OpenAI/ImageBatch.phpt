@@ -2,8 +2,7 @@
 
 use AIAccess\Batch\Status;
 use AIAccess\Media;
-use AIAccess\Provider\OpenAI\BatchResponse;
-use AIAccess\Provider\OpenAI\Client;
+use AIAccess\Provider\OpenAI\{BatchResponse, Client};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

@@ -1,10 +1,7 @@
 <?php declare(strict_types=1);
 
 use AIAccess\CommunicationException;
-use AIAccess\Http\CachingClient;
-use AIAccess\Http\ObservableClient;
-use AIAccess\Http\Response;
-use AIAccess\Http\RetryClient;
+use AIAccess\Http\{CachingClient, ObservableClient, Response, RetryClient};
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;
 

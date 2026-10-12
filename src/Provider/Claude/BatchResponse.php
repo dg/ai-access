@@ -8,8 +8,7 @@
 namespace AIAccess\Provider\Claude;
 
 use AIAccess;
-use AIAccess\Batch\Result;
-use AIAccess\Batch\Status;
+use AIAccess\Batch\{Result, Status};
 use function is_array, is_string;
 
 

@@ -7,8 +7,7 @@
 
 namespace AIAccess\Chat;
 
-use AIAccess\LogicException;
-use AIAccess\Media;
+use AIAccess\{LogicException, Media};
 use function is_string;
 
 

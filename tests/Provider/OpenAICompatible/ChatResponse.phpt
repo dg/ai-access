@@ -1,9 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Chat\FinishReason;
-use AIAccess\Chat\ReasoningPart;
-use AIAccess\Chat\TextPart;
-use AIAccess\Chat\ToolCallPart;
+use AIAccess\Chat\{FinishReason, ReasoningPart, TextPart, ToolCallPart};
 use AIAccess\Provider\OpenAICompatible\ChatResponse;
 use Tester\Assert;
 

@@ -2,9 +2,7 @@
 
 use AIAccess\Chat\Role;
 use AIAccess\LogicException;
-use AIAccess\Provider\DeepSeek\Chat;
-use AIAccess\Provider\DeepSeek\ChatResponse;
-use AIAccess\Provider\DeepSeek\Client;
+use AIAccess\Provider\DeepSeek\{Chat, ChatResponse, Client};
 use Tester\Assert;
 
 require __DIR__ . '/../../bootstrap.php';

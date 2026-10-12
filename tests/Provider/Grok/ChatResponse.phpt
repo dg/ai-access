@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
 
-use AIAccess\Chat\FinishReason;
-use AIAccess\Chat\Usage;
+use AIAccess\Chat\{FinishReason, Usage};
 use AIAccess\Provider\Grok\ChatResponse;
 use Tester\Assert;
 

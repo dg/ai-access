@@ -3,9 +3,7 @@
 // The library does not persist conversations, but its message format must not stand in
 // the way of anyone who wants to. This test guards that; it is not a public API promise.
 
-use AIAccess\Chat\ReasoningPart;
-use AIAccess\Chat\Role;
-use AIAccess\Chat\TextPart;
+use AIAccess\Chat\{ReasoningPart, Role, TextPart};
 use AIAccess\Media;
 use Tester\Assert;
 use Tests\Support\FakeHttpClient;

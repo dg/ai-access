@@ -2,9 +2,7 @@
 
 use AIAccess\Chat\Role;
 use AIAccess\LogicException;
-use AIAccess\Provider\Gemini\Chat;
-use AIAccess\Provider\Gemini\ChatResponse;
-use AIAccess\Provider\Gemini\Client;
+use AIAccess\Provider\Gemini\{Chat, ChatResponse, Client};
 use Tester\Assert;
 
 require __DIR__ . '/../../bootstrap.php';

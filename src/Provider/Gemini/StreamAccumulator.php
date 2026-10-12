@@ -7,8 +7,7 @@
 
 namespace AIAccess\Provider\Gemini;
 
-use AIAccess\Chat\Delta;
-use AIAccess\Chat\DeltaType;
+use AIAccess\Chat\{Delta, DeltaType};
 use AIAccess\Helpers;
 use function count, is_array, is_string;
 

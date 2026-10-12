@@ -8,8 +8,7 @@
 namespace AIAccess\Provider\Claude;
 
 use AIAccess;
-use AIAccess\Chat\Effort;
-use AIAccess\Chat\Role;
+use AIAccess\Chat\{Effort, Role};
 use AIAccess\ServiceException;
 use function is_array;
 
