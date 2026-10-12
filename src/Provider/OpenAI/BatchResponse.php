@@ -10,7 +10,7 @@ namespace AIAccess\Provider\OpenAI;
 use AIAccess;
 use AIAccess\Batch\Result;
 use AIAccess\Batch\Status;
-use function implode, is_array, is_string, str_starts_with;
+use function is_array, is_string;
 
 
 /**

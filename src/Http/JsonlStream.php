@@ -7,7 +7,6 @@
 
 namespace AIAccess\Http;
 
-use function rtrim, strpos, substr;
 
 
 /**

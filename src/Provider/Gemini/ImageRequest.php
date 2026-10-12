@@ -8,7 +8,7 @@
 namespace AIAccess\Provider\Gemini;
 
 use AIAccess;
-use function array_filter, array_merge, is_array, is_string;
+use function is_array, is_string;
 
 
 /**

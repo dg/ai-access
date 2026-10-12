@@ -10,7 +10,7 @@ namespace AIAccess\Provider\Gemini;
 use AIAccess;
 use AIAccess\Embedding\Vector;
 use AIAccess\Http;
-use function count, is_array, rtrim;
+use function count, is_array;
 
 
 /**

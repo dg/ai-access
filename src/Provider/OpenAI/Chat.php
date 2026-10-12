@@ -10,7 +10,7 @@ namespace AIAccess\Provider\OpenAI;
 use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
-use function array_filter, array_merge, array_values, count, is_array;
+use function count, is_array;
 
 
 /**

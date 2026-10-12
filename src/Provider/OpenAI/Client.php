@@ -11,7 +11,7 @@ use AIAccess;
 use AIAccess\Embedding\Vector;
 use AIAccess\Http;
 use AIAccess\Http\FormData;
-use function array_filter, count, http_build_query, is_array, rtrim, strlen, usort;
+use function count, is_array, strlen;
 
 
 /**

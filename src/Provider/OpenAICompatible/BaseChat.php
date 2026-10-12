@@ -11,7 +11,7 @@ use AIAccess;
 use AIAccess\Chat\Effort;
 use AIAccess\Chat\Role;
 use AIAccess\Http\SseStream;
-use function array_filter, is_array, is_string;
+use function is_array, is_string;
 
 
 /**

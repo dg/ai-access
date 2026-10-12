@@ -8,7 +8,7 @@
 namespace AIAccess\Provider\OpenAI;
 
 use AIAccess;
-use function array_filter, array_merge, in_array;
+use function in_array;
 
 
 /**

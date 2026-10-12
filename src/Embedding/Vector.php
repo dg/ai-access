@@ -8,7 +8,7 @@
 namespace AIAccess\Embedding;
 
 use AIAccess\LogicException;
-use function array_reduce, array_values, count, pack, sqrt, strlen, unpack;
+use function count, strlen;
 
 
 /**
