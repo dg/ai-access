@@ -137,7 +137,7 @@ test('Invalid JSON response handling', function () {
 	Assert::exception(
 		fn() => $client->fetch('https://api.example.com/data'),
 		CommunicationException::class,
-		'Invalid JSON response from API: Syntax error',
+		'Invalid JSON response from API: Syntax error%a?%',
 	);
 });
 
