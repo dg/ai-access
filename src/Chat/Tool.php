@@ -11,7 +11,7 @@ namespace AIAccess\Chat;
 /**
  * A function the model may call.
  */
-final class Tool
+final readonly class Tool
 {
 	/**
 	 * @param  mixed[]  $parameters  JSON Schema of the arguments
@@ -21,11 +21,11 @@ final class Tool
 	 *                       no such switch and ignore it
 	 */
 	public function __construct(
-		public readonly string $name,
-		public readonly string $description = '',
-		public readonly array $parameters = [],
-		public readonly ?\Closure $handler = null,
-		public readonly bool $strict = false,
+		public string $name,
+		public string $description = '',
+		public array $parameters = [],
+		public ?\Closure $handler = null,
+		public bool $strict = false,
 	) {
 	}
 }

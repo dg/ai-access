@@ -14,12 +14,12 @@ namespace AIAccess\Chat;
  * Providers require their own reasoning payload back verbatim in multi-turn tool loops,
  * so $raw is opaque and is only ever sent to the provider named in $provider.
  */
-final class ReasoningPart implements Part
+final readonly class ReasoningPart implements Part
 {
 	public function __construct(
-		public readonly ?string $text,
-		public readonly ?string $provider = null,
-		public readonly mixed $raw = null,
+		public ?string $text,
+		public ?string $provider = null,
+		public mixed $raw = null,
 	) {
 	}
 }

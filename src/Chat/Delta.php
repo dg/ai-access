@@ -15,11 +15,11 @@ namespace AIAccess\Chat;
  * exposing reasoning or partial tool arguments later is a matter of letting them through
  * rather than rebuilding the providers.
  */
-final class Delta
+final readonly class Delta
 {
 	public function __construct(
-		public readonly DeltaType $type,
-		public readonly string $text,
+		public DeltaType $type,
+		public string $text,
 	) {
 	}
 }

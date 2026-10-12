@@ -8,16 +8,16 @@
 namespace AIAccess\Chat;
 
 
-final class Usage
+final readonly class Usage
 {
 	public function __construct(
-		public readonly ?int $inputTokens = null,
-		public readonly ?int $outputTokens = null,
-		public readonly ?int $reasoningTokens = null,
-		public readonly ?int $cacheReadTokens = null,
-		public readonly ?int $cacheWriteTokens = null,
+		public ?int $inputTokens = null,
+		public ?int $outputTokens = null,
+		public ?int $reasoningTokens = null,
+		public ?int $cacheReadTokens = null,
+		public ?int $cacheWriteTokens = null,
 		/** @var mixed[] */
-		public readonly array $raw = [],
+		public array $raw = [],
 	) {
 	}
 

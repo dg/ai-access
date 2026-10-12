@@ -11,13 +11,13 @@ namespace AIAccess\Http;
 /**
  * HTTP Response.
  */
-final class Response
+final readonly class Response
 {
 	public function __construct(
-		private readonly int $statusCode,
+		private int $statusCode,
 		/** @var array<string, string[]> $headers HTTP headers with lowercased keys */
-		private readonly array $headers,
-		private readonly mixed $data,
+		private array $headers,
+		private mixed $data,
 	) {
 	}
 
