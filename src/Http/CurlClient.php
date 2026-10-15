@@ -103,7 +103,7 @@ final class CurlClient implements Client
 		if ($errorBody !== '') {
 			// a streaming endpoint keeps announcing text/event-stream even when it answers with
 			// a JSON error, so the content type says nothing here and the body is tried as JSON
-			$decoded = json_decode($errorBody, true);
+			$decoded = json_decode($errorBody, associative: true);
 			$errorBody = is_array($decoded) ? $decoded : $errorBody;
 		}
 

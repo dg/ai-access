@@ -60,7 +60,7 @@ final class Chat extends AIAccess\Chat\Chat
 		?array $include = null,
 	): static
 	{
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			[
 				'max_output_tokens' => $maxOutputTokens,
 				'temperature' => $temperature,
@@ -74,7 +74,7 @@ final class Chat extends AIAccess\Chat\Chat
 				'include' => $include,
 			],
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 
@@ -197,15 +197,15 @@ final class Chat extends AIAccess\Chat\Chat
 			};
 		}
 
-		$payload = array_merge($payload, $this->options);
+		$payload = [...$payload, ...$this->options];
 
 		// without store the reasoning items exist nowhere server-side, so their encrypted copy
 		// must travel with the answer, or tool loops on reasoning models break with a 400
 		if (($payload['store'] ?? true) === false) {
-			$payload['include'] = array_values(array_unique(array_merge(
-				$payload['include'] ?? [],
-				['reasoning.encrypted_content'],
-			)));
+			$payload['include'] = array_values(array_unique([
+				...$payload['include'] ?? [],
+				'reasoning.encrypted_content',
+			]));
 		}
 
 		return $payload;
@@ -234,7 +234,8 @@ final class Chat extends AIAccess\Chat\Chat
 				// with store on (the default) the server resolves the item by its id, so the raw
 				// item is replayed as is; without it only an encrypted_content copy can travel
 				if ($part->provider === ChatResponse::Provider && $part->raw !== null
-					&& (isset($part->raw['encrypted_content']) || ($this->options['store'] ?? true) !== false)) {
+					&& (isset($part->raw['encrypted_content']) || ($this->options['store'] ?? true) !== false)
+				) {
 					$input[] = $part->raw;
 				}
 			} elseif ($part instanceof AIAccess\Chat\ToolCallPart) {

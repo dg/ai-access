@@ -53,7 +53,8 @@ final class StreamAccumulator
 				// getText() joins text blocks with \n, so the streamed text must read the same
 				if ((($data['part'] ?? [])['type'] ?? null) === 'output_text'
 					&& $this->sawText
-					&& $onDelta(new Delta(DeltaType::Text, "\n")) === false) {
+					&& $onDelta(new Delta(DeltaType::Text, "\n")) === false
+				) {
 					return false;
 				}
 				break;
@@ -62,7 +63,7 @@ final class StreamAccumulator
 				$this->sawText = true;
 				$this->partialTexts[(int) ($data['output_index'] ?? 0)][(int) ($data['content_index'] ?? 0)]
 					= ($this->partialTexts[(int) ($data['output_index'] ?? 0)][(int) ($data['content_index'] ?? 0)] ?? '')
-					. (string) ($data['delta'] ?? '');
+						. (string) ($data['delta'] ?? '');
 				return $onDelta(new Delta(DeltaType::Text, (string) ($data['delta'] ?? ''))) !== false;
 
 			case 'response.reasoning_summary_text.delta':

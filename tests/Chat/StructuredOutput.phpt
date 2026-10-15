@@ -37,7 +37,8 @@ test('the generic client shares the dialect shape, DeepSeek refuses it', functio
 	$http = (new FakeHttpClient)->queue(['choices' => [['message' => ['content' => '{}']]]]);
 
 	(new Provider\OpenAICompatible\Client('k', 'https://x/v1', $http))->createChat('m')
-		->setResponseSchema($schema)->sendMessage('x');
+		->setResponseSchema($schema)
+		->sendMessage('x');
 	Assert::same($schema, $http->lastPayload()['response_format']['json_schema']['schema']);
 
 	// measured: a json_schema format is answered with "This response_format type is unavailable now"

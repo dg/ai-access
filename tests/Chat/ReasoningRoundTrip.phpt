@@ -53,7 +53,7 @@ test('openai leaves no empty turn behind either', function () {
 
 	// a text part with nothing in it does not make an item of its own next to a call
 	$chat->clearMessages();
-	$chat->addMessage([new TextPart(''), new ToolCallPart('call_1', 'get_time', [])], Role::Model);
+	$chat->addMessage([new TextPart(''), new ToolCallPart('call_1', 'get_time')], Role::Model);
 	$chat->sendMessage('Again');
 
 	$types = array_map(fn($item) => $item['type'] ?? $item['role'], $http->lastPayload()['input']);

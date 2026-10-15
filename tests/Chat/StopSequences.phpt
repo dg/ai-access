@@ -17,10 +17,22 @@ function geminiAnswer(): array
 
 test('one option name reaches whatever the wire calls it', function () {
 	$cases = [
-		[fixture('claude/chat'), fn($http) => (new AIAccess\Provider\Claude\Client('key', $http))->createChat('m'), fn($p) => $p['stop_sequences']],
-		[fixture('deepseek/chat'), fn($http) => (new AIAccess\Provider\DeepSeek\Client('key', $http))->createChat('m'), fn($p) => $p['stop']],
+		[
+			fixture('claude/chat'),
+			fn($http) => (new AIAccess\Provider\Claude\Client('key', $http))->createChat('m'),
+			fn($p) => $p['stop_sequences'],
+		],
+		[
+			fixture('deepseek/chat'),
+			fn($http) => (new AIAccess\Provider\DeepSeek\Client('key', $http))->createChat('m'),
+			fn($p) => $p['stop'],
+		],
 		[fixture('grok/chat'), fn($http) => (new AIAccess\Provider\Grok\Client('key', $http))->createChat('m'), fn($p) => $p['stop']],
-		[geminiAnswer(), fn($http) => (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m'), fn($p) => $p['generationConfig']['stopSequences']],
+		[
+			geminiAnswer(),
+			fn($http) => (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m'),
+			fn($p) => $p['generationConfig']['stopSequences'],
+		],
 	];
 
 	foreach ($cases as [$answer, $createChat, $read]) {
@@ -38,9 +50,24 @@ test('a single sequence needs no array', function () {
 	// the chat/completions dialect takes a bare string, the others insist on a list,
 	// which is the library's business rather than the caller's
 	$cases = [
-		[fixture('claude/chat'), fn($http) => (new AIAccess\Provider\Claude\Client('key', $http))->createChat('m'), fn($p) => $p['stop_sequences'], ['STOP']],
-		[geminiAnswer(), fn($http) => (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m'), fn($p) => $p['generationConfig']['stopSequences'], ['STOP']],
-		[fixture('deepseek/chat'), fn($http) => (new AIAccess\Provider\DeepSeek\Client('key', $http))->createChat('m'), fn($p) => $p['stop'], 'STOP'],
+		[
+			fixture('claude/chat'),
+			fn($http) => (new AIAccess\Provider\Claude\Client('key', $http))->createChat('m'),
+			fn($p) => $p['stop_sequences'],
+			['STOP'],
+		],
+		[
+			geminiAnswer(),
+			fn($http) => (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m'),
+			fn($p) => $p['generationConfig']['stopSequences'],
+			['STOP'],
+		],
+		[
+			fixture('deepseek/chat'),
+			fn($http) => (new AIAccess\Provider\DeepSeek\Client('key', $http))->createChat('m'),
+			fn($p) => $p['stop'],
+			'STOP',
+		],
 	];
 
 	foreach ($cases as [$answer, $createChat, $read, $expected]) {

@@ -50,7 +50,10 @@ test('calculateEmbeddings basic functionality', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with('embeddings', Mockery::on(fn($payload) => $payload['model'] === $model && $payload['input'] === $input && !isset($payload['dimensions'])))
+		->with(
+			'embeddings',
+			Mockery::on(fn($payload) => $payload['model'] === $model && $payload['input'] === $input && !isset($payload['dimensions'])),
+		)
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($input, $model);
@@ -79,7 +82,12 @@ test('calculateEmbeddings with dimensions parameter for text-embedding-3 model',
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with('embeddings', Mockery::on(fn($payload) => $payload['model'] === $model && $payload['input'] === $input && $payload['dimensions'] === $dimensions))
+		->with(
+			'embeddings',
+			Mockery::on(
+				fn($payload) => $payload['model'] === $model && $payload['input'] === $input && $payload['dimensions'] === $dimensions,
+			),
+		)
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($input, $model, $dimensions);

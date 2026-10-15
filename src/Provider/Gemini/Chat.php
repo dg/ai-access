@@ -52,10 +52,10 @@ final class Chat extends AIAccess\Chat\Chat
 	): static
 	{
 		$stopSequences = $stopSequences === null ? null : (array) $stopSequences;
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			compact('maxOutputTokens', 'safetySettings', 'stopSequences', 'temperature', 'topK', 'topP'),
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 
@@ -95,7 +95,11 @@ final class Chat extends AIAccess\Chat\Chat
 	{
 		$accumulator = new StreamAccumulator;
 		$stopped = AIAccess\Http\SseStream::consume(
-			fn(\Closure $onChunk) => $this->client->callApiStream('models/' . $this->model . ':streamGenerateContent?alt=sse', $this->buildPayload(), $onChunk),
+			fn(\Closure $onChunk) => $this->client->callApiStream(
+				'models/' . $this->model . ':streamGenerateContent?alt=sse',
+				$this->buildPayload(),
+				$onChunk,
+			),
 			fn(?string $name, string $json) => $accumulator->event($name, $json, $onDelta),
 		);
 		return new ChatResponse($accumulator->getResponse(), cancelled: $stopped);
@@ -130,7 +134,10 @@ final class Chat extends AIAccess\Chat\Chat
 			};
 			if ($lastRole === $role) {
 				// For now, let the API potentially handle it.
-				trigger_error("Consecutive messages with the same role ('$role') detected. Gemini requires alternating roles.", E_USER_WARNING);
+				trigger_error(
+					"Consecutive messages with the same role ('$role') detected. Gemini requires alternating roles.",
+					E_USER_WARNING,
+				);
 			}
 			$payload['contents'][] = [
 				'role' => $role,

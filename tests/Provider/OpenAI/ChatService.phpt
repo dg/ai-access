@@ -63,7 +63,7 @@ test('Chat builds correct API payload with minimal options', function () {
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction by generating response
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Now verify the captured payload
 	Assert::same($modelName, $capturedPayload['model']);
@@ -111,7 +111,7 @@ test('Chat builds correct API payload with all options', function () {
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Verify all options
 	Assert::same(1000, $capturedPayload['max_output_tokens']);
@@ -165,7 +165,7 @@ test('Chat throws exception on empty message history', function () {
 	$chat = new Chat($clientMock, 'gpt-4o');
 
 	Assert::exception(function () use ($chat) {
-		$chat->sendMessage(null); // No messages yet, should throw
+		$chat->sendMessage(); // No messages yet, should throw
 	}, LogicException::class, 'Cannot send request with empty message history.');
 });
 
@@ -231,7 +231,7 @@ test('Chat handles null system instruction correctly', function () {
 	$chat = new Chat($clientMock, 'gpt-4o');
 	// Don't set system instruction
 	$chat->addMessage('Hello', Role::User);
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Verify system instruction isn't included
 	Assert::false(isset($capturedPayload['instructions']));

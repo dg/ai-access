@@ -59,7 +59,8 @@ final class StreamAccumulator
 				$block = is_array($data['content_block'] ?? null) ? $data['content_block'] : [];
 				// getText() joins text blocks with \n, so the streamed text must read the same
 				if (($block['type'] ?? null) === 'text' && $this->hasTextBlock()
-					&& $onDelta(new Delta(DeltaType::Text, "\n")) === false) {
+					&& $onDelta(new Delta(DeltaType::Text, "\n")) === false
+				) {
 					return false;
 				}
 				$this->blocks[$index] = $block;
@@ -75,10 +76,10 @@ final class StreamAccumulator
 				break;
 
 			case 'message_delta':
-				$this->message = array_merge($this->message, is_array($data['delta'] ?? null) ? $data['delta'] : []);
+				$this->message = [...$this->message, ...is_array($data['delta'] ?? null) ? $data['delta'] : []];
 				if (is_array($data['usage'] ?? null)) {
 					// cumulative, so the last one wins rather than being added up
-					$this->message['usage'] = array_merge($this->message['usage'] ?? [], $data['usage']);
+					$this->message['usage'] = [...$this->message['usage'] ?? [], ...$data['usage']];
 				}
 				break;
 
@@ -143,7 +144,7 @@ final class StreamAccumulator
 	public function getResponse(): array
 	{
 		foreach ($this->partialJson as $index => $json) {
-			$decoded = json_decode($json, true);
+			$decoded = json_decode($json, associative: true);
 			$this->blocks[$index]['input'] = is_array($decoded) ? $decoded : [];
 		}
 
@@ -152,7 +153,8 @@ final class StreamAccumulator
 		// has arguments that never arrived, which would run the tool with whatever survived
 		foreach ($this->blocks as $index => $block) {
 			if (!isset($this->closed[$index])
-				&& in_array($block['type'] ?? null, ['thinking', 'redacted_thinking', 'tool_use'], true)) {
+				&& in_array($block['type'] ?? null, ['thinking', 'redacted_thinking', 'tool_use'], true)
+			) {
 				unset($this->blocks[$index]);
 			}
 		}

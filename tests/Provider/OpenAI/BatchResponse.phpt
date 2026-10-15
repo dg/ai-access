@@ -153,7 +153,9 @@ test('nothing is memoized, so reading twice fetches twice', function () {
 	$clientMock = Mockery::mock(Client::class);
 	$clientMock->expects('streamLines')
 		->twice()
-		->andReturn(['{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response"}]}]}}}']);
+		->andReturn(
+			['{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"Response"}]}]}}}'],
+		);
 
 	$response = new BatchResponse($clientMock, $batchData);
 
@@ -219,7 +221,9 @@ test('a complex output structure is parsed as a live one would be', function () 
 	$clientMock = Mockery::mock(Client::class);
 	$clientMock->expects('streamLines')
 		->once()
-		->andReturn(['{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"First part"},{"type":"output_text","text":" and second part"}]}]}}}']);
+		->andReturn(
+			['{"custom_id":"task1","response":{"status_code":200,"body":{"output":[{"type":"message","content":[{"type":"output_text","text":"First part"},{"type":"output_text","text":" and second part"}]}]}}}'],
+		);
 
 	$results = iterator_to_array((new BatchResponse($clientMock, $batchData))->getResults());
 

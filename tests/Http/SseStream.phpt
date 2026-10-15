@@ -78,7 +78,7 @@ test('every captured transcript parses into events', function () {
 		// fed in small pieces, so the boundaries fall in the middle of events
 		$events = [];
 		foreach (str_split($raw, 64) as $piece) {
-			$events = array_merge($events, $sse->feed($piece));
+			$events = [...$events, ...$sse->feed($piece)];
 		}
 
 		Assert::true(count($events) > 1, $provider);
@@ -87,7 +87,7 @@ test('every captured transcript parses into events', function () {
 
 		foreach ($events as $event) {
 			if ($event['data'] !== '[DONE]') {
-				Assert::type('array', json_decode($event['data'], true), $provider);
+				Assert::type('array', json_decode($event['data'], associative: true), $provider);
 			}
 		}
 	}

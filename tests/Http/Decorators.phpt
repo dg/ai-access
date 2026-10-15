@@ -1,5 +1,7 @@
 <?php declare(strict_types=1);
 
+// dresscode:disable hygiene.defaultArgument -- the named arguments say what the call does
+
 use AIAccess\CommunicationException;
 use AIAccess\Http\{CachingClient, ObservableClient, Response, RetryClient};
 use Tester\Assert;
@@ -8,23 +10,23 @@ use Tests\Support\FakeHttpClient;
 require __DIR__ . '/../bootstrap.php';
 
 
-/**
- * Deliberately not getTempDir(): that directory has a garbage collector any test
- * process can trigger, and a cache purged mid-run is indistinguishable from a miss.
- */
 /** Stands in for the gadget a tampered cache file would try to build. */
 class CacheGadget
 {
 	public static bool $woken = false;
 
 
-	public function __wakeup(): void
+	public function __unserialize(array $data): void
 	{
 		self::$woken = true;
 	}
 }
 
 
+/**
+ * Deliberately not getTempDir(): that directory has a garbage collector any test
+ * process can trigger, and a cache purged mid-run is indistinguishable from a miss.
+ */
 function cacheDir(string $name): string
 {
 	static $dir = null;

@@ -163,7 +163,7 @@ test('Chat sendMessage with null input continues conversation', function () {
 	$chat->setMockedResponse($mockResponse);
 
 	// Send null to continue
-	$response = $chat->sendMessage(null);
+	$response = $chat->sendMessage();
 	Assert::same($mockResponse, $response);
 
 	// Check message history

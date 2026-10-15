@@ -40,20 +40,20 @@ final readonly class ObservableClient implements Client
 
 		// for a stream the elapsed time covers the whole transfer, so it says how long the
 		// answer took to finish rather than how long it took to start
-		$start = microtime(true);
+		$start = microtime(as_float: true);
 		try {
 			$response = $this->inner->fetch($url, $payload, $headers, $method, $onChunk);
 		} catch (\Throwable $e) {
 			// anything that went wrong during the transfer, which for a stream includes the
 			// consumer's own callback
 			if ($this->onError !== null) {
-				($this->onError)($e, microtime(true) - $start);
+				($this->onError)($e, microtime(as_float: true) - $start);
 			}
 			throw $e;
 		}
 
 		if ($this->onResponse !== null) {
-			($this->onResponse)($response, microtime(true) - $start);
+			($this->onResponse)($response, microtime(as_float: true) - $start);
 		}
 		return $response;
 	}

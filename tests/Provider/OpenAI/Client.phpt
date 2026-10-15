@@ -56,7 +56,7 @@ test('API headers are correctly set', function () {
 			Mockery::any(),
 			Mockery::any(),
 			Mockery::on(fn($headers) => $headers['Authorization'] === 'Bearer ' . $apiKey
-					&& !isset($headers['OpenAI-Organization'])),
+				&& !isset($headers['OpenAI-Organization'])),
 		)
 		->once()
 		->andReturn(mockSuccessResponse());
@@ -76,7 +76,7 @@ test('Organization ID is included in headers when set', function () {
 			Mockery::any(),
 			Mockery::any(),
 			Mockery::on(fn($headers) => $headers['Authorization'] === 'Bearer ' . $apiKey
-					&& $headers['OpenAI-Organization'] === $orgId),
+				&& $headers['OpenAI-Organization'] === $orgId),
 		)
 		->once()
 		->andReturn(mockSuccessResponse());

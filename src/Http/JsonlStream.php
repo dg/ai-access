@@ -8,7 +8,6 @@
 namespace AIAccess\Http;
 
 
-
 /**
  * Cuts a byte stream into lines and turns the transport's push into a pull.
  *

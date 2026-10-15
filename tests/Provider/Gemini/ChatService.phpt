@@ -54,7 +54,7 @@ test('Chat builds correct API payload with user message', function () {
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction by generating response
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Now verify the captured payload structure
 	Assert::true(isset($capturedPayload['contents']));
@@ -93,7 +93,7 @@ test('Chat builds correct API payload with all options', function () {
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Verify all options in generationConfig
 	Assert::true(isset($capturedPayload['generationConfig']));
@@ -141,7 +141,7 @@ test('Chat throws exception on empty message history', function () {
 	$chat = new Chat($clientMock, 'gemini-1.5-pro');
 
 	Assert::exception(
-		fn() => $chat->sendMessage(null),
+		fn() => $chat->sendMessage(),
 		LogicException::class,
 		'Cannot send request with empty message history.',
 	);
@@ -156,7 +156,7 @@ test('Chat throws exception if first message is not from user', function () {
 	$chat->addMessage('Model message', Role::Model);
 
 	Assert::exception(
-		fn() => $chat->sendMessage(null),
+		fn() => $chat->sendMessage(),
 		LogicException::class,
 		'The first message must be from the user role.',
 	);
@@ -181,7 +181,7 @@ test('Chat warns about consecutive messages with same role', function () {
 
 	// This should trigger a warning
 	Assert::error(function () use ($chat) {
-		$chat->sendMessage(null);
+		$chat->sendMessage();
 	}, E_USER_WARNING, "Consecutive messages with the same role ('user') detected. Gemini requires alternating roles.");
 });
 

@@ -26,7 +26,7 @@ test('fromBinary leaves the raw response empty', function () {
 
 test('fromFile detects the mime type', function () {
 	$file = getTempDir() . '/pixel.gif';
-	file_put_contents($file, base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', true));
+	file_put_contents($file, base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', strict: true));
 
 	$media = Media::fromFile($file);
 

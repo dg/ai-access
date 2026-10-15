@@ -36,7 +36,7 @@ test('an argument-less tool call replays as an object, never as []', function ()
 
 
 test('a foreign call with no arguments replays as an object on every wire', function () {
-	$foreign = new ToolCallPart('call_x', 'get_time', [], provider: 'someone-else');
+	$foreign = new ToolCallPart('call_x', 'get_time', provider: 'someone-else');
 	$openai = fn($http) => (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
 	$deepseek = fn($http) => (new AIAccess\Provider\DeepSeek\Client('key', $http))->createChat('m');
 	$gemini = fn($http) => (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m');
@@ -77,7 +77,12 @@ test('a foreign call with no arguments replays as an object on every wire', func
 
 
 test('gemini wraps a list result, because a JSON array is not a Struct', function () {
-	$call = new ToolCallPart('get_items#0', 'get_items', [], provider: 'gemini', raw: ['functionCall' => ['name' => 'get_items', 'args' => new stdClass]]);
+	$call = new ToolCallPart(
+		'get_items#0',
+		'get_items',
+		provider: 'gemini',
+		raw: ['functionCall' => ['name' => 'get_items', 'args' => new stdClass]],
+	);
 
 	$http = (new FakeHttpClient)->queue(geminiAnswer());
 	$chat = (new AIAccess\Provider\Gemini\Client('key', $http))->createChat('m');
@@ -104,7 +109,7 @@ test('gemini wraps a list result, because a JSON array is not a Struct', functio
 
 test('openai replays assistant text parts as output_text, not input_text', function () {
 	// two texts side by side are the turn that forces the block form
-	$call = new ToolCallPart('call_1', 'get_time', [], provider: 'someone-else');
+	$call = new ToolCallPart('call_1', 'get_time', provider: 'someone-else');
 	$http = (new FakeHttpClient)->queue(fixture('openai/chat'));
 	$chat = (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
 	$chat->addMessage('Q', Role::User);
@@ -129,7 +134,7 @@ test('openai replays assistant text parts as output_text, not input_text', funct
 test('openai keeps the parts of a turn in the order the model produced them', function () {
 	// the flat input list has to read as the answer did: a text that came before a call
 	// must not end up behind it, or a reasoning item loses the item required to follow it
-	$call = new ToolCallPart('call_1', 'get_time', [], provider: 'someone-else');
+	$call = new ToolCallPart('call_1', 'get_time', provider: 'someone-else');
 	$http = (new FakeHttpClient)->queue(fixture('openai/chat'));
 	$chat = (new AIAccess\Provider\OpenAI\Client('key', $http))->createChat('m');
 	$chat->addMessage('Q', Role::User);

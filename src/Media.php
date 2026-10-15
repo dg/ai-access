@@ -16,10 +16,10 @@ final class Media implements Chat\Part
 	private ?string $base64 = null;
 
 
-	/** @param  ?mixed[]  $rawResponse */
 	public function __construct(
 		private readonly string $data,
 		private readonly string $mimeType,
+		/** @var ?mixed[] */
 		private readonly ?array $rawResponse = null,
 		private readonly ?string $fileName = null,
 	) {

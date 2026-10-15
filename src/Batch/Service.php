@@ -6,6 +6,7 @@
  */
 
 namespace AIAccess\Batch;
+
 use AIAccess\ServiceException;
 
 

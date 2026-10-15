@@ -6,6 +6,7 @@
  */
 
 namespace AIAccess\Chat;
+
 use AIAccess\UnexpectedResponseException;
 
 

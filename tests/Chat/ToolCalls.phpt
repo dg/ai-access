@@ -107,7 +107,7 @@ test('an id answers the newest call wearing it, not one settled rounds ago', fun
 	$chat->addToolResult($call, 'first round');
 
 	// Gemini usually sends no id at all, so the same one comes round again
-	$chat->addMessage(new AIAccess\Chat\ToolCallPart($call->callId, 'get_time', []), Role::Model);
+	$chat->addMessage(new AIAccess\Chat\ToolCallPart($call->callId, 'get_time'), Role::Model);
 	$chat->addToolResult($call->callId, 'second round');
 
 	$messages = $chat->getMessages();

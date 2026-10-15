@@ -13,10 +13,10 @@ namespace AIAccess\Chat;
  */
 final readonly class ToolResultPart implements Part
 {
-	/** @param string|mixed[] $content */
 	public function __construct(
 		public string $callId,
 		public string $name,
+		/** @var string|mixed[] */
 		public string|array $content,
 		public bool $isError = false,
 	) {

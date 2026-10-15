@@ -28,7 +28,7 @@ require __DIR__ . '/Support/FakeHttpClient.php';
  */
 function fixture(string $name): array
 {
-	$data = json_decode(fixtureRaw($name . '.json'), true, flags: JSON_THROW_ON_ERROR);
+	$data = json_decode(fixtureRaw($name . '.json'), associative: true, flags: JSON_THROW_ON_ERROR);
 	return is_array($data) ? $data : throw new LogicException("Fixture $name is not an array.");
 }
 

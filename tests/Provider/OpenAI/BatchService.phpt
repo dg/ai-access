@@ -128,7 +128,7 @@ test('submit validates JSONL content structure', function () {
 	$lines = iterator_to_array($capturedLines);
 	Assert::count(1, $lines); // Should have 1 item
 
-	$requestData = json_decode($lines[0], true);
+	$requestData = json_decode($lines[0], associative: true);
 	Assert::same($customId, $requestData['custom_id']);
 	Assert::same('POST', $requestData['method']);
 	Assert::same('/v1/responses', $requestData['url']);

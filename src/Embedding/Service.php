@@ -6,6 +6,7 @@
  */
 
 namespace AIAccess\Embedding;
+
 use AIAccess\ServiceException;
 
 

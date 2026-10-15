@@ -48,13 +48,13 @@ final class ImageRequest
 		?string $imageSize = null,
 	): static
 	{
-		$this->imageConfig = array_merge($this->imageConfig, array_filter(
+		$this->imageConfig = [...$this->imageConfig, ...array_filter(
 			[
 				'aspectRatio' => $aspectRatio,
 				'imageSize' => $imageSize,
 			],
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 

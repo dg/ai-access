@@ -8,7 +8,6 @@
 namespace AIAccess\Provider\OpenAICompatible;
 
 
-
 /**
  * Chat session against an OpenAI-compatible endpoint.
  */
@@ -42,7 +41,7 @@ final class Chat extends BaseChat
 		?array $custom = null,
 	): static
 	{
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			[
 				'max_tokens' => $maxOutputTokens,
 				'temperature' => $temperature,
@@ -54,7 +53,7 @@ final class Chat extends BaseChat
 				'response_format' => $responseFormat,
 			],
 			fn($value) => $value !== null,
-		), $custom ?? []);
+		), ...$custom ?? []];
 		return $this;
 	}
 

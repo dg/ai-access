@@ -59,8 +59,9 @@ test('calculateEmbeddings basic functionality', function () {
 
 			// Check each request has correct model and content
 			foreach ($payload['requests'] as $index => $request) {
-				if ($request['model'] !== "models/{$model}" ||
-					$request['content']['parts'][0]['text'] !== $input[$index]) {
+				if ($request['model'] !== "models/{$model}"
+					|| $request['content']['parts'][0]['text'] !== $input[$index]
+				) {
 					return false;
 				}
 			}
@@ -95,7 +96,10 @@ test('calculateEmbeddings with taskType parameter', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType))
+		->with(
+			"models/{$model}:batchEmbedContents",
+			Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType),
+		)
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($input, $model, $taskType);
@@ -121,7 +125,13 @@ test('calculateEmbeddings with title for document retrieval', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType && $payload['requests'][0]['embedContentConfig']['title'] === $title))
+		->with(
+			"models/{$model}:batchEmbedContents",
+			Mockery::on(
+				fn($payload) => $payload['requests'][0]['embedContentConfig']['taskType'] === $taskType
+					&& $payload['requests'][0]['embedContentConfig']['title'] === $title,
+			),
+		)
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($input, $model, $taskType, $title);
@@ -146,7 +156,10 @@ test('calculateEmbeddings with outputDimensionality parameter', function () {
 	$clientMock = Mockery::mock(Client::class)->makePartial();
 	$clientMock->expects('callApi')
 		->once()
-		->with("models/{$model}:batchEmbedContents", Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['outputDimensionality'] === $dimensionality))
+		->with(
+			"models/{$model}:batchEmbedContents",
+			Mockery::on(fn($payload) => $payload['requests'][0]['embedContentConfig']['outputDimensionality'] === $dimensionality),
+		)
 		->andReturn($expectedResponse);
 
 	$results = $clientMock->calculateEmbeddings($input, $model, null, null, $dimensionality);

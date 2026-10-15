@@ -21,16 +21,14 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	private string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/';
 
 
-	/**
-	 * @param  ?string  $chatModel  used by createChat() and the batch when none is given there
-	 * @param  ?string  $imageModel  the same for generateImage() and image batch requests
-	 * @param  ?string  $embeddingModel  the same for calculateEmbeddings()
-	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		/** used by createChat() and the batch when none is given there */
 		private readonly ?string $chatModel = null,
+		/** the same for generateImage() and image batch requests */
 		private readonly ?string $imageModel = null,
+		/** the same for calculateEmbeddings() */
 		private readonly ?string $embeddingModel = null,
 	) {
 	}

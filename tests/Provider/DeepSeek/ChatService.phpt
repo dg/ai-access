@@ -55,7 +55,7 @@ test('Chat builds correct API payload with minimal options', function () {
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction by generating response
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Now verify the captured payload
 	Assert::same($modelName, $capturedPayload['model']);
@@ -99,7 +99,7 @@ test('Chat builds correct API payload with all options', function () {
 	$chat->addMessage($userMessage, Role::User);
 
 	// Trigger payload construction
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Verify all options
 	Assert::same(500, $capturedPayload['max_tokens']);
@@ -125,11 +125,11 @@ test('effort maps to the thinking parameter', function () {
 	$chat->addMessage('Hello', Role::User);
 
 	$chat->setEffort(AIAccess\Chat\Effort::None);
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 	Assert::same(['type' => 'disabled'], $capturedPayload['thinking']);
 
 	$chat->setEffort(AIAccess\Chat\Effort::Low);
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 	Assert::same(['type' => 'enabled', 'reasoning_effort' => 'low'], $capturedPayload['thinking']);
 });
 
@@ -167,7 +167,7 @@ test('Chat throws exception on empty message history', function () {
 	$chat = new Chat($clientMock, 'deepseek-coder');
 
 	Assert::exception(
-		fn() => $chat->sendMessage(null),
+		fn() => $chat->sendMessage(),
 		LogicException::class,
 		'Cannot send request with empty message history.',
 	);
@@ -219,7 +219,7 @@ test('Chat handles null system instruction by not adding a system message', func
 	$chat = new Chat($clientMock, 'deepseek-coder');
 	// Don't set system instruction
 	$chat->addMessage('Hello', Role::User);
-	$chat->sendMessage(null);
+	$chat->sendMessage();
 
 	// Verify no system message is included
 	Assert::count(1, $capturedPayload['messages']);

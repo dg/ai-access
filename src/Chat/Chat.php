@@ -6,6 +6,7 @@
  */
 
 namespace AIAccess\Chat;
+
 use AIAccess\{LogicException, ServiceException, TooManyRoundsException};
 use function array_key_exists, count, is_array, is_bool, is_float, is_int, is_scalar, is_string;
 

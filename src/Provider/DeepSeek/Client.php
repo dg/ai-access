@@ -20,12 +20,10 @@ final class Client implements AIAccess\Chat\Service
 	private string $baseUrl = 'https://api.deepseek.com/';
 
 
-	/**
-	 * @param  ?string  $chatModel  used by createChat() when none is given there
-	 */
 	public function __construct(
 		private readonly string $apiKey,
 		private readonly Http\Client $httpClient = new Http\CurlClient,
+		/** used by createChat() when none is given there */
 		private readonly ?string $chatModel = null,
 	) {
 	}

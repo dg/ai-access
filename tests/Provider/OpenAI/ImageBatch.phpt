@@ -17,7 +17,7 @@ require __DIR__ . '/../../bootstrap.php';
 function uploadedLines(FakeHttpClient $http): array
 {
 	$content = $http->uploads[0]['file'] ?? throw new LogicException('Nothing was uploaded.');
-	return array_map(fn($line) => json_decode($line, true), explode("\n", trim($content)));
+	return array_map(fn($line) => json_decode($line, associative: true), explode("\n", trim($content)));
 }
 
 

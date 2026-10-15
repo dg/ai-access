@@ -43,7 +43,7 @@ final class Chat extends OpenAICompatible\BaseChat
 		?array $responseFormat = null,
 	): static
 	{
-		$this->options = array_merge($this->options, array_filter(
+		$this->options = [...$this->options, ...array_filter(
 			[
 				'max_tokens' => $maxOutputTokens,
 				'temperature' => $temperature,
@@ -52,7 +52,7 @@ final class Chat extends OpenAICompatible\BaseChat
 				'response_format' => $responseFormat,
 			],
 			fn($value) => $value !== null,
-		));
+		)];
 		return $this;
 	}
 
