@@ -13,7 +13,7 @@ jobs:
 
         name: PHP ${{ matrix.php }} tests
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
             - uses: shivammathur/setup-php@v2
               with:
                   php-version: ${{ matrix.php }}
@@ -21,9 +21,9 @@ jobs:
 
             - run: composer install --no-progress --prefer-dist
             - run: find examples -name '*.php' -print0 | xargs -0 -n1 php -l
-            - run: vendor/bin/tester tests -s -C
+            - run: composer tester
             - if: failure()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: output-${{ matrix.php }}
                   path: tests/**/output
@@ -33,14 +33,14 @@ jobs:
         name: Code Coverage
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
             - uses: shivammathur/setup-php@v2
               with:
                   php-version: 8.3
-                  coverage: none
+                  coverage: pcov
 
             - run: composer install --no-progress --prefer-dist
-            - run: vendor/bin/tester -p phpdbg tests -s -C --coverage ./coverage.xml --coverage-src ./src
+            - run: composer tester -- --coverage ./coverage.xml --coverage-src ./src
               continue-on-error: true
             - uses: coverallsapp/github-action@v2
               with:
