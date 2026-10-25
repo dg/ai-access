@@ -33,18 +33,17 @@ final class TextStream implements \IteratorAggregate
 	private ?string $pending = null;
 	private ?\Throwable $failure = null;
 
-	/** @var \Closure(\Closure(string): (bool|null)): Response */
-	private \Closure $run;
-
 
 	/**
-	 * @param  \Closure(\Closure(string): (bool|null)): Response  $run  receives the emit callback,
-	 *         returns the finished response
 	 * @internal
 	 */
-	public function __construct(\Closure $run)
-	{
-		$this->run = $run;
+	public function __construct(
+		/**
+		 * @var \Closure(\Closure(string): (bool|null)): Response receives the emit callback,
+		 * returns the finished response
+		 */
+		private \Closure $run,
+	) {
 	}
 
 
