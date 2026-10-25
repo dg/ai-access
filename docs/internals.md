@@ -336,13 +336,13 @@ uploads it as a file, and submits `input_file_id`; **Gemini** posts to
 `batch.inputConfig.requests.requests`, keyed by `metadata.key`. **One job is one model
 on both**, for different reasons — Gemini puts the model in the endpoint, OpenAI allows
 one model per input file — and both refuse the second model **when it is added**, not at
-submit, so the exception names the request that broke the rule. All three call `Chat::buildPayload()`,
-so request-shaping is **shared with live chat** — which is why `buildPayload()` is
-**`public` (@internal) only for Batch's sake**; changing its signature breaks batch
-across layers. The upload-and-create half of the OpenAI mechanism and the
-nest-and-post half of the Gemini one live on the **`Client`**
-(`submitBatch()`, `@internal`), because the chat batch and the image batch differ
-only in what they put in and must not drift in how they submit it. **Neither side of a
+submit, so the exception names the request that broke the rule. All three call
+`Chat::buildPayload()`, so request-shaping is **shared with live chat** — which is why
+`buildPayload()` is **`public` (@internal) only for Batch's sake**; changing its
+signature breaks batch across layers. The upload-and-create half of the OpenAI mechanism
+and the nest-and-post half of the Gemini one live on the **`Client`** (`submitBatch()`,
+`@internal`), because the chat batch and the image batch differ only in what they put
+in and must not drift in how they submit it. **Neither side of a
 batch is ever held whole.** Going out, the lines are a generator written straight to a
 temp file and uploaded from disk, because a batch of images with inlined references runs
 to hundreds of megabytes and a string would hold it twice over. Coming back,
@@ -355,13 +355,14 @@ and that is deliberate**: it is built only through `answered()` and `failed()`, 
 one-of-two invariant its two nullable fields would otherwise merely promise cannot be
 broken, and the wire's third possibility — Gemini answering with neither a result nor an
 error — is normalised into a failure rather than given a case of its own. A third case
-that genuinely deserved one would mean subtypes of `Result`, not a third field. **Gemini is the exception to the
-fetching half**: its results ride inside the job's own JSON, so they are decoded by
-`callApi()` before `getResults()` sees them and a second reading costs nothing, because
-there is nothing left to fetch. Tools work in a batch only as far as the model asking: a returned message
-can carry a `ToolCallPart`, but nothing runs it, because a batch has no round to answer
-in. Status enums and date parsing (Claude ISO string vs OpenAI unix `@ts`) differ per
-provider — unifying them is a silent regression.
+that genuinely deserved one would mean subtypes of `Result`, not a third field.
+**Gemini is the exception to the fetching half**: its results ride inside the job's own
+JSON, so they are decoded by `callApi()` before `getResults()` sees them and a second
+reading costs nothing, because there is nothing left to fetch. Tools work in a batch only
+as far as the model asking: a returned message can carry a `ToolCallPart`, but nothing
+runs it, because a batch has no round to answer in. Status enums and date parsing
+(Claude ISO string vs OpenAI unix `@ts`) differ per provider — unifying them is a silent
+regression.
 
 **Images ride the same rails, and that is the whole design.** An image request is an
 object (an `ImageRequest`, one `final` class per provider) exactly as a chat is, with the
@@ -418,8 +419,8 @@ simply more parts. What genuinely differs per provider is worth knowing:
 `Chat::setEffort()` is the only model-tuning method on the base class, and it exists
 because sampling parameters are dying: `temperature`/`top_p`/`top_k` are rejected with
 400 by Claude Opus 4.7 and the whole Claude 5 line, and by GPT-5.1+ (unless effort is
-`none`), silently ignored by
-Gemini 3.6+ and by DeepSeek whenever thinking is on, which is its default. Each
+`none`), silently ignored by Gemini 3.6+ and by DeepSeek whenever thinking is on, which
+is its default. Each
 provider maps the enum in its own `buildPayload()`: `output_config.effort`,
 `reasoning.effort`, `thinkingConfig.thinkingLevel`, `thinking.reasoning_effort`,
 `reasoning_effort`.
