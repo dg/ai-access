@@ -62,6 +62,48 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	}
 
 
+	/**
+	 * Stores a large beginning of a prompt on the server, so that requests naming it through
+	 * Chat::setCachedContent() read it at the price of cached input. Gemini's automatic caching
+	 * promises no hit, this one does. The storage is paid by the hour.
+	 * @param  int  $ttl  seconds until the server drops it
+	 * @return string  name of the stored content
+	 * @throws AIAccess\ServiceException
+	 */
+	public function createCachedContent(
+		string $content,
+		?string $systemInstruction = null,
+		int $ttl = 3600,
+		?string $model = null,
+	): string
+	{
+		$model ??= $this->chatModel ?? throw new AIAccess\LogicException('No chat model given and the client has no default one.');
+		$payload = [
+			'model' => "models/$model",
+			'contents' => [['role' => 'user', 'parts' => [['text' => $content]]]],
+			'ttl' => $ttl . 's',
+		];
+		if ($systemInstruction !== null) {
+			$payload['systemInstruction'] = ['parts' => [['text' => $systemInstruction]]];
+		}
+
+		return AIAccess\Helpers::expectString($this->callApi('cachedContents', $payload)['name'] ?? null, 'name');
+	}
+
+
+	/**
+	 * @throws AIAccess\ServiceException
+	 */
+	public function deleteCachedContent(string $name): void
+	{
+		$this->readResponse($this->httpClient->fetch(
+			$this->baseUrl . $name,
+			headers: ['x-goog-api-key' => $this->apiKey],
+			method: 'DELETE',
+		));
+	}
+
+
 	public function createBatch(): Batch
 	{
 		return new Batch($this, $this->chatModel, $this->imageModel);
@@ -249,7 +291,16 @@ final class Client implements AIAccess\Chat\Service, AIAccess\Embedding\Service,
 	 */
 	public function callApi(string $endpoint, ?array $payload = null): array
 	{
-		$response = $this->httpClient->fetch($this->baseUrl . $endpoint, $payload, ['x-goog-api-key' => $this->apiKey]);
+		return $this->readResponse($this->httpClient->fetch($this->baseUrl . $endpoint, $payload, ['x-goog-api-key' => $this->apiKey]));
+	}
+
+
+	/**
+	 * @return mixed[]
+	 * @throws AIAccess\ServiceException
+	 */
+	private function readResponse(Http\Response $response): array
+	{
 		$data = $response->getData();
 
 		if ($response->getStatusCode() >= 400) {

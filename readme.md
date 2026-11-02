@@ -185,6 +185,17 @@ echo "Reasoning: {$usage->reasoningTokens}, served from cache: {$usage->cacheRea
 Cache hit rates are the main cost lever with today's models, so `Usage` reports
 them for every provider that exposes them.
 
+Gemini's automatic cache promises no hit, so a long prompt shared by many requests can
+be stored on the server explicitly. The system instruction and tools go into the cache,
+because the API refuses them next to it, and the storage is paid by the hour:
+
+```php
+$cache = $client->createCachedContent($pages, systemInstruction: $brief, ttl: 3600, model: 'gemini-3.8-flash');
+$chat = $client->createChat('gemini-3.8-flash')->setCachedContent($cache);
+$response = $chat->sendMessage($question);
+$client->deleteCachedContent($cache);
+```
+
 And when you need something the abstraction does not cover, `$response->getRawResponse()` hands you the provider's complete decoded payload. The unified interface is a convenience, never a cage.
 
 

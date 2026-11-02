@@ -23,6 +23,7 @@ final class Chat extends AIAccess\Chat\Chat
 
 	/** @var mixed[]|Structure|null */
 	private array|Structure|null $responseSchema = null;
+	private ?string $cachedContent = null;
 
 
 	public function __construct(
@@ -68,6 +69,17 @@ final class Chat extends AIAccess\Chat\Chat
 	public function setResponseSchema(array|Structure $schema): static
 	{
 		$this->responseSchema = $schema;
+		return $this;
+	}
+
+
+	/**
+	 * Starts the conversation from what Client::createCachedContent() stored. The model must be
+	 * the one it was stored for.
+	 */
+	public function setCachedContent(?string $name): static
+	{
+		$this->cachedContent = $name;
 		return $this;
 	}
 
@@ -145,6 +157,13 @@ final class Chat extends AIAccess\Chat\Chat
 				'parts' => $parts,
 			];
 			$lastRole = $role;
+		}
+
+		if ($this->cachedContent !== null) {
+			if ($this->systemInstruction !== null || $this->tools || $this->toolChoice !== null) {
+				throw new AIAccess\LogicException('A system instruction and tools belong into the cached content, the API refuses them next to it.');
+			}
+			$payload['cachedContent'] = $this->cachedContent;
 		}
 
 		if ($this->systemInstruction !== null) {
