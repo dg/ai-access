@@ -38,6 +38,33 @@ function cacheDir(string $name): string
 }
 
 
+/** Throws the exception on the first call and answers on the next one. */
+function failingOnce(Throwable $failure): FakeHttpClient
+{
+	return new class ($failure) extends FakeHttpClient {
+		public int $calls = 0;
+
+
+		public function __construct(
+			private Throwable $failure,
+		) {
+		}
+
+
+		public function fetch(
+			string $url,
+			string|array|AIAccess\Http\FormData|null $payload = null,
+			array $headers = [],
+			?string $method = null,
+			?Closure $onChunk = null,
+		): Response
+		{
+			return ++$this->calls === 1 ? throw $this->failure : new Response(200, [], ['ok' => true]);
+		}
+	};
+}
+
+
 test('retries a rate limit and returns the successful response', function () {
 	$slept = [];
 	$http = (new FakeHttpClient)
@@ -87,31 +114,64 @@ test('does not retry a client error', function () {
 });
 
 
-test('retries a network failure', function () {
-	$http = new class extends FakeHttpClient {
-		public int $calls = 0;
-
-
-		public function fetch(
-			string $url,
-			string|array|AIAccess\Http\FormData|null $payload = null,
-			array $headers = [],
-			?string $method = null,
-			?Closure $onChunk = null,
-		): Response
-		{
-			$this->calls++;
-			if ($this->calls === 1) {
-				throw new CommunicationException('connection reset');
-			}
-			return new Response(200, [], ['ok' => true]);
-		}
-	};
+test('a GET is repeated even after it left, reading costs nothing', function () {
+	$http = failingOnce(new CommunicationException('connection reset'));
 
 	$response = (new RetryClient($http, sleep: fn() => null))->fetch('https://api.example.com/x');
 
 	Assert::same(['ok' => true], $response->getData());
 	Assert::same(2, $http->calls);
+});
+
+
+test('a generation that never left is repeated', function () {
+	$http = failingOnce(new AIAccess\RequestNotSentException('connection refused'));
+
+	$response = (new RetryClient($http, sleep: fn() => null))->fetch('https://api.example.com/x', ['q' => 1]);
+
+	Assert::same(['ok' => true], $response->getData());
+	Assert::same(2, $http->calls);
+});
+
+
+test('a generation that may have reached the server is not paid for twice', function () {
+	$http = failingOnce(new CommunicationException('Operation timed out'));
+
+	Assert::exception(
+		fn() => (new RetryClient($http, sleep: fn() => null))->fetch('https://api.example.com/x', ['q' => 1]),
+		CommunicationException::class,
+		'Operation timed out',
+	);
+	Assert::same(1, $http->calls);
+});
+
+
+test('a generation is repeated only after a status saying the server did not work on it', function () {
+	foreach ([408 => 2, 429 => 2, 500 => 2, 503 => 2, 502 => 1, 504 => 1, 520 => 1] as $status => $calls) {
+		$http = (new FakeHttpClient)->queue([], $status)->queue(['ok' => true]);
+		(new RetryClient($http, sleep: fn() => null))->fetch('https://api.example.com/x', ['q' => 1]);
+		Assert::count($calls, $http->requests, "status $status");
+	}
+});
+
+
+test('a GET is repeated after a gateway gave up, whatever the case of the method', function () {
+	foreach ([[502, null], [504, 'get']] as [$status, $method]) {
+		$http = (new FakeHttpClient)->queue([], $status)->queue(['ok' => true]);
+		$response = (new RetryClient($http, sleep: fn() => null))->fetch('https://api.example.com/x', method: $method);
+		Assert::same(['ok' => true], $response->getData());
+	}
+});
+
+
+test('an explicit POST without a body is not repeated after it left either', function () {
+	$http = failingOnce(new CommunicationException('Operation timed out'));
+
+	Assert::exception(
+		fn() => (new RetryClient($http, sleep: fn() => null))->fetch('https://api.example.com/x', method: 'POST'),
+		CommunicationException::class,
+	);
+	Assert::same(1, $http->calls);
 });
 
 

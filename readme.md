@@ -686,7 +686,7 @@ try {
 }
 ```
 
-The backing off is not yours to write either: the [HTTP layer](https://ai-access.deegee.dev/http) ships a `RetryClient` that repeats rate limits and outages, honors `Retry-After`, and repeats nothing that would fail identically the second time.
+The backing off is not yours to write either: the [HTTP layer](https://ai-access.deegee.dev/http) ships a `RetryClient` that repeats rate limits and outages, honors `Retry-After`, and repeats nothing that would fail identically the second time. Nor does it repeat a generation that may already have reached the server, so you never pay for one answer twice.
 
 `LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production. It extends PHP's own `\LogicException`, which is where any PHP developer expects to find it. `IOException` sits outside for a similar reason: a file that cannot be read or written (`Media::fromFile()`, saving media, uploading a batch) is a local filesystem problem, not something the service said, and it extends PHP's `\RuntimeException`.
 

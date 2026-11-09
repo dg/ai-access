@@ -122,6 +122,34 @@ test('Network error handling', function () {
 });
 
 
+test('a failure before the request left says so', function () {
+	CurlMocker::$response = false;
+	CurlMocker::$errno = 7; // CURLE_COULDNT_CONNECT
+	CurlMocker::$error = 'Failed to connect';
+
+	Assert::exception(
+		fn() => (new CurlClient)->fetch('https://api.example.com/data', ['q' => 1]),
+		AIAccess\RequestNotSentException::class,
+		'cURL request failed: [7] Failed to connect',
+	);
+});
+
+
+test('a timeout after the request left is not reported as unsent', function () {
+	CurlMocker::$response = false;
+	CurlMocker::$errno = 28; // CURLE_OPERATION_TIMEDOUT
+	CurlMocker::$error = 'Operation timed out';
+	CurlMocker::$requestSize = 131;
+
+	$e = Assert::exception(
+		fn() => (new CurlClient)->fetch('https://api.example.com/data', ['q' => 1]),
+		CommunicationException::class,
+		'cURL request failed: [28] Operation timed out',
+	);
+	Assert::false($e instanceof AIAccess\RequestNotSentException);
+});
+
+
 test('Invalid JSON response handling', function () {
 	$headers = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n";
 	$body = '{invalid json:data}';
@@ -245,10 +273,12 @@ test('a mid-stream transport failure still throws', function () {
 	CurlMocker::$response = false;
 	CurlMocker::$errno = 18; // CURLE_PARTIAL_FILE
 	CurlMocker::$error = 'transfer closed with outstanding read data remaining';
+	CurlMocker::$requestSize = 131;
 
-	Assert::exception(
+	$e = Assert::exception(
 		fn() => (new CurlClient)->fetch('https://api.example.com/stream', ['q' => 1], onChunk: fn() => null),
 		CommunicationException::class,
 		'%a%transfer closed%a%',
 	);
+	Assert::false($e instanceof AIAccess\RequestNotSentException);
 });

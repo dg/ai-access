@@ -12,6 +12,7 @@ class CurlMocker
 	public static $httpCode = 200;
 	public static $contentType;
 	public static array $options = [];
+	public static int $requestSize = 0;
 
 	/** streaming: raw header lines and body chunks fed into the curl callbacks */
 	public static array $headerLines = [];
@@ -27,6 +28,7 @@ class CurlMocker
 		self::$httpCode = 200;
 		self::$contentType = null;
 		self::$options = [];
+		self::$requestSize = 0;
 		self::$headerLines = [];
 		self::$streamChunks = [];
 	}
@@ -94,6 +96,9 @@ function curl_getinfo($ch, $option = null)
 	}
 	if ($option === CURLINFO_CONTENT_TYPE) {
 		return CurlMocker::$contentType;
+	}
+	if ($option === CURLINFO_REQUEST_SIZE) {
+		return CurlMocker::$requestSize;
 	}
 	return null;
 }

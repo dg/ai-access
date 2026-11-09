@@ -7,7 +7,7 @@
 
 namespace AIAccess\Http;
 
-use AIAccess\{CommunicationException, Helpers};
+use AIAccess\{CommunicationException, Helpers, RequestNotSentException};
 use function defined, is_array, is_string, strlen;
 
 
@@ -95,8 +95,7 @@ final class CurlClient implements Client
 		});
 
 		if (curl_exec($ch) === false && !$stopped) {
-			$errorNo = curl_errno($ch);
-			throw new CommunicationException('cURL request failed: [' . $errorNo . '] ' . curl_error($ch), $errorNo);
+			throw $this->createException($ch);
 		}
 
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -190,8 +189,7 @@ final class CurlClient implements Client
 	{
 		$response = curl_exec($ch);
 		if ($response === false) {
-			$errorNo = curl_errno($ch);
-			throw new CommunicationException('cURL request failed: [' . $errorNo . '] ' . curl_error($ch), $errorNo);
+			throw $this->createException($ch);
 		}
 
 		assert(is_string($response));
@@ -205,6 +203,17 @@ final class CurlClient implements Client
 		}
 
 		return new Response($httpCode, $this->parseHeaders($headers), $data);
+	}
+
+
+	private function createException(\CurlHandle $ch): CommunicationException
+	{
+		$errorNo = curl_errno($ch);
+		$message = 'cURL request failed: [' . $errorNo . '] ' . curl_error($ch);
+		// curl counts only what it has really written, so a failed connection leaves zero here
+		return curl_getinfo($ch, CURLINFO_REQUEST_SIZE) === 0
+			? new RequestNotSentException($message, $errorNo)
+			: new CommunicationException($message, $errorNo);
 	}
 
 

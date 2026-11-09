@@ -7,7 +7,7 @@
 
 namespace AIAccess\Http;
 
-use AIAccess\CommunicationException;
+use AIAccess\{CommunicationException, RequestNotSentException};
 
 
 /**
@@ -30,6 +30,7 @@ interface Client
 	 * @param  non-empty-string|null  $method  HTTP method (GET, POST, ...), defaults to GET for null payload or POST for non-null payload
 	 * @param  ?\Closure(string): (bool|null)  $onChunk  streams the response body; returning false stops the transfer
 	 * @throws CommunicationException  On connection errors, timeouts, stalled transfers, etc.
+	 * @throws RequestNotSentException  When the request certainly did not reach the server.
 	 */
 	function fetch(
 		string $url,

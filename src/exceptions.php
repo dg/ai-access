@@ -37,6 +37,13 @@ class CommunicationException extends ServiceException
 }
 
 /**
+ * The request never reached the server, so sending it again cannot duplicate anything.
+ */
+class RequestNotSentException extends CommunicationException
+{
+}
+
+/**
  * API response has an unexpected structure.
  */
 class UnexpectedResponseException extends ServiceException

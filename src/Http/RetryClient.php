@@ -7,13 +7,19 @@
 
 namespace AIAccess\Http;
 
-use AIAccess\CommunicationException;
+use AIAccess\{CommunicationException, RequestNotSentException};
+use function in_array;
 
 
 /**
  * Retries rate limits, overloads and network failures with exponential backoff.
  *
- * Requests are replayed as they are, so a 5xx that in fact created something
+ * A failure after the request left is repeated only for a GET: the model may have answered
+ * by then, and a second attempt would be paid for again. For the same reason any other request
+ * is repeated only after a status saying the server did not work on it (408, 429, 500, 503);
+ * behind a 502 or 504 a gateway gave up while the server may still be answering.
+ *
+ * Requests are replayed as they are, so a 500 that in fact created something
  * server-side (a batch job, an uploaded file) can be created twice.
  */
 final readonly class RetryClient implements Client
@@ -44,6 +50,7 @@ final readonly class RetryClient implements Client
 		?\Closure $onChunk = null,
 	): Response
 	{
+		$idempotent = strtoupper($method ?? ($payload === null ? 'GET' : 'POST')) === 'GET';
 		$attempt = 1;
 		while (true) {
 			$started = false;
@@ -56,13 +63,13 @@ final readonly class RetryClient implements Client
 				$response = $this->inner->fetch($url, $payload, $headers, $method, $watch);
 				// once the model has started talking, replaying the request would duplicate
 				// the answer and pay for it twice
-				if ($started || $attempt >= $this->maxAttempts || !$this->isRetriable($response->getStatusCode())) {
+				if ($started || $attempt >= $this->maxAttempts || !self::isRetriable($response->getStatusCode(), $idempotent)) {
 					return $response;
 				}
 				$delay = $this->parseRetryAfter($response->getHeader('retry-after')) ?? $this->backoff($attempt);
 
 			} catch (CommunicationException $e) {
-				if ($started || $attempt >= $this->maxAttempts) {
+				if ($started || $attempt >= $this->maxAttempts || !($idempotent || $e instanceof RequestNotSentException)) {
 					throw $e;
 				}
 				$delay = $this->backoff($attempt);
@@ -74,12 +81,11 @@ final readonly class RetryClient implements Client
 	}
 
 
-	private function isRetriable(int $statusCode): bool
+	private static function isRetriable(int $statusCode, bool $idempotent): bool
 	{
 		// 501 and 505 are the server saying "never", not "not now"
-		return $statusCode === 408
-			|| $statusCode === 429
-			|| ($statusCode >= 500 && $statusCode !== 501 && $statusCode !== 505);
+		return in_array($statusCode, [408, 429, 500, 503], true)
+			|| ($idempotent && $statusCode >= 500 && $statusCode !== 501 && $statusCode !== 505);
 	}
 
 

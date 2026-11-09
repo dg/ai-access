@@ -74,7 +74,11 @@ the body into it instead, so an implementation is one method rather than two nea
 Facts that surprise:
 
 - **Retrying, logging and caching are decorators, not behaviour of the client.**
-  `RetryClient` backs off on 408/429/5xx and network failures, `ObservableClient` times
+  `RetryClient` backs off on 408/429/5xx and on network failures, but after the request
+  left (anything but `RequestNotSentException`) only for a GET, since the model may have
+  answered and a second attempt would be paid for again. Any other request than a GET is
+  repeated only after 408, 429, 500 and 503; behind a 502 or 504 a gateway gave up while the
+  server may still be answering. `ObservableClient` times
   requests, redacts the auth headers and reports a request that never answered through
   `onError` rather than `onResponse`, `CachingClient` replays identical requests from
   disk for development. They compose, and the order changes what you see: retrying an
