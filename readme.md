@@ -1,4 +1,4 @@
-![AI Access for PHP](https://github.com/user-attachments/assets/88c604b4-18bc-4820-9d3a-7d5aa4d9ca3a)
+[![AI Access for PHP](https://github.com/user-attachments/assets/88c604b4-18bc-4820-9d3a-7d5aa4d9ca3a)](https://ai-access.deegee.dev)
 
 [![Downloads this Month](https://img.shields.io/packagist/dm/ai-access/ai-access.svg)](https://packagist.org/packages/ai-access/ai-access)
 [![Coverage Status](https://coveralls.io/repos/github/dg/ai-access/badge.svg?branch=master)](https://coveralls.io/github/dg/ai-access?branch=master)
@@ -689,6 +689,13 @@ try {
 The backing off is not yours to write either: the [HTTP layer](https://ai-access.deegee.dev/http) ships a `RetryClient` that repeats rate limits and outages, honors `Retry-After`, and repeats nothing that would fail identically the second time. Nor does it repeat a generation that may already have reached the server, so you never pay for one answer twice.
 
 `LogicException` (wrong arguments, calling methods in the wrong order) is deliberately outside the `ServiceException` tree: it signals a programming error you want to crash loudly in development, not something to catch in production. It extends PHP's own `\LogicException`, which is where any PHP developer expects to find it. `IOException` sits outside for a similar reason: a file that cannot be read or written (`Media::fromFile()`, saving media, uploading a batch) is a local filesystem problem, not something the service said, and it extends PHP's `\RuntimeException`.
+
+ <!---->
+
+Use It from AI Assistants
+=========================
+
+Not writing an application, just working with an AI assistant such as Cursor, Gemini CLI or Claude Code? [AI Access MCP](https://github.com/dg/ai-access-mcp) is an MCP server built on this library. It lets your assistant hand a task over to Gemini or GPT and generate images with an OpenAI model. It reads the files itself, so long inputs do not pass through the assistant, it never pays twice for one answer, and it reports what every call cost. Connecting it takes one block in the configuration of the assistant, see the [manual](https://ai-access.deegee.dev/mcp).
 
  <!---->
 
