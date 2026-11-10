@@ -200,6 +200,10 @@ final class CurlClient implements Client
 		$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?: '';
 		if ($data !== '' && preg_match('~^application/json|\+json~', $contentType)) {
 			$data = Helpers::decodeJson($data);
+		} elseif ($data !== '' && $httpCode >= 400) {
+			// some APIs send a JSON error under text/plain, so the body is tried as JSON anyway
+			$decoded = json_decode($data, associative: true);
+			$data = is_array($decoded) ? $decoded : $data;
 		}
 
 		return new Response($httpCode, $this->parseHeaders($headers), $data);

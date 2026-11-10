@@ -103,7 +103,9 @@ Facts that surprise:
   from disk would have to fake the timing too. Observation times the whole stream.
 - **JSON decoding is content-type-driven** — the body is decoded only for
   `application/json`/`+json`, so a non-JSON body arrives as a raw string and `callApi()`
-  turns that into `CommunicationException`. Bodies that are legitimately not JSON, i.e.
+  turns that into `CommunicationException`. The exception is an error status (≥400): its
+  body is decoded whenever it is valid JSON, whatever the content type says (OpenAI sends
+  JSON errors as `text/plain`). Bodies that are legitimately not JSON, i.e.
   batch result files, do not go through `callApi()` at all but through `streamLines()`.
 - Errors: HTTP ≥400 → `ApiException` (message from `data.error.message`), duplicated in
   every `callApi`; transport and JSON-decoding failures → `CommunicationException`.

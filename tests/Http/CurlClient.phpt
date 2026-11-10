@@ -107,6 +107,49 @@ test('Non-JSON response handling', function () {
 });
 
 
+test('JSON error body under a non-JSON content type is decoded', function () {
+	$headers = "HTTP/1.1 401 Unauthorized\r\nContent-Type: text/plain\r\n\r\n";
+	$body = '{"error":{"message":"Incorrect API key provided"},"status":401}';
+	CurlMocker::$response = $headers . $body;
+	CurlMocker::$headerSize = strlen($headers);
+	CurlMocker::$httpCode = 401;
+	CurlMocker::$contentType = 'text/plain';
+
+	$response = (new CurlClient)->fetch('https://api.example.com/data');
+
+	Assert::same(401, $response->getStatusCode());
+	Assert::same(['error' => ['message' => 'Incorrect API key provided'], 'status' => 401], $response->getData());
+});
+
+
+test('non-JSON error body stays a string', function () {
+	$headers = "HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\n\r\n";
+	$body = 'Bad gateway';
+	CurlMocker::$response = $headers . $body;
+	CurlMocker::$headerSize = strlen($headers);
+	CurlMocker::$httpCode = 502;
+	CurlMocker::$contentType = 'text/plain';
+
+	$response = (new CurlClient)->fetch('https://api.example.com/data');
+
+	Assert::same('Bad gateway', $response->getData());
+});
+
+
+test('successful body under a non-JSON content type stays a string even if it is JSON', function () {
+	$headers = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";
+	$body = '{"status":"success"}';
+	CurlMocker::$response = $headers . $body;
+	CurlMocker::$headerSize = strlen($headers);
+	CurlMocker::$httpCode = 200;
+	CurlMocker::$contentType = 'text/plain';
+
+	$response = (new CurlClient)->fetch('https://api.example.com/data');
+
+	Assert::same('{"status":"success"}', $response->getData());
+});
+
+
 test('Network error handling', function () {
 	CurlMocker::$response = false;
 	CurlMocker::$errno = 6; // CURLE_COULDNT_RESOLVE_HOST
